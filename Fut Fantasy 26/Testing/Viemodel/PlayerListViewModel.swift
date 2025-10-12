@@ -11,14 +11,15 @@ import SwiftData
 import Observation
 
 @Observable
-class PlayerListViewModel {
+@MainActor
+final class PlayerListViewModel {
     // Dependencies
     private let playerRepository: PlayerRepository
     
     // State
     var players: [Player] = []
     var isLoading = false
-    var error: Error?
+    var errorMessage: String?
     var currentPage = 0
     var hasMorePages = true
     
@@ -27,26 +28,22 @@ class PlayerListViewModel {
     var selectedNation: Nation?
     var maxPrice: Double?
     var searchQuery = ""
-    var sortType: PlayerRepository.SortType = .points
+    var sortType: PlayerSortType = .points
     
     // Constants
     private let pageSize = 20
     
     init(playerRepository: PlayerRepository) {
         self.playerRepository = playerRepository
-        
-        Task {
-            await loadPlayers()
-        }
     }
     
-    @MainActor
     func loadPlayers() async {
         isLoading = true
+        errorMessage = nil
         currentPage = 0
         
         do {
-            players = try playerRepository.fetchPlayersForSquadBuilding(
+            players = try await playerRepository.fetchPlayersForSquadBuilding(
                 position: selectedPosition,
                 nation: selectedNation,
                 priceUnder: maxPrice,
@@ -57,14 +54,13 @@ class PlayerListViewModel {
             
             hasMorePages = players.count == pageSize
         } catch {
-            self.error = error
-            print("Error loading players: \(error)")
+            errorMessage = error.localizedDescription
+            print("❌ Error loading players: \(error)")
         }
         
         isLoading = false
     }
     
-    @MainActor
     func loadMorePlayers() async {
         guard hasMorePages, !isLoading else { return }
         
@@ -72,7 +68,7 @@ class PlayerListViewModel {
         currentPage += 1
         
         do {
-            let nextPlayers = try playerRepository.fetchPlayersForSquadBuilding(
+            let nextPlayers = try await playerRepository.fetchPlayersForSquadBuilding(
                 position: selectedPosition,
                 nation: selectedNation,
                 priceUnder: maxPrice,
@@ -84,14 +80,13 @@ class PlayerListViewModel {
             players.append(contentsOf: nextPlayers)
             hasMorePages = nextPlayers.count == pageSize
         } catch {
-            self.error = error
-            print("Error loading more players: \(error)")
+            errorMessage = error.localizedDescription
+            print("❌ Error loading more players: \(error)")
         }
         
         isLoading = false
     }
     
-    @MainActor
     func search() async {
         guard !searchQuery.isEmpty else {
             await loadPlayers()
@@ -99,13 +94,14 @@ class PlayerListViewModel {
         }
         
         isLoading = true
+        errorMessage = nil
         
         do {
-            players = try playerRepository.searchPlayers(query: searchQuery)
+            players = try await playerRepository.searchPlayers(query: searchQuery)
             hasMorePages = false // No pagination for search
         } catch {
-            self.error = error
-            print("Error searching players: \(error)")
+            errorMessage = error.localizedDescription
+            print("❌ Error searching players: \(error)")
         }
         
         isLoading = false
@@ -115,7 +111,7 @@ class PlayerListViewModel {
         position: PlayerPosition?,
         nation: Nation?,
         maxPrice: Double?,
-        sortType: PlayerRepository.SortType
+        sortType: PlayerSortType
     ) {
         self.selectedPosition = position
         self.selectedNation = nation

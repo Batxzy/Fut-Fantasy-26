@@ -11,27 +11,23 @@ import SwiftData
 
 @main
 struct FantasyFootballApp: App {
-    // SwiftData setup
     let container = SwiftDataManager.shared.container
     let contextProvider: ModelContextProvider
     
-    // Repositories
+    // Use protocol types for repositories
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     let matchdayRepository: MatchdayRepository
     let fixtureRepository: FixtureRepository
     
     init() {
-        // Initialize context provider
         contextProvider = ModelContextProvider(container: container)
         
-        // Initialize repositories
-        playerRepository = PlayerRepository(contextProvider: contextProvider)
-        squadRepository = SquadRepository(contextProvider: contextProvider)
-        matchdayRepository = MatchdayRepository(contextProvider: contextProvider)
-        fixtureRepository = FixtureRepository(contextProvider: contextProvider)
-        
-        // --- REMOVED THE TASK FROM THE INITIALIZER ---
+        // Initialize with concrete implementations
+        playerRepository = SwiftDataPlayerRepository(contextProvider: contextProvider)
+        squadRepository = SwiftDataSquadRepository(contextProvider: contextProvider)
+        matchdayRepository = SwiftDataMatchdayRepository(contextProvider: contextProvider)
+        fixtureRepository = SwiftDataFixtureRepository(contextProvider: contextProvider)
     }
     
     var body: some Scene {
@@ -43,8 +39,6 @@ struct FantasyFootballApp: App {
                 fixtureRepository: fixtureRepository
             )
             .modelContainer(container)
-            // --- ADD THE .task MODIFIER HERE ---
-            // This task runs automatically when the view appears.
             .task {
                 await seedDataIfNeeded()
             }
@@ -53,10 +47,7 @@ struct FantasyFootballApp: App {
     
     @MainActor
     private func seedDataIfNeeded() async {
-        // Get a context for seeding
         let context = contextProvider.createMainContext()
-        
-        // Use the provided seeder class
         WorldCupDataSeeder.seedDataIfNeeded(context: context)
     }
 }

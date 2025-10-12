@@ -445,6 +445,231 @@ final class Squad {
     }
 }
 
+extension Squad {
+    // MARK: - Display Formatters
+    
+    /// Formatted current budget (e.g., "£98.5M")
+    var displayBudget: String {
+        String(format: "£%.1fM", currentBudget)
+    }
+    
+    /// Formatted total squad value (e.g., "£1.5M")
+    var displayTotalValue: String {
+        String(format: "£%.1fM", squadValue)
+    }
+    
+    /// Formatted spent budget
+    var displaySpentBudget: String {
+        let spent = initialBudget - currentBudget
+        return String(format: "£%.1fM", spent)
+    }
+    
+    // MARK: - Squad Status
+    
+    /// Number of free slots in squad (out of 15)
+    var freeSlots: Int {
+        max(0, 15 - (players?.count ?? 0))
+    }
+    
+    /// Is the squad completely full? (15 players)
+    var isFull: Bool {
+        (players?.count ?? 0) >= 15
+    }
+    
+    /// Number of players on bench
+    var benchCount: Int {
+        bench?.count ?? 0
+    }
+    
+    /// Number of starters selected
+    var startingXICount: Int {
+        startingXI?.count ?? 0
+    }
+    
+    // MARK: - Position Analysis
+    
+    /// Count players by position in full squad
+    func squadPlayerCount(for position: PlayerPosition) -> Int {
+        players?.filter { $0.position == position }.count ?? 0
+    }
+    
+    /// Check if can add more players of this position
+    func canAddPlayer(for position: PlayerPosition) -> Bool {
+        squadPlayerCount(for: position) < position.squadLimit
+    }
+    
+    /// Remaining slots for a position
+    func remainingSlots(for position: PlayerPosition) -> Int {
+        max(0, position.squadLimit - squadPlayerCount(for: position))
+    }
+    
+    // MARK: - Nation Rules
+    
+    /// All nations represented in squad
+    var representedNations: [Nation] {
+        let allNations = players?.map { $0.nation } ?? []
+        return Array(Set(allNations)).sorted { $0.rawValue < $1.rawValue }
+    }
+    
+    /// Count of unique nations in squad
+    var nationCount: Int {
+        representedNations.count
+    }
+    
+    // MARK: - Formation Validation
+    
+    /// Is the starting XI valid? (1 GK, 3+ DEF, 2+ MID, 1+ FWD, total 11)
+    var isValidXI: Bool {
+        guard let starting = startingXI, starting.count == 11 else { return false }
+        
+        let gk = starting.filter { $0.position == .goalkeeper }.count
+        let def = starting.filter { $0.position == .defender }.count
+        let mid = starting.filter { $0.position == .midfielder }.count
+        let fwd = starting.filter { $0.position == .forward }.count
+        
+        return gk == 1 && def >= 3 && mid >= 2 && fwd >= 1
+    }
+    
+    /// Current formation string (e.g., "4-3-3")
+    var formationString: String {
+        guard let starting = startingXI, starting.count == 11 else { return "Invalid" }
+        
+        let def = starting.filter { $0.position == .defender }.count
+        let mid = starting.filter { $0.position == .midfielder }.count
+        let fwd = starting.filter { $0.position == .forward }.count
+        
+        return "\(def)-\(mid)-\(fwd)"
+    }
+    
+    // MARK: - Captain Status
+    
+    /// Does squad have a captain assigned?
+    var hasCaptain: Bool {
+        captain != nil
+    }
+    
+    /// Does squad have a vice-captain assigned?
+    var hasViceCaptain: Bool {
+        viceCaptain != nil
+    }
+    
+    /// Are both captain roles filled?
+    var hasBothCaptains: Bool {
+        hasCaptain && hasViceCaptain
+    }
+    
+    // MARK: - Transfer Status
+    
+    /// Can make free transfer?
+    var canMakeFreeTransfer: Bool {
+        hasUnlimitedTransfers || freeTransfersRemaining > 0
+    }
+    
+    /// Cost of next transfer (0 if free, 4 if not)
+    var nextTransferCost: Int {
+        canMakeFreeTransfer ? 0 : 4
+    }
+    
+    /// Formatted transfer status
+    var transferStatusText: String {
+        if hasUnlimitedTransfers {
+            return "Unlimited Transfers"
+        } else if freeTransfersRemaining > 0 {
+            return "\(freeTransfersRemaining) Free Transfer\(freeTransfersRemaining == 1 ? "" : "s")"
+        } else {
+            return "No Free Transfers (-4 pts per transfer)"
+        }
+    }
+    
+    // MARK: - Points Analysis
+    
+    /// Average points per player in squad
+    var averagePoints: Double {
+        guard let players = players, !players.isEmpty else { return 0.0 }
+        let total = players.reduce(0) { $0 + $1.totalPoints }
+        return Double(total) / Double(players.count)
+    }
+    
+    /// Total points including deductions
+    var netPoints: Int {
+        totalPoints - pointsDeductedFromTransfers
+    }
+    
+    /// Formatted net points
+    var displayNetPoints: String {
+        if pointsDeductedFromTransfers > 0 {
+            return "\(netPoints) (\(totalPoints) - \(pointsDeductedFromTransfers))"
+        }
+        return "\(totalPoints)"
+    }
+    
+    // MARK: - Squad Completion Status
+    
+    /// Overall squad readiness percentage (0-100)
+    var completionPercentage: Int {
+        var score = 0
+        let maxScore = 5
+        
+        // Has 15 players (20%)
+        if isFull { score += 1 }
+        
+        // Has valid starting XI (20%)
+        if isValidXI { score += 1 }
+        
+        // Has 4 bench players (20%)
+        if benchCount == 4 { score += 1 }
+        
+        // Has captain and vice-captain (20%)
+        if hasBothCaptains { score += 1 }
+        
+        // Squad within budget (20%)
+        if currentBudget >= 0 { score += 1 }
+        
+        return (score * 100) / maxScore
+    }
+    
+    /// Is squad ready for matchday?
+    var isReadyForMatchday: Bool {
+        isFull && isValidXI && benchCount == 4 && hasBothCaptains && currentBudget >= 0
+    }
+    
+    /// What's missing from squad?
+    var missingRequirements: [String] {
+        var missing: [String] = []
+        
+        if !isFull {
+            missing.append("Need \(15 - (players?.count ?? 0)) more player(s)")
+        }
+        
+        if !isValidXI {
+            if startingXICount < 11 {
+                missing.append("Need to select \(11 - startingXICount) starter(s)")
+            } else {
+                missing.append("Invalid formation - check position requirements")
+            }
+        }
+        
+        if benchCount < 4 {
+            missing.append("Need \(4 - benchCount) bench player(s)")
+        }
+        
+        if !hasCaptain {
+            missing.append("Assign a captain")
+        }
+        
+        if !hasViceCaptain {
+            missing.append("Assign a vice-captain")
+        }
+        
+        if currentBudget < 0 {
+            missing.append("Over budget by £\(String(format: "%.1f", abs(currentBudget)))M")
+        }
+        
+        return missing
+    }
+}
+
+
 // MARK: - Tournament Stage Enum
 
 enum TournamentStage: String, Codable, CaseIterable {
