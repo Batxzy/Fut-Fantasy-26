@@ -12,11 +12,9 @@ import SwiftData
 @MainActor
 final class SwiftDataMatchdayRepository: MatchdayRepository {
     private let baseRepository: BaseRepository<Matchday>
-    private let contextProvider: ModelContextProvider
     
-    init(contextProvider: ModelContextProvider) {
-        self.contextProvider = contextProvider
-        self.baseRepository = BaseRepository<Matchday>(contextProvider: contextProvider)
+    init(modelContext: ModelContext) {
+        self.baseRepository = BaseRepository<Matchday>(modelContext: modelContext)
     }
     
     // MARK: - Matchday Queries

@@ -231,28 +231,39 @@ extension Notification.Name {
     static let squadDidUpdate = Notification.Name("squadDidUpdate")
 }
 
-// MARK: - ContentView Preview
 #Preview {
     let container = SwiftDataManager.shared.previewContainer
-    
+    let contextProvider = ModelContextProvider(container: container)
+    let mainContext = contextProvider.mainContext
+
     MainActor.assumeIsolated {
-        let context = ModelContext(container)
-        WorldCupDataSeeder.seedDataIfNeeded(context: context)
+        WorldCupDataSeeder.seedDataIfNeeded(context: mainContext)
     }
     
-    let contextProvider = ModelContextProvider(container: container)
+    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
+    let matchdayRepository: MatchdayRepository = SwiftDataMatchdayRepository(modelContext: mainContext)
+    let fixtureRepository: FixtureRepository = SwiftDataFixtureRepository(modelContext: mainContext)
+    let squadRepository: SquadRepository = SwiftDataSquadRepository(modelContext: mainContext, playerRepository: playerRepository)
     
-    // Use protocol types
-    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(contextProvider: contextProvider)
-    let squadRepository: SquadRepository = SwiftDataSquadRepository(contextProvider: contextProvider)
-    let matchdayRepository: MatchdayRepository = SwiftDataMatchdayRepository(contextProvider: contextProvider)
-    let fixtureRepository: FixtureRepository = SwiftDataFixtureRepository(contextProvider: contextProvider)
-    
-    return ContentView(
+    // Create the ContentView first
+    let contentView = ContentView(
         playerRepository: playerRepository,
         squadRepository: squadRepository,
         matchdayRepository: matchdayRepository,
         fixtureRepository: fixtureRepository
     )
-    .modelContainer(container)
+
+    // Return the view and attach the async task
+    return contentView
+        .task {
+            // This now runs when the preview appears
+            print("🚀 [Preview] Seeding squad...")
+            await WorldCupDataSeeder.seedSquadIfNeeded(
+                squadRepository: squadRepository,
+                playerRepository: playerRepository,
+                context: mainContext
+            )
+            print("✅ [Preview] Squad seeding complete.")
+        }
+        .modelContainer(container)
 }

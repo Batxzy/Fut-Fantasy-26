@@ -6,13 +6,6 @@
 //
 
 
-//
-//  SwiftDataFixtureRepository.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 12/10/25.
-//
-
 import Foundation
 import SwiftData
 
@@ -20,8 +13,8 @@ import SwiftData
 final class SwiftDataFixtureRepository: FixtureRepository {
     private let baseRepository: BaseRepository<Fixture>
     
-    init(contextProvider: ModelContextProvider) {
-        self.baseRepository = BaseRepository<Fixture>(contextProvider: contextProvider)
+    init(modelContext: ModelContext) {
+        self.baseRepository = BaseRepository<Fixture>(modelContext: modelContext)
     }
     
     func fetchFixtureById(_ id: Int) async throws -> Fixture? {

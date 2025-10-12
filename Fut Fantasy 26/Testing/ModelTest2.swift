@@ -383,7 +383,7 @@ final class Squad {
     init(
         teamName: String,
         ownerName: String = "Manager",
-        initialBudget: Double = 100.0
+        initialBudget: Double = 1000.0
     ) {
         self.id = UUID()
         self.teamName = teamName

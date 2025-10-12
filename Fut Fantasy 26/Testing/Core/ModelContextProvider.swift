@@ -9,19 +9,18 @@
 import Foundation
 import SwiftData
 
-// Class to provide controlled access to model contexts
 class ModelContextProvider {
     private let container: ModelContainer
     
-    init(container: ModelContainer) {
-        self.container = container
-    }
-    
-    // Main context for UI operations
-    func createMainContext() -> ModelContext {
+    // Create a single main context to be shared.
+    lazy var mainContext: ModelContext = {
         let context = ModelContext(container)
         context.autosaveEnabled = true
         return context
+    }()
+    
+    init(container: ModelContainer) {
+        self.container = container
     }
     
     // Background context for heavy operations
@@ -38,7 +37,6 @@ class ModelContextProvider {
         Task.detached {
             task(backgroundContext)
             do {
-                // FIX: Added try keyword and error handling
                 try backgroundContext.save()
             } catch {
                 print("Error saving background context: \(error)")
@@ -53,7 +51,7 @@ class ModelContextProvider {
                 transaction(context)
             }
             // Optionally, explicitly save after transaction if autosave is disabled
-            if context.autosaveEnabled == false {
+            if !context.autosaveEnabled {
                 try context.save()
             }
         } catch {

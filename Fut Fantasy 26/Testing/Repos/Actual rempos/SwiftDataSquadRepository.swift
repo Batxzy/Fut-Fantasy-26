@@ -13,11 +13,13 @@ import SwiftData
 @MainActor
 final class SwiftDataSquadRepository: SquadRepository {
     private let baseRepository: BaseRepository<Squad>
-    private let contextProvider: ModelContextProvider
+    private let playerRepository: PlayerRepository
+    private let modelContext: ModelContext
     
-    init(contextProvider: ModelContextProvider) {
-        self.contextProvider = contextProvider
-        self.baseRepository = BaseRepository<Squad>(contextProvider: contextProvider)
+    init(modelContext: ModelContext, playerRepository: PlayerRepository) {
+        self.modelContext = modelContext
+        self.baseRepository = BaseRepository<Squad>(modelContext: modelContext)
+        self.playerRepository = playerRepository
     }
     
     // MARK: - Squad Queries
@@ -74,16 +76,15 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.notFound
         }
         
-        // Get player using PlayerRepository
-        let playerRepo = SwiftDataPlayerRepository(contextProvider: contextProvider)
-        guard let player = try await playerRepo.fetchPlayerById(playerId) else {
+        // Use the injected playerRepository
+        guard let player = try await playerRepository.fetchPlayerById(playerId) else {
             print("❌ [SquadRepo] Player not found")
             throw RepositoryError.notFound
         }
         
         // Check position limit
         guard squad.canAddPlayer(position: player.position) else {
-            print("❌ [SquadRepo] Position limit reached")
+            print("❌ [SquadRepo] Position limit reached for \(player.position.rawValue)")
             throw RepositoryError.invalidData
         }
         
@@ -96,16 +97,15 @@ final class SwiftDataSquadRepository: SquadRepository {
         // Check nation limit (using group stage as default)
         let currentStage: TournamentStage = .groupStage
         guard squad.canAddPlayerFromNation(player.nation, stage: currentStage) else {
-            print("❌ [SquadRepo] Nation limit reached")
+            print("❌ [SquadRepo] Nation limit reached for \(player.nation.rawValue)")
             throw RepositoryError.invalidData
         }
         
         // Add player
         if squad.players == nil {
-            squad.players = [player]
-        } else {
-            squad.players?.append(player)
+            squad.players = []
         }
+        squad.players?.append(player)
         
         do {
             try await baseRepository.update(squad)
@@ -155,12 +155,11 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.notFound
         }
         
-        let playerRepo = SwiftDataPlayerRepository(contextProvider: contextProvider)
         var players: [Player] = []
         
         // Get all players from IDs
         for playerId in startingXI {
-            if let player = try await playerRepo.fetchPlayerById(playerId) {
+            if let player = try await playerRepository.fetchPlayerById(playerId) {
                 players.append(player)
             }
         }
@@ -211,9 +210,8 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.notFound
         }
         
-        let playerRepo = SwiftDataPlayerRepository(contextProvider: contextProvider)
-        guard let captain = try await playerRepo.fetchPlayerById(captainId),
-              let viceCaptain = try await playerRepo.fetchPlayerById(viceCaptainId) else {
+        guard let captain = try await playerRepository.fetchPlayerById(captainId),
+              let viceCaptain = try await playerRepository.fetchPlayerById(viceCaptainId) else {
             print("❌ [SquadRepo] Captain or vice captain not found")
             throw RepositoryError.notFound
         }

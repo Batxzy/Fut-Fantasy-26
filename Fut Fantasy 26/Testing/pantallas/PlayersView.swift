@@ -588,8 +588,8 @@ struct PlayerFiltersView: View {
     }
     
     let contextProvider = ModelContextProvider(container: container)
-    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(contextProvider: contextProvider)
-    let squadRepository: SquadRepository = SwiftDataSquadRepository(contextProvider: contextProvider)
+    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(modelContext: contextProvider.mainContext)
+    let squadRepository: SquadRepository = SwiftDataSquadRepository(modelContext: contextProvider.mainContext, playerRepository: playerRepository)
     
     return PlayersView(
         playerRepository: playerRepository,
