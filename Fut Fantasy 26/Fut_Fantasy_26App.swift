@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
-@main
-struct Fut_Fantasy_26App: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
-}
+/*
+ @main
+ struct Fut_Fantasy_26App: App {
+ var body: some Scene {
+ WindowGroup {
+ ContentView()
+ }
+ }
+ }
+ 
+ */
