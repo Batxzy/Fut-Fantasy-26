@@ -11,6 +11,7 @@ import SwiftData
 
 struct PlayersView: View {
     let playerRepository: PlayerRepository
+    let squadRepository: SquadRepository
     
     @State private var players: [Player] = []
     @State private var isLoading = false
@@ -68,7 +69,7 @@ struct PlayersView: View {
                         }
                     }
                 }
-                .toolbarBackground(.automatic) // ✅ Only blur the navbar
+                .toolbarBackground(.automatic)
                 .sheet(isPresented: $showingFilters) {
                     PlayerFiltersView(
                         selectedPosition: $selectedPosition,
@@ -118,11 +119,17 @@ struct PlayersView: View {
             )
         } else {
             List(players, id: \.id) { player in
-                NavigationLink(destination: PlayerDetailView(player: player, playerRepository: playerRepository)) {
+                NavigationLink(
+                    destination: PlayerDetailView(
+                        player: player,
+                        playerRepository: playerRepository,
+                        squadRepository: squadRepository
+                    )
+                ) {
                     PlayerRowView(player: player)
                 }
             }
-            .listStyle(.plain) // ✅ Clean style for better scroll behavior
+            .listStyle(.plain)
             .refreshable {
                 await loadPlayers()
             }
@@ -243,6 +250,13 @@ struct PlayerRowView: View {
 struct PlayerDetailView: View {
     let player: Player
     let playerRepository: PlayerRepository
+    let squadRepository: SquadRepository
+    
+    @State private var currentSquad: Squad?
+    @State private var isInSquad = false
+    @State private var showingAddConfirmation = false
+    @State private var isProcessing = false
+    @State private var errorMessage: String?
     
     var body: some View {
         ScrollView {
@@ -286,6 +300,18 @@ struct PlayerDetailView: View {
                 }
                 .padding()
                 
+                // ADD TO SQUAD BUTTON
+                actionButton
+                    .padding(.horizontal)
+                
+                // Error message
+                if let error = errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal)
+                }
+                
                 // Stats
                 VStack(spacing: 16) {
                     HStack {
@@ -300,6 +326,7 @@ struct PlayerDetailView: View {
                 }
                 .padding(.horizontal)
                 
+                // Information
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Information")
                         .font(.headline)
@@ -322,6 +349,106 @@ struct PlayerDetailView: View {
         }
         .navigationTitle("Player Details")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadSquadStatus()
+        }
+        .alert("Add \(player.name)?", isPresented: $showingAddConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Add", role: .none) {
+                Task {
+                    await addPlayerToSquad()
+                }
+            }
+        } message: {
+            Text("Add \(player.name) to your squad for \(player.displayPrice)?")
+        }
+    }
+    
+    @ViewBuilder
+    private var actionButton: some View {
+        if let squad = currentSquad {
+            if isInSquad {
+                // Already in squad
+                Label("In Squad", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.green.opacity(0.2))
+                    .foregroundStyle(.green)
+                    .cornerRadius(12)
+            } else if squad.isFull {
+                // Squad is full
+                Label("Squad Full (15/15)", systemImage: "person.3.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.orange.opacity(0.2))
+                    .foregroundStyle(.orange)
+                    .cornerRadius(12)
+            } else if squad.currentBudget < player.price {
+                // Can't afford
+                Label("Can't Afford", systemImage: "exclamationmark.triangle.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(.red.opacity(0.2))
+                    .foregroundStyle(.red)
+                    .cornerRadius(12)
+            } else {
+                // Can add
+                Button {
+                    showingAddConfirmation = true
+                } label: {
+                    if isProcessing {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else {
+                        Label("Add to Squad", systemImage: "plus.circle.fill")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(.blue)
+                            .foregroundStyle(.white)
+                            .cornerRadius(12)
+                    }
+                }
+                .disabled(isProcessing)
+            }
+        } else {
+            ProgressView()
+        }
+    }
+    
+    private func loadSquadStatus() async {
+        do {
+            let fetchedSquad = try await squadRepository.fetchUserSquad()
+            currentSquad = fetchedSquad
+            isInSquad = fetchedSquad.players?.contains(where: { $0.id == player.id }) ?? false
+            print("💰 Current budget: \(fetchedSquad.displayBudget)")
+        } catch {
+            print("❌ Error loading squad: \(error)")
+        }
+    }
+    
+    private func addPlayerToSquad() async {
+        guard let squad = currentSquad else { return }
+        
+        isProcessing = true
+        errorMessage = nil
+        
+        do {
+            try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
+            print("✅ Player added to squad successfully")
+            
+            // Reload squad status
+            await loadSquadStatus()
+            
+            // Notify other views
+            NotificationCenter.default.post(name: .squadDidUpdate, object: nil)
+            
+        } catch {
+            print("❌ Failed to add player: \(error)")
+            errorMessage = "Failed to add player: \(error.localizedDescription)"
+        }
+        
+        isProcessing = false
     }
 }
 
@@ -462,7 +589,11 @@ struct PlayerFiltersView: View {
     
     let contextProvider = ModelContextProvider(container: container)
     let playerRepository: PlayerRepository = SwiftDataPlayerRepository(contextProvider: contextProvider)
+    let squadRepository: SquadRepository = SwiftDataSquadRepository(contextProvider: contextProvider)
     
-    return PlayersView(playerRepository: playerRepository)
-        .modelContainer(container)
+    return PlayersView(
+        playerRepository: playerRepository,
+        squadRepository: squadRepository
+    )
+    .modelContainer(container)
 }

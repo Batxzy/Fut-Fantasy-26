@@ -16,6 +16,7 @@ struct SquadView: View {
     @State private var viewModel: SquadViewModel?
     @State private var showingTransfers = false
     @State private var isDragMode = false
+    @State private var refreshID = UUID()
     
     var body: some View {
         NavigationStack {
@@ -60,6 +61,7 @@ struct SquadView: View {
                                 .symbolRenderingMode(.hierarchical)
                                 .foregroundStyle(isDragMode ? .green : .primary)
                         }
+                        .disabled((viewModel?.squad?.startingXI?.count ?? 0) == 0)
                         
                         Button {
                             showingTransfers = true
@@ -87,6 +89,18 @@ struct SquadView: View {
                     await viewModel?.loadSquad()
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .squadDidUpdate)) { _ in
+                print("🔔 Squad update notification received")
+                Task {
+                    await viewModel?.loadSquad()
+                    refreshID = UUID()
+                }
+            }
+            .onAppear {
+                Task {
+                    await viewModel?.loadSquad()
+                }
+            }
         }
     }
     
@@ -96,6 +110,12 @@ struct SquadView: View {
             VStack(spacing: 24) {
                 // Squad Info
                 squadHeader(squad: squad)
+                    .id(refreshID)
+                
+                // Formation info
+                if let startingXI = squad.startingXI, !startingXI.isEmpty {
+                    formationInfo(squad: squad)
+                }
                 
                 // Formation Pitch
                 FormationView(
@@ -106,6 +126,7 @@ struct SquadView: View {
                     onPlayerTap: { player in
                         if !isDragMode {
                             // Show player detail
+                            print("👆 Tapped player: \(player.name)")
                         }
                     },
                     onPlayerMove: { fromIndex, toIndex in
@@ -114,7 +135,7 @@ struct SquadView: View {
                         }
                     }
                 )
-                .padding()
+                .frame(height: 500)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
                         .fill(.ultraThinMaterial)
@@ -135,10 +156,16 @@ struct SquadView: View {
                     }
                 )
                 .padding(.horizontal)
+                
+                // Helpful tip if squad is empty
+                if (squad.players?.count ?? 0) < 15 {
+                    helpfulTip
+                }
             }
             .padding(.vertical)
         }
         .scrollContentBackground(.hidden)
+        .background(Color(.systemGroupedBackground))
     }
     
     @ViewBuilder
@@ -155,6 +182,7 @@ struct SquadView: View {
                         .foregroundStyle(.secondary)
                     Text(squad.displayBudget)
                         .font(.headline)
+                        .foregroundColor(squad.currentBudget < 0 ? .red : .primary)
                 }
                 
                 VStack {
@@ -171,6 +199,7 @@ struct SquadView: View {
                         .foregroundStyle(.secondary)
                     Text("\(squad.players?.count ?? 0)/15")
                         .font(.headline)
+                        .foregroundColor((squad.players?.count ?? 0) < 15 ? .orange : .green)
                 }
             }
         }
@@ -179,6 +208,68 @@ struct SquadView: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
+        )
+        .padding(.horizontal)
+    }
+    
+    @ViewBuilder
+    private func formationInfo(squad: Squad) -> some View {
+        HStack(spacing: 20) {
+            // Formation display
+            HStack(spacing: 4) {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundStyle(.blue)
+                Text("Formation:")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(squad.formationString)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            
+            Spacer()
+            
+            // Captain info
+            if let captain = squad.captain {
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(.yellow)
+                    Text("Captain:")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(captain.lastName.isEmpty ? captain.name : captain.lastName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+    
+    private var helpfulTip: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "lightbulb.fill")
+                    .foregroundStyle(.yellow)
+                Text("Quick Tip")
+                    .font(.headline)
+                Spacer()
+            }
+            
+            Text("Go to the Players tab to add players to your squad. You need 15 players total: 2 Goalkeepers, 5 Defenders, 5 Midfielders, and 3 Forwards.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.blue.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(.blue.opacity(0.3), lineWidth: 1)
         )
         .padding(.horizontal)
     }

@@ -13,7 +13,7 @@ protocol FixtureRepository {
     func fetchFixtureById(_ id: Int) async throws -> Fixture?
     func fetchFixturesForMatchday(_ matchdayNumber: Int) async throws -> [Fixture]
     func fetchFixturesForNation(_ nation: Nation) async throws -> [Fixture]
-    func fetchFixturesForGroup(_ group: Group) async throws -> [Fixture]
+    func fetchFixturesForGroup(_ group: WorldCupGroup) async throws -> [Fixture]
     func fetchUpcomingFixtures(limit: Int) async throws -> [Fixture]
     func fetchRecentFixtures(limit: Int) async throws -> [Fixture]
     func updateFixtureScore(

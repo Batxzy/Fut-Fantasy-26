@@ -24,8 +24,6 @@ final class SwiftDataFixtureRepository: FixtureRepository {
         self.baseRepository = BaseRepository<Fixture>(contextProvider: contextProvider)
     }
     
-    // MARK: - Fixture Queries
-    
     func fetchFixtureById(_ id: Int) async throws -> Fixture? {
         print("⚽ [FixtureRepo] Fetching fixture with ID: \(id)")
         
@@ -83,7 +81,7 @@ final class SwiftDataFixtureRepository: FixtureRepository {
         }
     }
     
-    func fetchFixturesForGroup(_ group: Group) async throws -> [Fixture] {
+    func fetchFixturesForGroup(_ group: WorldCupGroup) async throws -> [Fixture] {
         print("⚽ [FixtureRepo] Fetching fixtures for group: \(group.rawValue)")
         
         let predicate = #Predicate<Fixture> { $0.group == group }
@@ -146,8 +144,6 @@ final class SwiftDataFixtureRepository: FixtureRepository {
             throw error
         }
     }
-    
-    // MARK: - Fixture Management
     
     func updateFixtureScore(
         fixtureId: Int,

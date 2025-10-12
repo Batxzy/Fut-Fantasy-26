@@ -47,7 +47,7 @@ final class Player {
     var appearances: Int // Number of matches played
     
     // Tournament Info
-    var group: Group? // Group stage only
+    var group: WorldCupGroup? // Group stage only
     var nextOpponent: Nation? // Next nation name
     var nextMatchDate: Date?
     
@@ -73,7 +73,7 @@ final class Player {
         nation: Nation,
         shirtNumber: Int,
         price: Double,
-        group: Group? = nil
+        group: WorldCupGroup? = nil
     ) {
         self.id = id
         self.name = name
@@ -250,7 +250,7 @@ enum Nation: String, Codable, CaseIterable {
         "https://flagcdn.com/w160/\(code).png"
     }
     
-    var group: Group? {
+    var group: WorldCupGroup? {
         switch self {
         case .qatar, .ecuador, .senegal, .netherlands: return .a
         case .england, .iran, .usa, .wales: return .b
@@ -264,9 +264,9 @@ enum Nation: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Group Enum
+// MARK: - WorldCupGroup Enum (renamed from Group)
 
-enum Group: String, Codable, CaseIterable {
+enum WorldCupGroup: String, Codable, CaseIterable {
     case a = "Group A"
     case b = "Group B"
     case c = "Group C"
@@ -448,17 +448,14 @@ final class Squad {
 extension Squad {
     // MARK: - Display Formatters
     
-    /// Formatted current budget (e.g., "£98.5M")
     var displayBudget: String {
         String(format: "£%.1fM", currentBudget)
     }
     
-    /// Formatted total squad value (e.g., "£1.5M")
     var displayTotalValue: String {
         String(format: "£%.1fM", squadValue)
     }
     
-    /// Formatted spent budget
     var displaySpentBudget: String {
         let spent = initialBudget - currentBudget
         return String(format: "£%.1fM", spent)
@@ -466,59 +463,49 @@ extension Squad {
     
     // MARK: - Squad Status
     
-    /// Number of free slots in squad (out of 15)
     var freeSlots: Int {
         max(0, 15 - (players?.count ?? 0))
     }
     
-    /// Is the squad completely full? (15 players)
     var isFull: Bool {
         (players?.count ?? 0) >= 15
     }
     
-    /// Number of players on bench
     var benchCount: Int {
         bench?.count ?? 0
     }
     
-    /// Number of starters selected
     var startingXICount: Int {
         startingXI?.count ?? 0
     }
     
     // MARK: - Position Analysis
     
-    /// Count players by position in full squad
     func squadPlayerCount(for position: PlayerPosition) -> Int {
         players?.filter { $0.position == position }.count ?? 0
     }
     
-    /// Check if can add more players of this position
     func canAddPlayer(for position: PlayerPosition) -> Bool {
         squadPlayerCount(for: position) < position.squadLimit
     }
     
-    /// Remaining slots for a position
     func remainingSlots(for position: PlayerPosition) -> Int {
         max(0, position.squadLimit - squadPlayerCount(for: position))
     }
     
     // MARK: - Nation Rules
     
-    /// All nations represented in squad
     var representedNations: [Nation] {
         let allNations = players?.map { $0.nation } ?? []
         return Array(Set(allNations)).sorted { $0.rawValue < $1.rawValue }
     }
     
-    /// Count of unique nations in squad
     var nationCount: Int {
         representedNations.count
     }
     
     // MARK: - Formation Validation
     
-    /// Is the starting XI valid? (1 GK, 3+ DEF, 2+ MID, 1+ FWD, total 11)
     var isValidXI: Bool {
         guard let starting = startingXI, starting.count == 11 else { return false }
         
@@ -530,7 +517,6 @@ extension Squad {
         return gk == 1 && def >= 3 && mid >= 2 && fwd >= 1
     }
     
-    /// Current formation string (e.g., "4-3-3")
     var formationString: String {
         guard let starting = startingXI, starting.count == 11 else { return "Invalid" }
         
@@ -543,34 +529,28 @@ extension Squad {
     
     // MARK: - Captain Status
     
-    /// Does squad have a captain assigned?
     var hasCaptain: Bool {
         captain != nil
     }
     
-    /// Does squad have a vice-captain assigned?
     var hasViceCaptain: Bool {
         viceCaptain != nil
     }
     
-    /// Are both captain roles filled?
     var hasBothCaptains: Bool {
         hasCaptain && hasViceCaptain
     }
     
     // MARK: - Transfer Status
     
-    /// Can make free transfer?
     var canMakeFreeTransfer: Bool {
         hasUnlimitedTransfers || freeTransfersRemaining > 0
     }
     
-    /// Cost of next transfer (0 if free, 4 if not)
     var nextTransferCost: Int {
         canMakeFreeTransfer ? 0 : 4
     }
     
-    /// Formatted transfer status
     var transferStatusText: String {
         if hasUnlimitedTransfers {
             return "Unlimited Transfers"
@@ -583,19 +563,16 @@ extension Squad {
     
     // MARK: - Points Analysis
     
-    /// Average points per player in squad
     var averagePoints: Double {
         guard let players = players, !players.isEmpty else { return 0.0 }
         let total = players.reduce(0) { $0 + $1.totalPoints }
         return Double(total) / Double(players.count)
     }
     
-    /// Total points including deductions
     var netPoints: Int {
         totalPoints - pointsDeductedFromTransfers
     }
     
-    /// Formatted net points
     var displayNetPoints: String {
         if pointsDeductedFromTransfers > 0 {
             return "\(netPoints) (\(totalPoints) - \(pointsDeductedFromTransfers))"
@@ -605,35 +582,23 @@ extension Squad {
     
     // MARK: - Squad Completion Status
     
-    /// Overall squad readiness percentage (0-100)
     var completionPercentage: Int {
         var score = 0
         let maxScore = 5
         
-        // Has 15 players (20%)
         if isFull { score += 1 }
-        
-        // Has valid starting XI (20%)
         if isValidXI { score += 1 }
-        
-        // Has 4 bench players (20%)
         if benchCount == 4 { score += 1 }
-        
-        // Has captain and vice-captain (20%)
         if hasBothCaptains { score += 1 }
-        
-        // Squad within budget (20%)
         if currentBudget >= 0 { score += 1 }
         
         return (score * 100) / maxScore
     }
     
-    /// Is squad ready for matchday?
     var isReadyForMatchday: Bool {
         isFull && isValidXI && benchCount == 4 && hasBothCaptains && currentBudget >= 0
     }
     
-    /// What's missing from squad?
     var missingRequirements: [String] {
         var missing: [String] = []
         
@@ -669,7 +634,6 @@ extension Squad {
     }
 }
 
-
 // MARK: - Tournament Stage Enum
 
 enum TournamentStage: String, Codable, CaseIterable {
@@ -702,7 +666,7 @@ enum TournamentStage: String, Codable, CaseIterable {
     
     var matchCount: Int {
         switch self {
-        case .groupStage: return 48 // 8 groups × 6 matches per group
+        case .groupStage: return 48
         case .roundOf16: return 8
         case .quarterFinals: return 4
         case .semiFinals: return 2
@@ -723,14 +687,11 @@ final class Matchday {
     var isActive: Bool
     var isFinished: Bool
     
-    // Group stage specific
-    var groupStageRound: Int? // 1, 2, or 3
+    var groupStageRound: Int?
     
-    // Transfer rules
     var hasUnlimitedTransfers: Bool
     var freeTransfersAllowed: Int
     
-    // Relationships
     @Relationship(deleteRule: .cascade, inverse: \Fixture.matchday)
     var fixtures: [Fixture]?
     
@@ -749,7 +710,6 @@ final class Matchday {
         self.stage = stage
         self.groupStageRound = groupStageRound
         
-        // Generate name
         if stage == .groupStage, let round = groupStageRound {
             self.name = "Matchday \(number) (Group Stage - Round \(round))"
         } else {
@@ -772,41 +732,34 @@ final class MatchdayPerformance {
     var matchdayNumber: Int
     var points: Int
     
-    // Appearance
     var didAppear: Bool
     var minutesPlayed: Int
     var played60Plus: Bool
     
-    // Scoring
     var goalsScored: Int
     var goalsOutsideBox: Int
     var assists: Int
     var ballsRecovered: Int
     
-    // Defensive
     var cleanSheet: Bool
     var goalsConceded: Int
     var saves: Int
     
-    // Discipline
     var yellowCards: Int
     var redCards: Int
     var ownGoals: Int
     
-    // Special
     var penaltiesWon: Int
     var penaltiesConceded: Int
     var penaltiesSaved: Int
     var penaltiesMissed: Int
     var playerOfTheMatch: Bool
     
-    // Captain/Vice-Captain
     var wasCaptain: Bool
     var wasViceCaptain: Bool
     var captainBonus: Int
-    var captainMultiplier: Int // 2 for normal, 3 if triple captain chip used
+    var captainMultiplier: Int
     
-    // Relationships
     @Relationship(deleteRule: .nullify)
     var player: Player?
     
@@ -842,58 +795,44 @@ final class MatchdayPerformance {
         self.captainMultiplier = 1
     }
     
-    // MARK: - Calculate Points
-    
     func calculatePoints(position: PlayerPosition) -> Int {
         var total = 0
         
-        // Appearance
         if didAppear { total += 1 }
         if played60Plus { total += 1 }
         
-        // Goals
         total += goalsScored * position.pointsForGoal()
         total += goalsOutsideBox
         
-        // Assists
         total += assists * 3
         
-        // Balls recovered (every 3)
         total += (ballsRecovered / 3)
         
-        // Clean sheet
         if cleanSheet {
             total += position.pointsForCleanSheet(minutesPlayed: minutesPlayed)
         }
         
-        // Goals conceded (GK and DEF only)
         if position == .goalkeeper || position == .defender {
             total -= (goalsConceded / 2)
         }
         
-        // Saves (GK only - every 3)
         if position == .goalkeeper {
             total += (saves / 3)
         }
         
-        // Penalties
         total += penaltiesWon * 2
         total -= penaltiesConceded
         total += penaltiesSaved * 5
         total -= penaltiesMissed * 2
         
-        // Discipline
         total -= yellowCards
         total -= redCards * 3
         total -= ownGoals * 2
         
-        // Player of the Match
         if playerOfTheMatch { total += 3 }
         
-        // Store base points
         self.points = total
         
-        // Captain multiplier
         if wasCaptain || wasViceCaptain {
             self.captainBonus = total * (captainMultiplier - 1)
             return total * captainMultiplier
@@ -909,14 +848,13 @@ final class MatchdayPerformance {
 final class MatchdaySquad {
     @Attribute(.unique) var id: UUID
     var matchdayNumber: Int
-    var squadSnapshot: [Int] // Player IDs
+    var squadSnapshot: [Int]
     var startingXISnapshot: [Int]
     var benchSnapshot: [Int]
     var captainID: Int
     var viceCaptainID: Int
     var formation: String
     
-    // Relationships
     @Relationship(deleteRule: .nullify)
     var squad: Squad?
     
@@ -940,10 +878,9 @@ final class Transfer {
     @Attribute(.unique) var id: UUID
     var matchdayNumber: Int
     var isFreeTransfer: Bool
-    var pointsDeducted: Int // 4 if not free
+    var pointsDeducted: Int
     var timestamp: Date
     
-    // Relationships
     @Relationship(deleteRule: .nullify)
     var playerIn: Player?
     
@@ -969,7 +906,7 @@ final class Transfer {
     }
 }
 
-// MARK: - Fixture Model (Individual Match)
+// MARK: - Fixture Model
 
 @Model
 final class Fixture {
@@ -985,16 +922,13 @@ final class Fixture {
     var hadPenaltyShootout: Bool
     var penaltyWinner: Nation?
     
-    // Group stage
-    var group: Group?
+    var group: WorldCupGroup?
     var venue: String?
     var city: String?
     
-    // Knockout stage
     var knockoutStage: TournamentStage?
-    var matchLabel: String? // "QF1", "SF2", "FINAL"
+    var matchLabel: String?
     
-    // Relationships
     @Relationship(deleteRule: .nullify)
     var matchday: Matchday?
     
@@ -1004,7 +938,7 @@ final class Fixture {
         homeNation: Nation,
         awayNation: Nation,
         kickoffTime: Date,
-        group: Group? = nil,
+        group: WorldCupGroup? = nil,
         knockoutStage: TournamentStage? = nil,
         venue: String? = nil,
         city: String? = nil

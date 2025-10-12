@@ -17,6 +17,9 @@ import SwiftData
 
 
 
+import SwiftUI
+import SwiftData
+
 struct ContentView: View {
     // MARK: - Dependencies
     let playerRepository: PlayerRepository
@@ -30,7 +33,10 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // Players tab
-            PlayersView(playerRepository: playerRepository)
+            PlayersView(
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )
                 .tabItem {
                     Label("Players", systemImage: "person.3")
                 }
@@ -104,16 +110,6 @@ struct LeaderboardView: View {
 }
 
 // MARK: - Child Views
-
-struct SquadManagementView: View {
-    let squadRepository: SquadRepository
-    let playerRepository: PlayerRepository
-    
-    var body: some View {
-        Text("Squad management view")
-            .navigationTitle("My Squad")
-    }
-}
 
 struct FixturesListView: View {
     let fixtureRepository: FixtureRepository
@@ -228,6 +224,11 @@ struct FixtureRowView: View {
         .font(.subheadline)
         .padding(.vertical, 4)
     }
+}
+
+// MARK: - Notification Extension
+extension Notification.Name {
+    static let squadDidUpdate = Notification.Name("squadDidUpdate")
 }
 
 // MARK: - ContentView Preview

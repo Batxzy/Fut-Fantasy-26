@@ -39,6 +39,7 @@ final class SquadViewModel {
         
         do {
             squad = try await squadRepository.fetchUserSquad()
+            print("✅ [ViewModel] Squad loaded: \(squad?.players?.count ?? 0) players, Budget: \(squad?.displayBudget ?? "N/A")")
         } catch {
             errorMessage = error.localizedDescription
             print("❌ Error loading squad: \(error)")
@@ -94,15 +95,23 @@ final class SquadViewModel {
         guard let squad = squad else { return }
         
         do {
+            print("🔄 [ViewModel] Starting transfer: \(oldPlayer.name) → \(newPlayer.name)")
+            
             // Remove old player
             try await squadRepository.removePlayerFromSquad(playerId: oldPlayer.id, squadId: squad.id)
+            print("✅ [ViewModel] Old player removed")
             
             // Add new player
             try await squadRepository.addPlayerToSquad(playerId: newPlayer.id, squadId: squad.id)
+            print("✅ [ViewModel] New player added")
             
+            // Reload squad to reflect changes
             await loadSquad()
+            print("✅ [ViewModel] Squad reloaded")
+            
         } catch {
             errorMessage = error.localizedDescription
+            print("❌ [ViewModel] Transfer failed: \(error)")
         }
     }
 }

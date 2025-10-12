@@ -9,6 +9,7 @@
 import Foundation
 import SwiftData
 
+
 @MainActor
 final class SwiftDataSquadRepository: SquadRepository {
     private let baseRepository: BaseRepository<Squad>
