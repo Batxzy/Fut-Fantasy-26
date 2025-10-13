@@ -435,23 +435,32 @@ struct PlayerSelectionView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Player.self, Squad.self,
-        configurations: config
-    )
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
     
     let context = container.mainContext
-    
-    // Seed data
     WorldCupDataSeeder.seedDataIfNeeded(context: context)
     
     let playerRepo = SwiftDataPlayerRepository(modelContext: context)
     let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
     
-    return PlayersView(
-        viewModel: PlayerViewModel(repository: playerRepo),
-        playerRepository: playerRepo,
-        squadRepository: squadRepo
-    )
+    return NavigationStack {
+        TransfersView(
+            playerRepository: playerRepo,
+            squadRepository: squadRepo,
+            viewModel: SquadViewModel(
+                squadRepository: squadRepo,
+                playerRepository: playerRepo
+            )
+        )
+    }
     .modelContainer(container)
 }

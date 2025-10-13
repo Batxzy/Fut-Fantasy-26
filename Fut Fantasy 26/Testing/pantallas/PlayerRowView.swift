@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import SwiftData
 
 struct PlayerRowView: View {
     let player: Player
@@ -68,4 +69,29 @@ struct PlayerRowView: View {
         }
         .padding(.vertical, 4)
     }
+}
+
+// MARK: - Preview
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    return List {
+        PlayerRowView(player: MockData.messi)
+        PlayerRowView(player: MockData.mbappe)
+        PlayerRowView(player: MockData.kane)
+    }
+    .modelContainer(container)
 }

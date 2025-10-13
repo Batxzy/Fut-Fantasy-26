@@ -214,3 +214,34 @@ struct PlayerDetailView: View {
         isProcessing = false
     }
 }
+
+// MARK: - Preview
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    
+    return NavigationStack {
+        PlayerDetailView(
+            player: MockData.messi,
+            viewModel: PlayerViewModel(repository: playerRepo),
+            playerRepository: playerRepo,
+            squadRepository: squadRepo
+        )
+    }
+    .modelContainer(container)
+}

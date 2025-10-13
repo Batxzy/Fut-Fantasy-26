@@ -43,3 +43,20 @@ struct InfoRow: View {
         .padding()
     }
 }
+
+// MARK: - Previews
+#Preview("StatBox") {
+    VStack {
+        StatBox(title: "Total Points", value: "125")
+        StatBox(title: "Price", value: "£12.0m")
+    }
+    .padding()
+}
+
+#Preview("InfoRow") {
+    List {
+        InfoRow(label: "Full Name", value: "Lionel Messi")
+        InfoRow(label: "Shirt Number", value: "#10")
+        InfoRow(label: "Group", value: "Group C")
+    }
+}

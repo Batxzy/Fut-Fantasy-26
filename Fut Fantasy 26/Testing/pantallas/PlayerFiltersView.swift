@@ -95,3 +95,15 @@ struct PlayerFiltersView: View {
         }
     }
 }
+
+// MARK: - Preview
+#Preview {
+    PlayerFiltersView(
+        selectedPosition: .constant(nil),
+        selectedNation: .constant(nil),
+        maxPrice: .constant(nil),
+        sortType: .constant(.points),
+        onApply: { print("Apply tapped") },
+        onReset: { print("Reset tapped") }
+    )
+}
