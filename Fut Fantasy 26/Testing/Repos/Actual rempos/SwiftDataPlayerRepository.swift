@@ -11,136 +11,77 @@ import SwiftData
 
 @MainActor
 final class SwiftDataPlayerRepository: PlayerRepository {
-    private let baseRepository: BaseRepository<Player>
     private let modelContext: ModelContext
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
-        self.baseRepository = BaseRepository<Player>(modelContext: modelContext)
     }
     
-    // MARK: - Player Queries
-    
-    func fetchPlayerById(_ id: Int) async throws -> Player? {
-        let predicate = #Predicate<Player> { $0.id == id }
-        return try await baseRepository.fetchOne(with: predicate)
-    }
-    
-    func fetchTopPlayers(limit: Int = 10) async throws -> [Player] {
-        return try await baseRepository.fetchWithPagination(
-            sortBy: [SortDescriptor(\.totalPoints, order: .reverse)],
-            limit: limit,
-            offset: 0
-        )
-    }
-    
-    func searchPlayers(query: String) async throws -> [Player] {
-        if query.isEmpty {
-            return try await fetchPlayersForSquadBuilding(limit: 100)
-        }
-        
-        let predicate = #Predicate<Player> {
-            $0.name.localizedStandardContains(query) ||
-            $0.firstName.localizedStandardContains(query) ||
-            $0.lastName.localizedStandardContains(query)
-        }
-        
-        return try await baseRepository.fetch(with: predicate)
-    }
-    
-    // --- NUKED AND REPLACED PREDICATE LOGIC ---
-    // This is the simplest, most stable implementation. No complex macros, no NSPredicate.
-    func fetchPlayersForSquadBuilding(
-        position: PlayerPosition? = nil,
-        nation: Nation? = nil,
-        priceUnder: Double? = nil,
-        sortType: PlayerSortType = .points,
-        limit: Int = 20,
-        offset: Int = 0
-    ) async throws -> [Player] {
-        
-        // 1. Fetch all players first.
-        let allPlayers = try await baseRepository.fetchAll()
-        
-        // 2. Apply filters in-memory. This is clear and avoids compiler issues.
-        var filteredPlayers = allPlayers
-        
-        if let position = position {
-            filteredPlayers = filteredPlayers.filter { $0.position == position }
-        }
-        
-        if let nation = nation {
-            filteredPlayers = filteredPlayers.filter { $0.nation == nation }
-        }
-        
-        if let priceUnder = priceUnder {
-            filteredPlayers = filteredPlayers.filter { $0.price <= priceUnder }
-        }
-        
-        // 3. Apply sorting.
-        switch sortType {
-        case .points:
-            filteredPlayers.sort { $0.totalPoints > $1.totalPoints }
-        case .price:
-            filteredPlayers.sort {
-                if $0.price != $1.price {
-                    return $0.price < $1.price
-                } else {
-                    return $0.totalPoints > $1.totalPoints
-                }
-            }
-        case .value:
-            // Sorting by computed property requires this approach
-            filteredPlayers.sort { $0.pointsPerPrice > $1.pointsPerPrice }
-        case .form:
-            filteredPlayers.sort { $0.matchdayPoints > $1.matchdayPoints }
-        }
-        
-        // 4. Apply pagination.
-        let startIndex = offset
-        let endIndex = min(startIndex + limit, filteredPlayers.count)
-        
-        if startIndex >= endIndex {
-            return [] // Return empty if the offset is out of bounds.
-        }
-        
-        return Array(filteredPlayers[startIndex..<endIndex])
-    }
-    
-    // MARK: - Player Management
+    // MARK: - Write Operations Only
     
     func addPlayer(_ player: Player) async throws {
-        try await baseRepository.insert(player)
+        print("⚽ [PlayerRepo] Adding player: \(player.name)")
+        modelContext.insert(player)
+        
+        do {
+            try modelContext.save()
+            print("✅ [PlayerRepo] Player saved successfully")
+        } catch {
+            print("❌ [PlayerRepo] Save failed: \(error)")
+            throw RepositoryError.saveFailed(underlyingError: error)
+        }
     }
     
     func updatePlayer(_ player: Player) async throws {
-        try await baseRepository.update(player)
+        print("⚽ [PlayerRepo] Updating player: \(player.name)")
+        
+        do {
+            try modelContext.save()
+            print("✅ [PlayerRepo] Player updated successfully")
+        } catch {
+            print("❌ [PlayerRepo] Update failed: \(error)")
+            throw RepositoryError.updateFailed(underlyingError: error)
+        }
     }
     
     func deletePlayer(_ player: Player) async throws {
-        try await baseRepository.delete(player)
+        print("⚽ [PlayerRepo] Deleting player: \(player.name)")
+        modelContext.delete(player)
+        
+        do {
+            try modelContext.save()
+            print("✅ [PlayerRepo] Player deleted successfully")
+        } catch {
+            print("❌ [PlayerRepo] Delete failed: \(error)")
+            throw RepositoryError.deleteFailed(underlyingError: error)
+        }
     }
-    
-    // MARK: - Player Performance Management
     
     func updatePlayerPerformance(
         playerId: Int,
         matchdayNumber: Int,
         stats: [String: Any]
     ) async throws {
-        guard let player = try await fetchPlayerById(playerId) else {
+        print("⚽ [PlayerRepo] Updating performance for player \(playerId)")
+        
+        // Fetch player using @Query pattern in the calling view
+        let predicate = #Predicate<Player> { $0.id == playerId }
+        var descriptor = FetchDescriptor<Player>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        
+        guard let player = try modelContext.fetch(descriptor).first else {
             throw RepositoryError.notFound
         }
         
-        let predicate = #Predicate<MatchdayPerformance> {
+        let perfPredicate = #Predicate<MatchdayPerformance> {
             $0.player?.id == playerId && $0.matchdayNumber == matchdayNumber
         }
         
-        var descriptor = FetchDescriptor<MatchdayPerformance>(predicate: predicate)
-        descriptor.fetchLimit = 1
+        var perfDescriptor = FetchDescriptor<MatchdayPerformance>(predicate: perfPredicate)
+        perfDescriptor.fetchLimit = 1
         
         let performance: MatchdayPerformance
-        if let existing = try modelContext.fetch(descriptor).first {
+        if let existing = try modelContext.fetch(perfDescriptor).first {
             performance = existing
         } else {
             performance = MatchdayPerformance(matchdayNumber: matchdayNumber, player: player)

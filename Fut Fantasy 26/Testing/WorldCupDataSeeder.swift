@@ -9,7 +9,6 @@
 import Foundation
 import SwiftData
 
-
 @MainActor
 class WorldCupDataSeeder {
     
@@ -18,13 +17,12 @@ class WorldCupDataSeeder {
     static func seedDataIfNeeded(context: ModelContext) {
         let descriptor = FetchDescriptor<Player>()
         guard (try? context.fetch(descriptor))?.isEmpty ?? true else {
-            // Data is already seeded, no need to print.
             return
         }
         
         print("🌱 Seeding initial World Cup data...")
         seedMatchdays(context: context)
-        seedPlayers(context: context) // Now includes more nations
+        seedPlayers(context: context)
         seedFixtures(context: context)
         
         do {
@@ -35,7 +33,16 @@ class WorldCupDataSeeder {
         }
     }
     
+    // MARK: - Helper to Fetch User Squad
+    
+    private static func fetchUserSquad(context: ModelContext) throws -> Squad? {
+        let descriptor = FetchDescriptor<Squad>()
+        let squads = try context.fetch(descriptor)
+        return squads.first
+    }
+    
     // MARK: - Squad Seeding (HARDCODED FIX)
+    
     @MainActor
     static func seedSquadIfNeeded(
         squadRepository: SquadRepository,
@@ -45,59 +52,43 @@ class WorldCupDataSeeder {
         print("👥 [Seeder] Checking squad status...")
         
         do {
-            // --- This part is the same: check if we need to seed ---
             let playerCount = try context.fetchCount(FetchDescriptor<Player>())
             guard playerCount > 0 else {
                 print("⚠️ [Seeder] No players found in database. Cannot seed squad.")
                 return
             }
             
-            var squad = try await squadRepository.fetchUserSquad()
+            // ✅ Fetch squad directly from context
+            var squad = try fetchUserSquad(context: context)
             
-            if (squad.players?.count ?? 0) != 15 {
-                print("⚠️ Squad is incomplete. Resetting.")
-                
-                if let existingSquad = try? context.fetch(FetchDescriptor<Squad>()).first {
-                    context.delete(existingSquad)
-                    try context.save()
-                    print("✅ Old squad deleted")
-                }
-                
-                squad = try await squadRepository.createSquad(teamName: "My Team")
-                print("✅ New empty squad created.")
-            } else {
+            if let existingSquad = squad, (existingSquad.players?.count ?? 0) == 15 {
                 print("✅ Squad is already full with 15 players. No action needed.")
                 return
             }
             
-            // --- NEW HARDCODED LOGIC ---
+            print("⚠️ Squad is incomplete or missing. Creating new squad.")
+            
+            // Delete old squad if exists
+            if let existingSquad = squad {
+                context.delete(existingSquad)
+                try context.save()
+                print("✅ Old squad deleted")
+            }
+            
+            // Create new squad
+            squad = try await squadRepository.createSquad(teamName: "My Team")
+            print("✅ New empty squad created.")
+            
+            // --- HARDCODED PLAYER SELECTION ---
             print("👥 [Seeder] Assembling a hardcoded default squad...")
-
-            // A hand-picked, valid squad of 15 player IDs.
-            // 3 ARG, 3 BRA, 3 ENG, 3 FRA, 3 GER
+            
             let defaultSquadPlayerIDs: [Int] = [
-                // Goalkeepers (2)
-                1,  // E. Martínez (ARG)
-                12, // Alisson (BRA)
-                // Defenders (5)
-                2,  // C. Romero (ARG)
-                13, // Marquinhos (BRA)
-                24, // K. Walker (ENG)
-                35, // T. Hernández (FRA)
-                40, // A. Rüdiger (GER)
-                // Midfielders (5)
-                6,  // E. Fernández (ARG)
-                16, // Casemiro (BRA)
-                28, // J. Bellingham (ENG)
-                37, // A. Griezmann (FRA)
-                41, // J. Kimmich (GER)
-                // Forwards (3)
-                31, // H. Kane (ENG)
-                38, // K. Mbappé (FRA)
-                43  // K. Havertz (GER)
+                1, 12,  // GK
+                2, 13, 24, 35, 40,  // DEF
+                6, 16, 28, 37, 41,  // MID
+                31, 38, 43  // FWD
             ]
             
-            // Fetch only the players we need. This is simple and fast.
             let predicate = #Predicate<Player> { defaultSquadPlayerIDs.contains($0.id) }
             let descriptor = FetchDescriptor<Player>(predicate: predicate)
             let playersForSquad = try context.fetch(descriptor)
@@ -109,22 +100,23 @@ class WorldCupDataSeeder {
             
             print("✅ Fetched 15 specific players. Adding to squad...")
             for player in playersForSquad {
-                try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
+                try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad!.id)
             }
             
-            // --- The rest of the logic remains the same ---
-            squad = try await squadRepository.fetchUserSquad()
-            guard let allPlayers = squad.players else {
-                fatalError("Squad players are nil after adding them.")
+            // ✅ Refresh squad from context
+            squad = try fetchUserSquad(context: context)
+            
+            guard let allPlayers = squad?.players else {
+                print("❌ Squad players are nil after adding them.")
+                return
             }
             
-            // Sort the players to ensure consistent starting XI selection
             let sortedPlayers = allPlayers.sorted { $0.id < $1.id }
             
-            let gks = sortedPlayers.filter { $0.position == .goalkeeper }
-            let defs = sortedPlayers.filter { $0.position == .defender }
-            let mids = sortedPlayers.filter { $0.position == .midfielder }
-            let fwds = sortedPlayers.filter { $0.position == .forward }
+            let gks = sortedPlayers.filter { $0.position == PlayerPosition.goalkeeper }
+            let defs = sortedPlayers.filter { $0.position == PlayerPosition.defender }
+            let mids = sortedPlayers.filter { $0.position == PlayerPosition.midfielder }
+            let fwds = sortedPlayers.filter { $0.position == PlayerPosition.forward }
             
             let startingXI = Array(gks.prefix(1)) + Array(defs.prefix(4)) + Array(mids.prefix(4)) + Array(fwds.prefix(2))
             
@@ -132,43 +124,46 @@ class WorldCupDataSeeder {
                 print("❌ Could not form a starting XI of 11. Players found: GK(\(gks.count)), D(\(defs.count)), M(\(mids.count)), F(\(fwds.count))")
                 return
             }
-
+            
             print("✅ [Seeder] Setting starting XI...")
-            try await squadRepository.setSquadStartingXI(squadId: squad.id, startingXI: startingXI.map { $0.id })
+            try await squadRepository.setSquadStartingXI(squadId: squad!.id, startingXI: startingXI.map { $0.id })
             print("✅ [Seeder] Starting XI set")
             
             if let captain = startingXI.first(where: { $0.name == "K. Mbappé" }),
                let viceCaptain = startingXI.first(where: { $0.name == "H. Kane" }) {
-                try await squadRepository.setCaptain(squadId: squad.id, captainId: captain.id, viceCaptainId: viceCaptain.id)
+                try await squadRepository.setCaptain(playerId: captain.id, squadId: squad!.id)
+                try await squadRepository.setViceCaptain(playerId: viceCaptain.id, squadId: squad!.id)
                 print("✅ [Seeder] Captain and vice-captain set")
             }
             
-            let finalSquad = try await squadRepository.fetchUserSquad()
+            // ✅ Final refresh
+            squad = try fetchUserSquad(context: context)
+            
             print("\n🎉 [Seeder] Squad setup complete!")
-            print("   - Players: \(finalSquad.players?.count ?? 0)/15")
-            print("   - Budget: \(finalSquad.displayBudget)\n")
+            print("   - Players: \(squad?.players?.count ?? 0)/15")
+            print("   - Budget: \(squad?.displayBudget ?? "N/A")\n")
             
         } catch {
             print("❌ [Seeder] ERROR during squad seeding: \(error)")
         }
     }
-
+    
     // MARK: - Matchdays
     
     static func seedMatchdays(context: ModelContext) {
         let matchdays: [(number: Int, stage: TournamentStage, deadline: String, round: Int?, unlimited: Bool, freeTransfers: Int)] = [
-             (1, .groupStage, "2026-06-11 15:00", 1, true, 999),
-             (2, .groupStage, "2026-06-12 15:00", 1, false, 1),
-             (3, .groupStage, "2026-06-16 15:00", 2, false, 1),
-             (4, .groupStage, "2026-06-17 15:00", 2, false, 1),
-             (5, .groupStage, "2026-06-21 15:00", 3, false, 1),
-             (6, .groupStage, "2026-06-22 15:00", 3, false, 1),
-             (7, .roundOf16, "2026-06-27 15:00", nil, true, 999),
-             (8, .roundOf16, "2026-06-28 15:00", nil, false, 2),
-             (9, .quarterFinals, "2026-07-04 15:00", nil, false, 2),
-             (10, .semiFinals, "2026-07-08 15:00", nil, false, 1),
-             (11, .thirdPlace, "2026-07-12 15:00", nil, false, 0),
-             (12, .final, "2026-07-13 15:00", nil, false, 0)
+            (1, .groupStage, "2026-06-11 15:00", 1, true, 999),
+            (2, .groupStage, "2026-06-12 15:00", 1, false, 1),
+            (3, .groupStage, "2026-06-16 15:00", 2, false, 1),
+            (4, .groupStage, "2026-06-17 15:00", 2, false, 1),
+            (5, .groupStage, "2026-06-21 15:00", 3, false, 1),
+            (6, .groupStage, "2026-06-22 15:00", 3, false, 1),
+            (7, .roundOf16, "2026-06-27 15:00", nil, true, 999),
+            (8, .roundOf16, "2026-06-28 15:00", nil, false, 2),
+            (9, .quarterFinals, "2026-07-04 15:00", nil, false, 2),
+            (10, .semiFinals, "2026-07-08 15:00", nil, false, 1),
+            (11, .thirdPlace, "2026-07-12 15:00", nil, false, 0),
+            (12, .final, "2026-07-13 15:00", nil, false, 0)
         ]
         
         for md in matchdays {
@@ -240,7 +235,17 @@ class WorldCupDataSeeder {
         
         var playerId = 1
         for player in playerData {
-            let newPlayer = Player(id: playerId, name: player.name, firstName: player.firstName, lastName: player.lastName, position: player.pos, nation: player.nation, shirtNumber: player.shirt, price: player.price, group: player.nation.group)
+            let newPlayer = Player(
+                id: playerId,
+                name: player.name,
+                firstName: player.firstName,
+                lastName: player.lastName,
+                position: player.pos,
+                nation: player.nation,
+                shirtNumber: player.shirt,
+                price: player.price,
+                group: player.nation.group
+            )
             context.insert(newPlayer)
             playerId += 1
         }
@@ -257,7 +262,17 @@ class WorldCupDataSeeder {
         ]
         
         for fixture in fixtures {
-            let newFixture = Fixture(id: fixture.id, matchdayNumber: fixture.md, homeNation: fixture.home, awayNation: fixture.away, kickoffTime: parseDate(fixture.kickoff), group: fixture.group, knockoutStage: fixture.stage, venue: nil, city: nil)
+            let newFixture = Fixture(
+                id: fixture.id,
+                matchdayNumber: fixture.md,
+                homeNation: fixture.home,
+                awayNation: fixture.away,
+                kickoffTime: parseDate(fixture.kickoff),
+                group: fixture.group,
+                knockoutStage: fixture.stage,
+                venue: nil,
+                city: nil
+            )
             context.insert(newFixture)
         }
     }

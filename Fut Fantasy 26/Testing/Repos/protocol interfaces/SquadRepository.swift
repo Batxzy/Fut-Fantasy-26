@@ -8,15 +8,14 @@
 
 import Foundation
 
+import Foundation
+
 protocol SquadRepository {
-    func fetchUserSquad() async throws -> Squad
-    func fetchSquadById(_ id: UUID) async throws -> Squad?
+    func createSquad(teamName: String) async throws -> Squad
+    func updateSquad(_ squad: Squad) async throws
     func addPlayerToSquad(playerId: Int, squadId: UUID) async throws
     func removePlayerFromSquad(playerId: Int, squadId: UUID) async throws
     func setSquadStartingXI(squadId: UUID, startingXI: [Int]) async throws
-    func setCaptain(squadId: UUID, captainId: Int, viceCaptainId: Int) async throws
-    func createSquad(teamName: String) async throws -> Squad
-    func updateSquad(_ squad: Squad) async throws
     func setCaptain(playerId: Int, squadId: UUID) async throws
     func setViceCaptain(playerId: Int, squadId: UUID) async throws
 }

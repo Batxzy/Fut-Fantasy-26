@@ -4,56 +4,59 @@
 //
 //  Created by Jose julian Lopez on 12/10/25.
 //
-
-import SwiftUI
 import SwiftData
-
-
-
 import SwiftUI
-import SwiftData
+
+
 
 struct ContentView: View {
-    // MARK: - Dependencies
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     let matchdayRepository: MatchdayRepository
     let fixtureRepository: FixtureRepository
     
-    // MARK: - State
+    // ✅ Create ViewModels here
+    @State private var playerViewModel: PlayerViewModel?
+    @State private var squadViewModel: SquadViewModel?
+    
     @State private var selectedTab = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
             // Players tab
-            PlayersView(
-                playerRepository: playerRepository,
-                squadRepository: squadRepository
-            )
+            if let playerViewModel = playerViewModel,
+               let squadViewModel = squadViewModel {
+                PlayersView(
+                    viewModel: playerViewModel,
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
+                )
                 .tabItem {
                     Label("Players", systemImage: "person.3")
                 }
                 .tag(0)
-            
-            // My Squad tab
-            SquadBrowserView(
-                squadRepository: squadRepository,
-                playerRepository: playerRepository
-            )
+                
+                // My Squad tab
+                SquadView(
+                    viewModel: squadViewModel,
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
+                )
                 .tabItem {
                     Label("My Squad", systemImage: "sportscourt")
                 }
                 .tag(1)
+            }
             
             // Fixtures tab
-            FixturesBrowserView(
+            FixturesListView(
                 fixtureRepository: fixtureRepository,
                 matchdayRepository: matchdayRepository
             )
-                .tabItem {
-                    Label("Fixtures", systemImage: "calendar")
-                }
-                .tag(2)
+            .tabItem {
+                Label("Fixtures", systemImage: "calendar")
+            }
+            .tag(2)
             
             // Leaderboard tab
             LeaderboardView()
@@ -62,113 +65,58 @@ struct ContentView: View {
                 }
                 .tag(3)
         }
-    }
-}
-
-// MARK: - Tab Container Views
-
-struct SquadBrowserView: View {
-    let squadRepository: SquadRepository
-    let playerRepository: PlayerRepository
-    
-    var body: some View {
-        SquadView(
-            squadRepository: squadRepository,
-            playerRepository: playerRepository
-        )
-    }
-}
-
-struct FixturesBrowserView: View {
-    let fixtureRepository: FixtureRepository
-    let matchdayRepository: MatchdayRepository
-    
-    var body: some View {
-        NavigationStack {
-            FixturesListView(
-                fixtureRepository: fixtureRepository,
-                matchdayRepository: matchdayRepository
-            )
+        .onAppear {
+            if playerViewModel == nil {
+                playerViewModel = PlayerViewModel(repository: playerRepository)
+            }
+            if squadViewModel == nil {
+                squadViewModel = SquadViewModel(
+                    squadRepository: squadRepository,
+                    playerRepository: playerRepository
+                )
+            }
         }
     }
 }
 
-struct LeaderboardView: View {
-    var body: some View {
-        NavigationStack {
-            Text("Leaderboard coming soon")
-                .navigationTitle("Leaderboard")
-        }
-    }
-}
-
-// MARK: - Child Views
+// MARK: - Fixtures List (with @Query)
 
 struct FixturesListView: View {
     let fixtureRepository: FixtureRepository
     let matchdayRepository: MatchdayRepository
-    @State private var fixtures: [Fixture] = []
-    @State private var currentMatchday: Matchday?
-    @State private var isLoading = true
-    @State private var errorMessage: String?
     
-    var body: some View {
-        content
-            .navigationTitle("Fixtures")
-            .task {
-                if fixtures.isEmpty {
-                    await loadFixtures()
-                }
-            }
+    // ✅ @Query for fixtures
+    @Query(sort: \Fixture.kickoffTime) private var allFixtures: [Fixture]
+    
+    // ✅ @Query for matchdays
+    @Query(sort: \Matchday.number) private var allMatchdays: [Matchday]
+    
+    var currentMatchday: Matchday? {
+        allMatchdays.first { $0.isActive } ?? allMatchdays.first
     }
     
-    @ViewBuilder
-    private var content: some View {
-        if isLoading {
-            ProgressView("Loading fixtures...")
-        } else if let errorMessage = errorMessage {
-            ContentUnavailableView {
-                Label("Error", systemImage: "exclamationmark.triangle")
-            } description: {
-                Text(errorMessage)
-            } actions: {
-                Button("Retry") {
-                    Task { await loadFixtures() }
-                }
-            }
-        } else if fixtures.isEmpty {
-            ContentUnavailableView("No fixtures available", systemImage: "calendar.badge.exclamationmark")
-        } else {
-            List {
-                if let matchday = currentMatchday {
-                    Section(header: Text(matchday.name)) {
-                        ForEach(fixtures, id: \.id) { fixture in
-                            FixtureRowView(fixture: fixture)
+    var fixturesForCurrentMatchday: [Fixture] {
+        guard let matchday = currentMatchday else { return [] }
+        return allFixtures.filter { $0.matchdayNumber == matchday.number }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            if fixturesForCurrentMatchday.isEmpty {
+                ContentUnavailableView("No fixtures available", systemImage: "calendar.badge.exclamationmark")
+            } else {
+                List {
+                    if let matchday = currentMatchday {
+                        Section(header: Text(matchday.name)) {
+                            ForEach(fixturesForCurrentMatchday, id: \.id) { fixture in
+                                FixtureRowView(fixture: fixture)
+                            }
                         }
                     }
                 }
             }
-            .refreshable {
-                await loadFixtures()
-            }
         }
-    }
-    
-    private func loadFixtures() async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            currentMatchday = try await matchdayRepository.fetchCurrentMatchday()
-            if let matchday = currentMatchday {
-                fixtures = try await fixtureRepository.fetchFixturesForMatchday(matchday.number)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            print("❌ Error loading fixtures: \(error)")
-        }
-        
-        isLoading = false
+        .navigationTitle("Fixtures")
     }
 }
 
@@ -178,7 +126,6 @@ struct FixtureRowView: View {
     var body: some View {
         HStack {
             HStack {
-                // Home Team
                 Text(fixture.homeNation.rawValue)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .lineLimit(1)
@@ -199,7 +146,6 @@ struct FixtureRowView: View {
                 .frame(minWidth: 50)
             
             HStack {
-                // Away Team
                 AsyncImage(url: URL(string: fixture.awayFlagURL)) {
                     $0.resizable().aspectRatio(contentMode: .fit)
                 } placeholder: {
@@ -219,44 +165,55 @@ struct FixtureRowView: View {
     }
 }
 
+struct LeaderboardView: View {
+    var body: some View {
+        NavigationStack {
+            Text("Leaderboard coming soon")
+                .navigationTitle("Leaderboard")
+        }
+    }
+}
+
+
+
+
 // MARK: - Notification Extension
 extension Notification.Name {
     static let squadDidUpdate = Notification.Name("squadDidUpdate")
 }
 
-#Preview {
-    let container = SwiftDataManager.shared.previewContainer
-    let contextProvider = ModelContextProvider(container: container)
-    let mainContext = contextProvider.mainContext
 
-    MainActor.assumeIsolated {
-        WorldCupDataSeeder.seedDataIfNeeded(context: mainContext)
+// MARK: - Preview (FIXED)
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container: \(error)")
     }
     
-    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
-    let matchdayRepository: MatchdayRepository = SwiftDataMatchdayRepository(modelContext: mainContext)
-    let fixtureRepository: FixtureRepository = SwiftDataFixtureRepository(modelContext: mainContext)
-    let squadRepository: SquadRepository = SwiftDataSquadRepository(modelContext: mainContext, playerRepository: playerRepository)
+    let context = container.mainContext
     
-    // Create the ContentView first
-    let contentView = ContentView(
-        playerRepository: playerRepository,
-        squadRepository: squadRepository,
-        matchdayRepository: matchdayRepository,
-        fixtureRepository: fixtureRepository
+    // Seed data
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    // Create repositories
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    let matchdayRepo = SwiftDataMatchdayRepository(modelContext: context)
+    let fixtureRepo = SwiftDataFixtureRepository(modelContext: context)
+    
+    // Return the view
+    return ContentView(
+        playerRepository: playerRepo,
+        squadRepository: squadRepo,
+        matchdayRepository: matchdayRepo,
+        fixtureRepository: fixtureRepo
     )
-
-    // Return the view and attach the async task
-    return contentView
-        .task {
-            // This now runs when the preview appears
-            print("🚀 [Preview] Seeding squad...")
-            await WorldCupDataSeeder.seedSquadIfNeeded(
-                squadRepository: squadRepository,
-                playerRepository: playerRepository,
-                context: mainContext
-            )
-            print("✅ [Preview] Squad seeding complete.")
-        }
-        .modelContainer(container)
+    .modelContainer(container)
 }

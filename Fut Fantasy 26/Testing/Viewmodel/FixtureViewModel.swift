@@ -5,13 +5,7 @@
 //  Created by Jose julian Lopez on 12/10/25.
 //
 
-
-//
-//  FixtureViewModel.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 12/10/25.
-//
+/*
 
 import Foundation
 import Observation
@@ -122,3 +116,4 @@ final class FixtureViewModel {
         }
     }
 }
+*/

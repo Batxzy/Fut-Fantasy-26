@@ -24,15 +24,12 @@ struct FormationView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Pitch background
                 pitchBackground
                 
                 if startingXI.isEmpty {
-                    // Empty state
                     emptyPitchState
                 } else {
                     VStack(spacing: 0) {
-                        // Goalkeeper (1)
                         formationLine(
                             players: goalkeepers,
                             position: .goalkeeper,
@@ -42,7 +39,6 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // Defenders (4)
                         formationLine(
                             players: defenders,
                             position: .defender,
@@ -52,7 +48,6 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // Midfielders (3)
                         formationLine(
                             players: midfielders,
                             position: .midfielder,
@@ -62,7 +57,6 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // Forwards (3)
                         formationLine(
                             players: forwards,
                             position: .forward,
@@ -79,9 +73,10 @@ struct FormationView: View {
         .aspectRatio(0.7, contentMode: .fit)
     }
     
+    // MARK: - Background Components
+    
     private var pitchBackground: some View {
         ZStack {
-            // Grass texture
             LinearGradient(
                 colors: [
                     Color.green.opacity(0.3),
@@ -94,54 +89,55 @@ struct FormationView: View {
                 endPoint: .bottom
             )
             
-            // Pitch lines
-            VStack(spacing: 0) {
-                // Top box (Goalkeeper area)
-                Rectangle()
-                    .stroke(.white.opacity(0.4), lineWidth: 2)
-                    .frame(height: 50)
-                    .padding(.horizontal, 60)
-                    .padding(.top, 10)
-                
-                Spacer()
-                
-                // Center circle
-                Circle()
-                    .stroke(.white.opacity(0.4), lineWidth: 2)
-                    .frame(width: 80, height: 80)
-                
-                // Middle line
-                Rectangle()
-                    .fill(.white.opacity(0.4))
-                    .frame(height: 2)
-                    .offset(y: -40)
-                
-                Spacer()
-                
-                // Bottom box
-                Rectangle()
-                    .stroke(.white.opacity(0.4), lineWidth: 2)
-                    .frame(height: 50)
-                    .padding(.horizontal, 60)
-                    .padding(.bottom, 10)
-            }
-            
-            // Corner circles
-            VStack {
-                HStack {
-                    cornerArc
-                    Spacer()
-                    cornerArc.rotation3DEffect(.degrees(90), axis: (x: 0, y: 1, z: 0))
-                }
-                Spacer()
-                HStack {
-                    cornerArc.rotation3DEffect(.degrees(-90), axis: (x: 1, y: 0, z: 0))
-                    Spacer()
-                    cornerArc.rotation3DEffect(.degrees(180), axis: (x: 1, y: 1, z: 0))
-                }
-            }
+            pitchLines
+            cornerCircles
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+    
+    private var pitchLines: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .frame(height: 50)
+                .padding(.horizontal, 60)
+                .padding(.top, 10)
+            
+            Spacer()
+            
+            Circle()
+                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .frame(width: 80, height: 80)
+            
+            Rectangle()
+                .fill(.white.opacity(0.4))
+                .frame(height: 2)
+                .offset(y: -40)
+            
+            Spacer()
+            
+            Rectangle()
+                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .frame(height: 50)
+                .padding(.horizontal, 60)
+                .padding(.bottom, 10)
+        }
+    }
+    
+    private var cornerCircles: some View {
+        VStack {
+            HStack {
+                cornerArc
+                Spacer()
+                cornerArc.rotation3DEffect(.degrees(90), axis: (x: 0, y: 1, z: 0))
+            }
+            Spacer()
+            HStack {
+                cornerArc.rotation3DEffect(.degrees(-90), axis: (x: 1, y: 0, z: 0))
+                Spacer()
+                cornerArc.rotation3DEffect(.degrees(180), axis: (x: 1, y: 1, z: 0))
+            }
+        }
     }
     
     private var cornerArc: some View {
@@ -170,8 +166,15 @@ struct FormationView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
+    // MARK: - Formation Line (FIXED)
+    
     @ViewBuilder
-    private func formationLine(players: [Player], position: PlayerPosition, geometry: GeometryProxy, lineHeight: CGFloat) -> some View {
+    private func formationLine(
+        players: [Player],
+        position: PlayerPosition,
+        geometry: GeometryProxy,
+        lineHeight: CGFloat
+    ) -> some View {
         HStack(spacing: 0) {
             if players.isEmpty {
                 Spacer()
@@ -182,58 +185,9 @@ struct FormationView: View {
                     Spacer()
                     
                     if isDragMode {
-                        PitchPlayerCard(
-                            player: player,
-                            isCaptain: captain?.id == player.id,
-                            isViceCaptain: viceCaptain?.id == player.id,
-                            isDragMode: isDragMode
-                        )
-                        .opacity(draggedPlayer?.id == player.id ? 0.4 : 1.0)
-                        .onDrag {
-                            self.draggedPlayer = player
-                            return NSItemProvider(object: "\(player.id)" as NSString)
-                        }
-                        .onDrop(of: ["public.text"], isTargeted: nil) { providers in
-                            guard let sourcePlayerId = providers.first else { return false }
-                            
-                            var sourceIndex: Int = -1
-                            var destinationIndex: Int = -1
-                            
-                            // Find source player's position in starting XI
-                            for (i, p) in startingXI.enumerated() {
-                                if p.id == draggedPlayer?.id {
-                                    sourceIndex = i
-                                }
-                                if p.id == player.id {
-                                    destinationIndex = i
-                                }
-                            }
-                            
-                            if sourceIndex != -1 && destinationIndex != -1 {
-                                // Only allow swapping players of the same position
-                                if startingXI[sourceIndex].position == startingXI[destinationIndex].position {
-                                    onPlayerMove(sourceIndex, destinationIndex)
-                                    draggedPlayer = nil
-                                    return true
-                                }
-                            }
-                            return false
-                        }
+                        playerCardWithDrag(player: player)
                     } else {
-                        NavigationLink(destination: PlayerDetailView(player: player, playerRepository: playerRepository, squadRepository: squadRepository)) {
-                            PitchPlayerCard(
-                                player: player,
-                                isCaptain: captain?.id == player.id,
-                                isViceCaptain: viceCaptain?.id == player.id,
-                                isDragMode: isDragMode
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .onTapGesture {
-                            if !isDragMode {
-                                onPlayerTap(player)
-                            }
-                        }
+                        playerCardWithNavigation(player: player)
                     }
                     
                     Spacer()
@@ -243,24 +197,95 @@ struct FormationView: View {
         .frame(height: lineHeight)
     }
     
-    // Computed properties for positions
+    // MARK: - Player Card Builders (FIXED - Separated Logic)
+    
+    private func playerCardWithDrag(player: Player) -> some View {
+        PitchPlayerCard(
+            player: player,
+            isCaptain: captain?.id == player.id,
+            isViceCaptain: viceCaptain?.id == player.id,
+            isDragMode: isDragMode
+        )
+        .opacity(draggedPlayer?.id == player.id ? 0.4 : 1.0)
+        .onDrag {
+            self.draggedPlayer = player
+            return NSItemProvider(object: "\(player.id)" as NSString)
+        }
+        .onDrop(of: ["public.text"], isTargeted: nil) { providers in
+            handleDrop(on: player, providers: providers)
+        }
+    }
+    
+    private func playerCardWithNavigation(player: Player) -> some View {
+        NavigationLink(
+            destination: PlayerDetailView(
+                player: player,
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )
+        ) {
+            PitchPlayerCard(
+                player: player,
+                isCaptain: captain?.id == player.id,
+                isViceCaptain: viceCaptain?.id == player.id,
+                isDragMode: isDragMode
+            )
+        }
+        .buttonStyle(.plain)
+        .onTapGesture {
+            if !isDragMode {
+                onPlayerTap(player)
+            }
+        }
+    }
+    
+    // MARK: - Drop Handler (FIXED - Extracted)
+    
+    private func handleDrop(on player: Player, providers: [NSItemProvider]) -> Bool {
+        guard draggedPlayer != nil else { return false }
+        
+        var sourceIndex: Int = -1
+        var destinationIndex: Int = -1
+        
+        for (i, p) in startingXI.enumerated() {
+            if p.id == draggedPlayer?.id {
+                sourceIndex = i
+            }
+            if p.id == player.id {
+                destinationIndex = i
+            }
+        }
+        
+        if sourceIndex != -1 && destinationIndex != -1 {
+            if startingXI[sourceIndex].position == startingXI[destinationIndex].position {
+                onPlayerMove(sourceIndex, destinationIndex)
+                draggedPlayer = nil
+                return true
+            }
+        }
+        return false
+    }
+    
+    // MARK: - Position Filters
+    
     private var goalkeepers: [Player] {
         startingXI.filter { $0.position == .goalkeeper }
     }
     
     private var defenders: [Player] {
         let defs = startingXI.filter { $0.position == .defender }
-        return Array(defs.prefix(4)) // Ensure max 4
+        return Array(defs.prefix(4))
     }
     
     private var midfielders: [Player] {
         let mids = startingXI.filter { $0.position == .midfielder }
-        return Array(mids.prefix(3)) // Ensure max 3
+        return Array(mids.prefix(3))
     }
     
     private var forwards: [Player] {
         let fwds = startingXI.filter { $0.position == .forward }
-        return Array(fwds.prefix(3)) // Ensure max 3
+        return Array(fwds.prefix(3))
     }
 }
 
@@ -275,96 +300,103 @@ struct PitchPlayerCard: View {
     var body: some View {
         VStack(spacing: 6) {
             ZStack(alignment: .topTrailing) {
-                // Player card with flag and initials
-                ZStack {
-                    // Background circle with position color
-                    Circle()
-                        .fill(positionColor.opacity(0.9))
-                        .frame(width: 60, height: 60)
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                    
-                    // White inner circle
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 56, height: 56)
-                    
-                    VStack(spacing: 2) {
-                        // Country flag
-                        AsyncImage(url: URL(string: player.nationFlagURL)) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                        }
-                        .frame(width: 32, height: 20)
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(Color.black.opacity(0.1), lineWidth: 0.5)
-                        }
-                        
-                        // Player initials
-                        Text(playerInitials)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.primary)
-                    }
-                }
-                
-                // Captain badge
-                if isCaptain {
-                    Text("C")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(.blue))
-                        .overlay {
-                            Circle().stroke(.white, lineWidth: 1.5)
-                        }
-                        .offset(x: 6, y: -6)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                } else if isViceCaptain {
-                    Text("V")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 18, height: 18)
-                        .background(Circle().fill(.purple))
-                        .overlay {
-                            Circle().stroke(.white, lineWidth: 1.5)
-                        }
-                        .offset(x: 6, y: -6)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                }
+                playerCircle
+                captainBadge
             }
             
-            // Player name
-            Text(player.lastName.isEmpty ? player.name : player.lastName)
-                .font(.system(size: 11, weight: .semibold))
-                .lineLimit(1)
-                .frame(width: 70)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(
-                    Capsule()
-                        .fill(.white.opacity(0.95))
-                        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
-                )
-            
-            // Points
-            Text("\(player.totalPoints)")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(
-                    Capsule()
-                        .fill(.black.opacity(0.6))
-                )
+            playerName
+            playerPoints
         }
         .opacity(isDragMode ? 0.8 : 1.0)
         .scaleEffect(isDragMode ? 0.95 : 1.0)
         .animation(.spring(response: 0.3), value: isDragMode)
+    }
+    
+    private var playerCircle: some View {
+        ZStack {
+            Circle()
+                .fill(positionColor.opacity(0.9))
+                .frame(width: 60, height: 60)
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            
+            Circle()
+                .fill(.white)
+                .frame(width: 56, height: 56)
+            
+            VStack(spacing: 2) {
+                AsyncImage(url: URL(string: player.nationFlagURL)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 32, height: 20)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Color.black.opacity(0.1), lineWidth: 0.5)
+                }
+                
+                Text(playerInitials)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.primary)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var captainBadge: some View {
+        if isCaptain {
+            Text("C")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(.blue))
+                .overlay {
+                    Circle().stroke(.white, lineWidth: 1.5)
+                }
+                .offset(x: 6, y: -6)
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        } else if isViceCaptain {
+            Text("V")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(.purple))
+                .overlay {
+                    Circle().stroke(.white, lineWidth: 1.5)
+                }
+                .offset(x: 6, y: -6)
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+    }
+    
+    private var playerName: some View {
+        Text(player.lastName.isEmpty ? player.name : player.lastName)
+            .font(.system(size: 11, weight: .semibold))
+            .lineLimit(1)
+            .frame(width: 70)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(.white.opacity(0.95))
+                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+            )
+    }
+    
+    private var playerPoints: some View {
+        Text("\(player.totalPoints)")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(
+                Capsule()
+                    .fill(.black.opacity(0.6))
+            )
     }
     
     private var playerInitials: String {
@@ -418,27 +450,31 @@ struct EmptyPlayerSlot: View {
 
 // MARK: - Preview
 #Preview {
-    let container = SwiftDataManager.shared.previewContainer
-    let contextProvider = ModelContextProvider(container: container)
-    let mainContext = contextProvider.mainContext
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Player.self, Squad.self,
+        configurations: config
+    )
     
-    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
-    let squadRepository: SquadRepository = SwiftDataSquadRepository(modelContext: mainContext, playerRepository: playerRepository)
+    let context = container.mainContext
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
     
     return ZStack {
         Color.gray.opacity(0.2).ignoresSafeArea()
         
         VStack {
-            // Preview with players
             FormationView(
-                startingXI: [], // Empty for now
-                captain: nil,
-                viceCaptain: nil,
+                startingXI: MockData.startingXI,
+                captain: MockData.mbappe,
+                viceCaptain: MockData.deBruyne,
                 isDragMode: false,
                 onPlayerTap: { _ in },
                 onPlayerMove: { _, _ in },
-                playerRepository: playerRepository,
-                squadRepository: squadRepository
+                playerRepository: playerRepo,
+                squadRepository: squadRepo
             )
             .padding()
         }

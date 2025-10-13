@@ -10,70 +10,83 @@ import SwiftData
 
 @main
 struct FantasyFootballApp: App {
-    // Single source of truth for the data container and context provider
-    let dataManager: SwiftDataManager
-    let contextProvider: ModelContextProvider
-    
-    // Repositories are now properties of the App
-    let playerRepository: PlayerRepository
-    let squadRepository: SquadRepository
-    let matchdayRepository: MatchdayRepository
-    let fixtureRepository: FixtureRepository
+    let modelContainer: ModelContainer
     
     init() {
-        // 1. Initialize data manager and context provider
-        self.dataManager = SwiftDataManager.shared
-        self.contextProvider = ModelContextProvider(container: dataManager.container)
-        
-        // 2. Create a shared main context
-        let mainContext = contextProvider.mainContext
-        
-        // 3. Initialize repositories with the shared context
-        // Note: Repositories that depend on other repositories must be initialized in order.
-        self.playerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
-        self.matchdayRepository = SwiftDataMatchdayRepository(modelContext: mainContext)
-        self.fixtureRepository = SwiftDataFixtureRepository(modelContext: mainContext)
-        
-        // SquadRepository depends on PlayerRepository, so we inject it.
-        self.squadRepository = SwiftDataSquadRepository(
-            modelContext: mainContext,
-            playerRepository: self.playerRepository
-        )
+        do {
+            let schema = Schema([
+                Player.self,
+                Squad.self,
+                Matchday.self,
+                MatchdayPerformance.self,
+                MatchdaySquad.self,
+                Transfer.self,
+                Fixture.self
+            ])
+            
+            let configuration = ModelConfiguration(
+                schema: schema,
+                url: URL.documentsDirectory.appending(path: "WorldCupFantasy.store")
+            )
+            
+            modelContainer = try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Failed to create ModelContainer: \(error)")
+        }
     }
     
     var body: some Scene {
         WindowGroup {
             ContentView(
-                playerRepository: playerRepository,
-                squadRepository: squadRepository,
-                matchdayRepository: matchdayRepository,
-                fixtureRepository: fixtureRepository
+                playerRepository: createPlayerRepository(),
+                squadRepository: createSquadRepository(),
+                matchdayRepository: createMatchdayRepository(),
+                fixtureRepository: createFixtureRepository()
             )
-            .modelContainer(dataManager.container)
+            .modelContainer(modelContainer)
             .task {
                 print("🚀 [App] Starting data seeding...")
-                // Pass the shared context to the seeder
-                await seedDataIfNeeded(context: contextProvider.mainContext)
-                
-                // Then seed the squad using the repositories
+                await seedDataIfNeeded()
                 await seedSquadIfNeeded()
                 print("✅ [App] All seeding tasks completed!")
             }
         }
     }
     
+    // MARK: - Repository Factory Methods
+    
+    private func createPlayerRepository() -> PlayerRepository {
+        SwiftDataPlayerRepository(modelContext: modelContainer.mainContext)
+    }
+    
+    private func createSquadRepository() -> SquadRepository {
+        SwiftDataSquadRepository(
+            modelContext: modelContainer.mainContext,
+            playerRepository: createPlayerRepository()
+        )
+    }
+    
+    private func createMatchdayRepository() -> MatchdayRepository {
+        SwiftDataMatchdayRepository(modelContext: modelContainer.mainContext)
+    }
+    
+    private func createFixtureRepository() -> FixtureRepository {
+        SwiftDataFixtureRepository(modelContext: modelContainer.mainContext)
+    }
+    
+    // MARK: - Seeding
+    
     @MainActor
-    private func seedDataIfNeeded(context: ModelContext) async {
-        WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    private func seedDataIfNeeded() async {
+        WorldCupDataSeeder.seedDataIfNeeded(context: modelContainer.mainContext)
     }
     
     @MainActor
     private func seedSquadIfNeeded() async {
-        // Pass the already initialized repositories to the seeder
         await WorldCupDataSeeder.seedSquadIfNeeded(
-            squadRepository: squadRepository,
-            playerRepository: playerRepository,
-            context: contextProvider.mainContext
+            squadRepository: createSquadRepository(),
+            playerRepository: createPlayerRepository(),
+            context: modelContainer.mainContext
         )
     }
 }

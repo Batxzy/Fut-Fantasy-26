@@ -9,13 +9,10 @@
 import Foundation
 import SwiftData
 
+
 protocol FixtureRepository {
-    func fetchFixtureById(_ id: Int) async throws -> Fixture?
-    func fetchFixturesForMatchday(_ matchdayNumber: Int) async throws -> [Fixture]
-    func fetchFixturesForNation(_ nation: Nation) async throws -> [Fixture]
-    func fetchFixturesForGroup(_ group: WorldCupGroup) async throws -> [Fixture]
-    func fetchUpcomingFixtures(limit: Int) async throws -> [Fixture]
-    func fetchRecentFixtures(limit: Int) async throws -> [Fixture]
+    func addFixture(_ fixture: Fixture) async throws
+    func deleteFixture(_ fixture: Fixture) async throws
     func updateFixtureScore(
         fixtureId: Int,
         homeScore: Int,
@@ -24,6 +21,4 @@ protocol FixtureRepository {
         hadPenaltyShootout: Bool,
         penaltyWinner: Nation?
     ) async throws
-    func addFixture(_ fixture: Fixture) async throws
-    func deleteFixture(_ fixture: Fixture) async throws
 }

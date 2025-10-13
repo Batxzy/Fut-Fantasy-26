@@ -4,31 +4,42 @@ import SwiftData
 struct TransfersView: View {
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
-    let squadViewModel: SquadViewModel
+    @Bindable var viewModel: SquadViewModel
+    
+    // ✅ @Query for squad observation
+    @Query private var squads: [Squad]
+    
+    // ✅ @Query for all players (for replacement selection)
+    @Query(sort: \Player.totalPoints, order: .reverse) private var allPlayers: [Player]
     
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlayerToRemove: Player?
     @State private var showingPlayerSelection = false
     @State private var isProcessing = false
-    @State private var errorMessage: String?
     @State private var pendingTransfers: [TransferMove] = []
     @State private var showingCaptainSelection = false
     
+    var squad: Squad? {
+        squads.first
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
-            transferHeader
-            
-            Divider()
-            
-            if let error = errorMessage {
-                errorBanner(error)
+            if let squad = squad {
+                transferHeader(squad: squad)
+                
+                Divider()
+                
+                if let error = viewModel.errorMessage {
+                    errorBanner(error)
+                }
+                
+                if !pendingTransfers.isEmpty {
+                    pendingTransfersSection
+                }
+                
+                squadList(squad: squad)
             }
-            
-            if !pendingTransfers.isEmpty {
-                pendingTransfersSection
-            }
-            
-            squadList
         }
         .navigationTitle("Transfers")
         .navigationBarTitleDisplayMode(.inline)
@@ -39,16 +50,16 @@ struct TransfersView: View {
                         await confirmAllTransfers()
                     }
                 }
-                .disabled(pendingTransfers.isEmpty)
+                .disabled(pendingTransfers.isEmpty || isProcessing)
                 .opacity(pendingTransfers.isEmpty ? 0.5 : 1.0)
             }
         }
         .sheet(isPresented: $showingPlayerSelection) {
-            if let playerToRemove = selectedPlayerToRemove {
+            if let playerToRemove = selectedPlayerToRemove, let squad = squad {
                 PlayerSelectionView(
-                    playerRepository: playerRepository,
+                    allPlayers: allPlayers,
                     playerToReplace: playerToRemove,
-                    currentSquad: squadViewModel.squad,
+                    currentSquad: squad,
                     temporaryBudget: calculateTemporaryBudget(),
                     onPlayerSelected: { newPlayer in
                         addPendingTransfer(out: playerToRemove, in: newPlayer)
@@ -58,14 +69,18 @@ struct TransfersView: View {
             }
         }
         .sheet(isPresented: $showingCaptainSelection) {
-            if let squad = squadViewModel.squad {
+            if let squad = squad {
                 CaptainSelectionView(
                     squad: squad,
                     onCaptainSelected: { player in
-                        Task { await squadViewModel.setCaptain(player) }
+                        Task {
+                            await viewModel.setCaptain(player, squadId: squad.id)
+                        }
                     },
                     onViceCaptainSelected: { player in
-                        Task { await squadViewModel.setViceCaptain(player) }
+                        Task {
+                            await viewModel.setViceCaptain(player, squadId: squad.id)
+                        }
                     }
                 )
             }
@@ -77,20 +92,20 @@ struct TransfersView: View {
         }
     }
     
-    // MARK: - Extracted View Components
+    // MARK: - View Components
     
-    private var transferHeader: some View {
+    private func transferHeader(squad: Squad) -> some View {
         VStack(spacing: 8) {
             HStack {
                 VStack(alignment: .leading) {
                     Text("Free Transfers")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("\(squadViewModel.squad?.freeTransfersRemaining ?? 0)")
+                    Text("\(squad.freeTransfersRemaining)")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundStyle(
-                            pendingTransfers.count > (squadViewModel.squad?.freeTransfersRemaining ?? 0) ?
+                            pendingTransfers.count > squad.freeTransfersRemaining ?
                             .red : .primary
                         )
                 }
@@ -115,63 +130,66 @@ struct TransfersView: View {
     }
     
     @ViewBuilder
-    var squadList: some View {
-        if let squad = squadViewModel.squad {
-            List {
-                Section("Current Squad") {
-                    ForEach(squad.players ?? [], id: \.id) { player in
-                        HStack {
-                            NavigationLink(destination: PlayerDetailView(player: player, playerRepository: playerRepository, squadRepository: squadRepository)) {
-                                PlayerRowView(player: player)
-                            }
-                            
-                            Spacer()
-                            
-                            Button {
-                                selectedPlayerToRemove = player
-                                showingPlayerSelection = true
-                            } label: {
-                                Image(systemName: "arrow.right.circle.fill")
-                                    .foregroundStyle(.blue)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(isProcessing || isPendingTransfer(player))
-                            .opacity(isPendingTransfer(player) ? 0.6 : 1.0)
+    private func squadList(squad: Squad) -> some View {
+        List {
+            Section("Current Squad") {
+                ForEach(squad.players ?? [], id: \.id) { player in
+                    HStack {
+                        NavigationLink(destination: PlayerDetailView(
+                            player: player,
+                            viewModel: PlayerViewModel(repository: playerRepository),
+                            playerRepository: playerRepository,
+                            squadRepository: squadRepository
+                        )) {
+                            PlayerRowView(player: player)
                         }
+                        
+                        Spacer()
+                        
+                        Button {
+                            selectedPlayerToRemove = player
+                            showingPlayerSelection = true
+                        } label: {
+                            Image(systemName: "arrow.right.circle.fill")
+                                .foregroundStyle(.blue)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isProcessing || isPendingTransfer(player))
+                        .opacity(isPendingTransfer(player) ? 0.6 : 1.0)
                     }
                 }
-                
-                if let captain = squad.captain {
-                    Section("Team Captain") {
-                        PlayerRowView(player: captain)
-                            .overlay(alignment: .trailing) {
-                                Image(systemName: "star.fill")
-                                    .foregroundStyle(.yellow)
-                                    .padding(.trailing, 8)
-                            }
-                    }
+            }
+            
+            if let captain = squad.captain {
+                Section("Team Captain") {
+                    PlayerRowView(player: captain)
+                        .overlay(alignment: .trailing) {
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(.yellow)
+                                .padding(.trailing, 8)
+                        }
                 }
-                
-                if let viceCaptain = squad.viceCaptain {
-                    Section("Vice Captain") {
-                        PlayerRowView(player: viceCaptain)
-                            .overlay(alignment: .trailing) {
-                                Text("V")
-                                    .font(.caption)
-                                    .padding(4)
-                                    .background(Circle().fill(.purple))
-                                    .foregroundStyle(.white)
-                                    .padding(.trailing, 8)
-                            }
-                    }
+            }
+            
+            if let viceCaptain = squad.viceCaptain {
+                Section("Vice Captain") {
+                    PlayerRowView(player: viceCaptain)
+                        .overlay(alignment: .trailing) {
+                            Text("V")
+                                .font(.caption)
+                                .padding(4)
+                                .background(Circle().fill(.purple))
+                                .foregroundStyle(.white)
+                                .padding(.trailing, 8)
+                        }
                 }
-                
-                Section("Leadership") {
-                    Button("Set Captain") {
-                        showingCaptainSelection = true
-                    }
-                    .disabled(isProcessing)
+            }
+            
+            Section("Leadership") {
+                Button("Set Captain & Vice-Captain") {
+                    showingCaptainSelection = true
                 }
+                .disabled(isProcessing)
             }
         }
     }
@@ -250,7 +268,6 @@ struct TransfersView: View {
                 }
             }
             
-            // Cancel button
             Button {
                 pendingTransfers.remove(at: index)
             } label: {
@@ -293,7 +310,7 @@ struct TransfersView: View {
     }
     
     private func calculateTemporaryBudget() -> Double {
-        guard let squad = squadViewModel.squad else { return 0 }
+        guard let squad = squad else { return 0 }
         var tempBudget = squad.currentBudget
         for transfer in pendingTransfers {
             tempBudget += transfer.playerOut.price
@@ -308,25 +325,28 @@ struct TransfersView: View {
     }
     
     private func confirmAllTransfers() async {
-        guard !pendingTransfers.isEmpty else { return }
+        guard !pendingTransfers.isEmpty, let squad = squad else { return }
         
         isProcessing = true
-        errorMessage = nil
+        viewModel.errorMessage = nil
         
         let transfersToProcess = pendingTransfers
         pendingTransfers = []
 
         for transfer in transfersToProcess {
             print("🔄 Processing transfer: \(transfer.playerOut.name) → \(transfer.playerIn.name)")
-            await squadViewModel.transferPlayer(out: transfer.playerOut, in: transfer.playerIn)
+            
+            // Remove old player
+            await viewModel.removePlayerFromSquad(transfer.playerOut, squadId: squad.id)
+            
+            // Add new player
+            await viewModel.addPlayerToSquad(transfer.playerIn, squadId: squad.id)
         }
         
         print("✅ All transfers completed")
         
-        if squadViewModel.errorMessage == nil {
+        if viewModel.errorMessage == nil {
             dismiss()
-        } else {
-            self.errorMessage = squadViewModel.errorMessage
         }
         
         isProcessing = false
@@ -341,157 +361,97 @@ struct TransferMove: Identifiable {
     let playerIn: Player
 }
 
+// MARK: - Player Selection View
+
 struct PlayerSelectionView: View {
-    let playerRepository: PlayerRepository
+    let allPlayers: [Player]
     let playerToReplace: Player
-    let currentSquad: Squad?
+    let currentSquad: Squad
     let temporaryBudget: Double
     let onPlayerSelected: (Player) -> Void
     
     @Environment(\.dismiss) private var dismiss
-    @State private var players: [Player] = []
-    @State private var isLoading = false
     @State private var searchText = ""
-    @State private var selectedPosition: PlayerPosition?
     
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                if isLoading {
-                    ProgressView("Loading players...")
-                } else if filteredPlayers.isEmpty {
-                    ContentUnavailableView(
-                        "No Replacements Found",
-                        systemImage: "person.3.fill",
-                        description: Text("Try adjusting your search or filters. Ensure you have enough budget.")
-                    )
-                } else {
-                    List(filteredPlayers, id: \.id) { player in
-                        Button {
-                            onPlayerSelected(player)
-                            dismiss()
-                        } label: {
-                            HStack {
-                                PlayerRowView(player: player)
-                                
-                                Spacer()
-                                
-                                if isInSquad(player) {
-                                    Label("In Squad", systemImage: "checkmark.circle.fill")
-                                        .font(.caption).foregroundStyle(.green)
-                                } else if !canAfford(player) {
-                                    Label("Can't Afford", systemImage: "exclamationmark.triangle.fill")
-                                        .font(.caption).foregroundStyle(.red)
-                                } else {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(.blue)
-                                }
-                            }
-                        }
-                        .disabled(isInSquad(player) || !canAfford(player))
-                    }
-                }
-            }
-            .navigationTitle("Select Replacement")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search players")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .task {
-                selectedPosition = playerToReplace.position
-                await loadPlayers()
-            }
-            .onChange(of: selectedPosition) {
-                Task { await loadPlayers() }
-            }
+    var filteredPlayers: [Player] {
+        var filtered = allPlayers.filter { player in
+            // Same position
+            player.position == playerToReplace.position &&
+            // Not already in squad
+            !(currentSquad.players?.contains(where: { $0.id == player.id }) ?? false) &&
+            // Can afford
+            canAfford(player)
         }
-    }
-    
-    private var filteredPlayers: [Player] {
-        var filtered = players
         
         if !searchText.isEmpty {
             filtered = filtered.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText)
+                $0.name.localizedStandardContains(searchText)
             }
         }
         
-        filtered = filtered.filter { canAfford($0) }
-        
-        return filtered
+        return filtered.sorted { $0.totalPoints > $1.totalPoints }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            if filteredPlayers.isEmpty {
+                ContentUnavailableView(
+                    "No Replacements Found",
+                    systemImage: "person.3.fill",
+                    description: Text("Try adjusting your search. Ensure you have enough budget.")
+                )
+            } else {
+                List(filteredPlayers, id: \.id) { player in
+                    Button {
+                        onPlayerSelected(player)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            PlayerRowView(player: player)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Select Replacement")
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search players")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+        }
     }
     
     private func canAfford(_ player: Player) -> Bool {
         return (temporaryBudget + playerToReplace.price) >= player.price
     }
-    
-    private func isInSquad(_ player: Player) -> Bool {
-        currentSquad?.players?.contains(where: { $0.id == player.id }) ?? false
-    }
-    
-    private func loadPlayers() async {
-        guard let position = selectedPosition else { return }
-        isLoading = true
-        
-        do {
-            players = try await playerRepository.fetchPlayersForSquadBuilding(
-                position: position,
-                nation: nil,
-                priceUnder: nil,
-                sortType: .points,
-                limit: 200,
-                offset: 0
-            )
-            print("✅ Loaded \(players.count) players for position: \(position.rawValue)")
-        } catch {
-            print("❌ Error loading players: \(error)")
-        }
-        
-        isLoading = false
-    }
 }
 
 #Preview {
-    // 1. Setup Data Layer
-    let container = SwiftDataManager.shared.previewContainer
-    let contextProvider = ModelContextProvider(container: container)
-    let mainContext = contextProvider.mainContext
-
-    MainActor.assumeIsolated {
-        WorldCupDataSeeder.seedDataIfNeeded(context: mainContext)
-    }
-    
-    let playerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
-    let squadRepository = SwiftDataSquadRepository(modelContext: mainContext, playerRepository: playerRepository)
-    
-    // 2. Create the View with an EMPTY ViewModel first.
-    //    The @StateObject wrapper is key here.
-    let view = TransfersView(
-        playerRepository: playerRepository,
-        squadRepository: squadRepository,
-        squadViewModel: SquadViewModel(
-            squadRepository: squadRepository,
-            playerRepository: playerRepository
-        )
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Player.self, Squad.self,
+        configurations: config
     )
-
-    // 3. Wrap in NavigationStack and run the seeding task.
-    return NavigationStack {
-        view
-    }
-    .task {
-        // This task now runs, seeds the data, and the view's own task
-        // will fetch it correctly after this is done.
-        print("🚀 [Preview] Seeding squad for TransfersView...")
-        await WorldCupDataSeeder.seedSquadIfNeeded(
-            squadRepository: squadRepository,
-            playerRepository: playerRepository,
-            context: mainContext
-        )
-        print("✅ [Preview] TransfersView seeding complete.")
-    }
+    
+    let context = container.mainContext
+    
+    // Seed data
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    
+    return PlayersView(
+        viewModel: PlayerViewModel(repository: playerRepo),
+        playerRepository: playerRepo,
+        squadRepository: squadRepo
+    )
     .modelContainer(container)
 }

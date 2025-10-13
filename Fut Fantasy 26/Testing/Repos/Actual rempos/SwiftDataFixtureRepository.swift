@@ -11,130 +11,35 @@ import SwiftData
 
 @MainActor
 final class SwiftDataFixtureRepository: FixtureRepository {
-    private let baseRepository: BaseRepository<Fixture>
+    private let modelContext: ModelContext
     
     init(modelContext: ModelContext) {
-        self.baseRepository = BaseRepository<Fixture>(modelContext: modelContext)
+        self.modelContext = modelContext
     }
     
-    func fetchFixtureById(_ id: Int) async throws -> Fixture? {
-        print("⚽ [FixtureRepo] Fetching fixture with ID: \(id)")
-        
-        let predicate = #Predicate<Fixture> { $0.id == id }
+    func addFixture(_ fixture: Fixture) async throws {
+        print("⚽ [FixtureRepo] Adding fixture")
+        modelContext.insert(fixture)
         
         do {
-            let fixture = try await baseRepository.fetchOne(with: predicate)
-            if fixture != nil {
-                print("✅ [FixtureRepo] Found fixture")
-            } else {
-                print("⚠️ [FixtureRepo] Fixture not found")
-            }
-            return fixture
+            try modelContext.save()
+            print("✅ [FixtureRepo] Fixture saved successfully")
         } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
+            print("❌ [FixtureRepo] Save failed: \(error)")
+            throw RepositoryError.saveFailed(underlyingError: error)
         }
     }
     
-    func fetchFixturesForMatchday(_ matchdayNumber: Int) async throws -> [Fixture] {
-        print("⚽ [FixtureRepo] Fetching fixtures for matchday \(matchdayNumber)")
-        
-        let predicate = #Predicate<Fixture> { $0.matchdayNumber == matchdayNumber }
-        
-        do {
-            let fixtures = try await baseRepository.fetch(
-                with: predicate,
-                sortBy: [SortDescriptor(\.kickoffTime)]
-            )
-            print("✅ [FixtureRepo] Fetched \(fixtures.count) fixtures")
-            return fixtures
-        } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
-        }
-    }
-    
-    func fetchFixturesForNation(_ nation: Nation) async throws -> [Fixture] {
-        print("⚽ [FixtureRepo] Fetching fixtures for nation: \(nation.rawValue)")
-        
-        let predicate = #Predicate<Fixture> {
-            $0.homeNation == nation || $0.awayNation == nation
-        }
+    func deleteFixture(_ fixture: Fixture) async throws {
+        print("⚽ [FixtureRepo] Deleting fixture")
+        modelContext.delete(fixture)
         
         do {
-            let fixtures = try await baseRepository.fetch(
-                with: predicate,
-                sortBy: [SortDescriptor(\.kickoffTime)]
-            )
-            print("✅ [FixtureRepo] Fetched \(fixtures.count) fixtures")
-            return fixtures
+            try modelContext.save()
+            print("✅ [FixtureRepo] Fixture deleted successfully")
         } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
-        }
-    }
-    
-    func fetchFixturesForGroup(_ group: WorldCupGroup) async throws -> [Fixture] {
-        print("⚽ [FixtureRepo] Fetching fixtures for group: \(group.rawValue)")
-        
-        let predicate = #Predicate<Fixture> { $0.group == group }
-        
-        do {
-            let fixtures = try await baseRepository.fetch(
-                with: predicate,
-                sortBy: [SortDescriptor(\.kickoffTime)]
-            )
-            print("✅ [FixtureRepo] Fetched \(fixtures.count) fixtures")
-            return fixtures
-        } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
-        }
-    }
-    
-    func fetchUpcomingFixtures(limit: Int = 5) async throws -> [Fixture] {
-        print("⚽ [FixtureRepo] Fetching upcoming fixtures (limit: \(limit))")
-        
-        let now = Date()
-        let predicate = #Predicate<Fixture> {
-            $0.kickoffTime > now && !$0.isFinished
-        }
-        
-        do {
-            let fixtures = try await baseRepository.fetchWithPagination(
-                predicate: predicate,
-                sortBy: [SortDescriptor(\.kickoffTime)],
-                limit: limit,
-                offset: 0
-            )
-            print("✅ [FixtureRepo] Fetched \(fixtures.count) upcoming fixtures")
-            return fixtures
-        } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
-        }
-    }
-    
-    func fetchRecentFixtures(limit: Int = 5) async throws -> [Fixture] {
-        print("⚽ [FixtureRepo] Fetching recent fixtures (limit: \(limit))")
-        
-        let now = Date()
-        let predicate = #Predicate<Fixture> {
-            $0.kickoffTime < now && $0.isFinished
-        }
-        
-        do {
-            let fixtures = try await baseRepository.fetchWithPagination(
-                predicate: predicate,
-                sortBy: [SortDescriptor(\.kickoffTime, order: .reverse)],
-                limit: limit,
-                offset: 0
-            )
-            print("✅ [FixtureRepo] Fetched \(fixtures.count) recent fixtures")
-            return fixtures
-        } catch {
-            print("❌ [FixtureRepo] Fetch failed: \(error)")
-            throw error
+            print("❌ [FixtureRepo] Delete failed: \(error)")
+            throw RepositoryError.deleteFailed(underlyingError: error)
         }
     }
     
@@ -148,7 +53,11 @@ final class SwiftDataFixtureRepository: FixtureRepository {
     ) async throws {
         print("⚽ [FixtureRepo] Updating score for fixture \(fixtureId)")
         
-        guard let fixture = try await fetchFixtureById(fixtureId) else {
+        let predicate = #Predicate<Fixture> { $0.id == fixtureId }
+        var descriptor = FetchDescriptor<Fixture>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        
+        guard let fixture = try modelContext.fetch(descriptor).first else {
             print("❌ [FixtureRepo] Fixture not found")
             throw RepositoryError.notFound
         }
@@ -161,35 +70,12 @@ final class SwiftDataFixtureRepository: FixtureRepository {
         fixture.isFinished = true
         
         do {
-            try await baseRepository.update(fixture)
+            try modelContext.save()
             print("✅ [FixtureRepo] Score updated successfully")
         } catch {
             print("❌ [FixtureRepo] Update failed: \(error)")
-            throw error
-        }
-    }
-    
-    func addFixture(_ fixture: Fixture) async throws {
-        print("⚽ [FixtureRepo] Adding fixture")
-        
-        do {
-            try await baseRepository.insert(fixture)
-            print("✅ [FixtureRepo] Fixture added successfully")
-        } catch {
-            print("❌ [FixtureRepo] Add failed: \(error)")
-            throw error
-        }
-    }
-    
-    func deleteFixture(_ fixture: Fixture) async throws {
-        print("⚽ [FixtureRepo] Deleting fixture")
-        
-        do {
-            try await baseRepository.delete(fixture)
-            print("✅ [FixtureRepo] Fixture deleted successfully")
-        } catch {
-            print("❌ [FixtureRepo] Delete failed: \(error)")
-            throw error
+            throw RepositoryError.updateFailed(underlyingError: error)
         }
     }
 }
+

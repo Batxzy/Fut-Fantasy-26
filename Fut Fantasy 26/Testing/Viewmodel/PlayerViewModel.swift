@@ -1,15 +1,12 @@
 //
-//  PlayerListViewModel.swift
+//  PlayerViewModel.swift
 //  Fut Fantasy 26
 //
-//  Created by Jose julian Lopez on 12/10/25.
+//  Created by Jose julian Lopez on 13/10/25.
 //
 
-
 import Foundation
-import SwiftData
-
-/*
+import Observation
 
 @Observable
 @MainActor
@@ -56,4 +53,3 @@ final class PlayerViewModel {
         isLoading = false
     }
 }
-*/
