@@ -6,12 +6,7 @@
 //
 
 
-//
-//  BenchView.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 12/10/25.
-//
+import SwiftUI
 
 import SwiftUI
 
@@ -50,7 +45,8 @@ struct BenchView: View {
                     ForEach(benchPlayers, id: \.id) { player in
                         BenchPlayerCard(player: player)
                             .onTapGesture {
-                                if isDragMode {
+                                // The substitution sheet is only shown when not in drag mode.
+                                if !isDragMode {
                                     selectedBenchPlayer = player
                                     showingSubstitution = true
                                 }
@@ -182,4 +178,21 @@ struct SubstitutionSheet: View {
             }
         }
     }
+}
+
+#Preview("Bench View") {
+    BenchView(
+        benchPlayers: MockData.bench,
+        isDragMode: false,
+        onSubstitution: { _, _ in print("Substitution Tapped") }
+    )
+    .padding()
+    .background(Color(.systemGroupedBackground))
+}
+
+#Preview("Substitution Sheet") {
+    SubstitutionSheet(
+        benchPlayer: MockData.bench.first!,
+        onSubstitute: { _ in print("Substitute Tapped") }
+    )
 }

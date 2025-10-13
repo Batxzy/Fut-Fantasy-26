@@ -5,13 +5,6 @@
 //  Created by Jose julian Lopez on 12/10/25.
 //
 
-//
-//  ContentView.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 12/10/25.
-//
-
 import SwiftUI
 import SwiftData
 

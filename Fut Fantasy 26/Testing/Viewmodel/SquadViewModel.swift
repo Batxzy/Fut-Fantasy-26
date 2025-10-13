@@ -16,6 +16,7 @@
 import Foundation
 import Observation
 
+
 @Observable
 @MainActor
 final class SquadViewModel {
@@ -112,6 +113,30 @@ final class SquadViewModel {
         } catch {
             errorMessage = error.localizedDescription
             print("❌ [ViewModel] Transfer failed: \(error)")
+        }
+    }
+    
+    func setCaptain(_ player: Player) async {
+        guard let squad = squad else { return }
+        
+        do {
+            try await squadRepository.setCaptain(playerId: player.id, squadId: squad.id)
+            await loadSquad()
+            print("✅ Captain set: \(player.name)")
+        } catch {
+            print("❌ Failed to set captain: \(error)")
+        }
+    }
+    
+    func setViceCaptain(_ player: Player) async {
+        guard let squad = squad else { return }
+        
+        do {
+            try await squadRepository.setViceCaptain(playerId: player.id, squadId: squad.id)
+            await loadSquad()
+            print("✅ Vice Captain set: \(player.name)")
+        } catch {
+            print("❌ Failed to set vice captain: \(error)")
         }
     }
 }

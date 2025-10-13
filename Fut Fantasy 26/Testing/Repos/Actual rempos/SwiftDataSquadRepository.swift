@@ -10,6 +10,9 @@ import Foundation
 import SwiftData
 
 
+import Foundation
+import SwiftData
+
 @MainActor
 final class SwiftDataSquadRepository: SquadRepository {
     private let baseRepository: BaseRepository<Squad>
@@ -256,6 +259,79 @@ final class SwiftDataSquadRepository: SquadRepository {
         do {
             try await baseRepository.update(squad)
             print("✅ [SquadRepo] Squad updated successfully")
+        } catch {
+            print("❌ [SquadRepo] Update failed: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - Single Captain Methods
+    
+    func setCaptain(playerId: Int, squadId: UUID) async throws {
+        print("👥 [SquadRepo] Setting captain playerId: \(playerId)")
+        
+        guard let squad = try await fetchSquadById(squadId) else {
+            print("❌ [SquadRepo] Squad not found")
+            throw RepositoryError.notFound
+        }
+        
+        guard let player = try await playerRepository.fetchPlayerById(playerId) else {
+            print("❌ [SquadRepo] Player not found")
+            throw RepositoryError.notFound
+        }
+        
+        // Validate player is in squad
+        guard squad.players?.contains(where: { $0.id == playerId }) == true else {
+            print("❌ [SquadRepo] Captain not in squad")
+            throw RepositoryError.invalidData
+        }
+        
+        // If this player is already the vice captain, remove that status
+        if squad.viceCaptain?.id == playerId {
+            squad.viceCaptain = nil
+        }
+        
+        squad.captain = player
+        
+        do {
+            try await baseRepository.update(squad)
+            print("✅ [SquadRepo] Captain set successfully")
+        } catch {
+            print("❌ [SquadRepo] Update failed: \(error)")
+            throw error
+        }
+    }
+    
+    func setViceCaptain(playerId: Int, squadId: UUID) async throws {
+        print("👥 [SquadRepo] Setting vice captain playerId: \(playerId)")
+        
+        guard let squad = try await fetchSquadById(squadId) else {
+            print("❌ [SquadRepo] Squad not found")
+            throw RepositoryError.notFound
+        }
+        
+        guard let player = try await playerRepository.fetchPlayerById(playerId) else {
+            print("❌ [SquadRepo] Player not found")
+            throw RepositoryError.notFound
+        }
+        
+        // Validate player is in squad
+        guard squad.players?.contains(where: { $0.id == playerId }) == true else {
+            print("❌ [SquadRepo] Vice captain not in squad")
+            throw RepositoryError.invalidData
+        }
+        
+        // Can't be both captain and vice captain
+        guard squad.captain?.id != playerId else {
+            print("❌ [SquadRepo] Player is already captain")
+            throw RepositoryError.invalidData
+        }
+        
+        squad.viceCaptain = player
+        
+        do {
+            try await baseRepository.update(squad)
+            print("✅ [SquadRepo] Vice captain set successfully")
         } catch {
             print("❌ [SquadRepo] Update failed: \(error)")
             throw error

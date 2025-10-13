@@ -5,15 +5,8 @@
 //  Created by Jose julian Lopez on 12/10/25.
 //
 
-
-//
-//  FormationView.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 12/10/25.
-//
-
 import SwiftUI
+import SwiftData
 
 struct FormationView: View {
     let startingXI: [Player]
@@ -22,6 +15,11 @@ struct FormationView: View {
     let isDragMode: Bool
     let onPlayerTap: (Player) -> Void
     let onPlayerMove: (Int, Int) -> Void
+    let playerRepository: PlayerRepository
+    let squadRepository: SquadRepository
+    
+    @State private var draggedPlayer: Player?
+    @State private var isDragging = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -37,6 +35,7 @@ struct FormationView: View {
                         // Goalkeeper (1)
                         formationLine(
                             players: goalkeepers,
+                            position: .goalkeeper,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.15
                         )
@@ -46,6 +45,7 @@ struct FormationView: View {
                         // Defenders (4)
                         formationLine(
                             players: defenders,
+                            position: .defender,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.20
                         )
@@ -55,6 +55,7 @@ struct FormationView: View {
                         // Midfielders (3)
                         formationLine(
                             players: midfielders,
+                            position: .midfielder,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.20
                         )
@@ -64,6 +65,7 @@ struct FormationView: View {
                         // Forwards (3)
                         formationLine(
                             players: forwards,
+                            position: .forward,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.20
                         )
@@ -169,7 +171,7 @@ struct FormationView: View {
     }
     
     @ViewBuilder
-    private func formationLine(players: [Player], geometry: GeometryProxy, lineHeight: CGFloat) -> some View {
+    private func formationLine(players: [Player], position: PlayerPosition, geometry: GeometryProxy, lineHeight: CGFloat) -> some View {
         HStack(spacing: 0) {
             if players.isEmpty {
                 Spacer()
@@ -179,15 +181,58 @@ struct FormationView: View {
                 ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
                     Spacer()
                     
-                    PitchPlayerCard(
-                        player: player,
-                        isCaptain: captain?.id == player.id,
-                        isViceCaptain: viceCaptain?.id == player.id,
-                        isDragMode: isDragMode
-                    )
-                    .onTapGesture {
-                        if !isDragMode {
-                            onPlayerTap(player)
+                    if isDragMode {
+                        PitchPlayerCard(
+                            player: player,
+                            isCaptain: captain?.id == player.id,
+                            isViceCaptain: viceCaptain?.id == player.id,
+                            isDragMode: isDragMode
+                        )
+                        .opacity(draggedPlayer?.id == player.id ? 0.4 : 1.0)
+                        .onDrag {
+                            self.draggedPlayer = player
+                            return NSItemProvider(object: "\(player.id)" as NSString)
+                        }
+                        .onDrop(of: ["public.text"], isTargeted: nil) { providers in
+                            guard let sourcePlayerId = providers.first else { return false }
+                            
+                            var sourceIndex: Int = -1
+                            var destinationIndex: Int = -1
+                            
+                            // Find source player's position in starting XI
+                            for (i, p) in startingXI.enumerated() {
+                                if p.id == draggedPlayer?.id {
+                                    sourceIndex = i
+                                }
+                                if p.id == player.id {
+                                    destinationIndex = i
+                                }
+                            }
+                            
+                            if sourceIndex != -1 && destinationIndex != -1 {
+                                // Only allow swapping players of the same position
+                                if startingXI[sourceIndex].position == startingXI[destinationIndex].position {
+                                    onPlayerMove(sourceIndex, destinationIndex)
+                                    draggedPlayer = nil
+                                    return true
+                                }
+                            }
+                            return false
+                        }
+                    } else {
+                        NavigationLink(destination: PlayerDetailView(player: player, playerRepository: playerRepository, squadRepository: squadRepository)) {
+                            PitchPlayerCard(
+                                player: player,
+                                isCaptain: captain?.id == player.id,
+                                isViceCaptain: viceCaptain?.id == player.id,
+                                isDragMode: isDragMode
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .onTapGesture {
+                            if !isDragMode {
+                                onPlayerTap(player)
+                            }
                         }
                     }
                     
@@ -373,7 +418,14 @@ struct EmptyPlayerSlot: View {
 
 // MARK: - Preview
 #Preview {
-    ZStack {
+    let container = SwiftDataManager.shared.previewContainer
+    let contextProvider = ModelContextProvider(container: container)
+    let mainContext = contextProvider.mainContext
+    
+    let playerRepository: PlayerRepository = SwiftDataPlayerRepository(modelContext: mainContext)
+    let squadRepository: SquadRepository = SwiftDataSquadRepository(modelContext: mainContext, playerRepository: playerRepository)
+    
+    return ZStack {
         Color.gray.opacity(0.2).ignoresSafeArea()
         
         VStack {
@@ -384,7 +436,9 @@ struct EmptyPlayerSlot: View {
                 viceCaptain: nil,
                 isDragMode: false,
                 onPlayerTap: { _ in },
-                onPlayerMove: { _, _ in }
+                onPlayerMove: { _, _ in },
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
             )
             .padding()
         }

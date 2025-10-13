@@ -17,4 +17,6 @@ protocol SquadRepository {
     func setCaptain(squadId: UUID, captainId: Int, viceCaptainId: Int) async throws
     func createSquad(teamName: String) async throws -> Squad
     func updateSquad(_ squad: Squad) async throws
+    func setCaptain(playerId: Int, squadId: UUID) async throws
+    func setViceCaptain(playerId: Int, squadId: UUID) async throws
 }
