@@ -8,15 +8,13 @@
 
 import SwiftUI
 
-import SwiftUI
-
 struct BenchView: View {
     let benchPlayers: [Player]
-    let isDragMode: Bool
-    let onSubstitution: (Player, Player) -> Void
+    let isEditMode: Bool
     
-    @State private var selectedBenchPlayer: Player?
-    @State private var showingSubstitution = false
+    @Binding var selectedSlot: PlayerSlot?
+    let isPlayerTappable: (PlayerSlot) -> Bool
+    let onPlayerTap: (PlayerSlot) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -42,15 +40,25 @@ struct BenchView: View {
                 .frame(height: 120)
             } else {
                 HStack(spacing: 12) {
-                    ForEach(benchPlayers, id: \.id) { player in
-                        BenchPlayerCard(player: player)
-                            .onTapGesture {
-                                // The substitution sheet is only shown when not in drag mode.
-                                if !isDragMode {
-                                    selectedBenchPlayer = player
-                                    showingSubstitution = true
-                                }
-                            }
+                    ForEach(benchPlayers) { player in
+                        let slot = PlayerSlot.bench(player)
+                        let isSelected = selectedSlot == slot
+                        let tappable = isPlayerTappable(slot)
+                        
+                        BenchPlayerCard(
+                            player: player,
+                            isSelected: isSelected,
+                            isTappable: isEditMode && tappable
+                        )
+                        .onTapGesture {
+                            onPlayerTap(slot)
+                        }
+                        // Add ID and transition for animations
+                        .id(player.id)
+                        .transition(.asymmetric(
+                            insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
+                            removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
+                        ))
                     }
                     
                     // Empty slots
@@ -65,38 +73,33 @@ struct BenchView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
         )
-        .sheet(isPresented: $showingSubstitution) {
-            if let benchPlayer = selectedBenchPlayer {
-                SubstitutionSheet(
-                    benchPlayer: benchPlayer,
-                    onSubstitute: { startingPlayer in
-                        onSubstitution(benchPlayer, startingPlayer)
-                        showingSubstitution = false
-                    }
-                )
-            }
-        }
     }
 }
 
 struct BenchPlayerCard: View {
     let player: Player
+    let isSelected: Bool
+    let isTappable: Bool
     
     var body: some View {
         VStack(spacing: 6) {
-            AsyncImage(url: URL(string: player.imageURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(.quaternary)
+            ZStack {
+                AsyncImage(url: URL(string: player.imageURL)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(.quaternary)
+                }
+                .frame(width: 50, height: 50)
+                .clipShape(Circle())
             }
-            .frame(width: 50, height: 50)
-            .clipShape(Circle())
+            // **FIX:** Move the outline outside the image ZStack
             .overlay {
                 Circle()
-                    .stroke(positionColor, lineWidth: 2)
+                    .stroke(isSelected ? Color.yellow : positionColor, lineWidth: isSelected ? 4 : 2)
+                    .frame(width: 58, height: 58) // Slightly larger than the circle
             }
             
             Text(player.name)
@@ -113,6 +116,11 @@ struct BenchPlayerCard: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(.ultraThinMaterial)
         )
+        .opacity(isTappable ? 1.0 : 0.4)
+        .grayscale(isTappable ? 0 : 0.8)
+        .scaleEffect(isSelected ? 1.1 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+        .animation(.easeInOut(duration: 0.2), value: isTappable)
     }
     
     private var positionColor: Color {
@@ -144,55 +152,4 @@ struct EmptyBenchSlot: View {
         }
         .padding(8)
     }
-}
-
-struct SubstitutionSheet: View {
-    let benchPlayer: Player
-    let onSubstitute: (Player) -> Void
-    
-    @Environment(\.dismiss) private var dismiss
-    @State private var startingPlayers: [Player] = [] // Would come from squad
-    
-    var body: some View {
-        NavigationStack {
-            List(startingPlayers.filter { $0.position == benchPlayer.position }, id: \.id) { player in
-                Button {
-                    onSubstitute(player)
-                } label: {
-                    HStack {
-                        PlayerRowView(player: player)
-                        Spacer()
-                        Image(systemName: "arrow.left.arrow.right")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .navigationTitle("Substitute \(benchPlayer.name)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-#Preview("Bench View") {
-    BenchView(
-        benchPlayers: MockData.bench,
-        isDragMode: false,
-        onSubstitution: { _, _ in print("Substitution Tapped") }
-    )
-    .padding()
-    .background(Color(.systemGroupedBackground))
-}
-
-#Preview("Substitution Sheet") {
-    SubstitutionSheet(
-        benchPlayer: MockData.bench.first!,
-        onSubstitute: { _ in print("Substitute Tapped") }
-    )
 }

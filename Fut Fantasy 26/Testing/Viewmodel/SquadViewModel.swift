@@ -76,41 +76,14 @@ final class SquadViewModel {
         }
     }
     
-    func swapStartingPlayers(from: Int, to: Int, squadId: UUID, startingXI: [Player]) async {
+    func swapPlayers(_ slot1: PlayerSlot, _ slot2: PlayerSlot, squadId: UUID) async {
         errorMessage = nil
-        
-        var newStartingXI = startingXI
-        newStartingXI.swapAt(from, to)
-        
         do {
-            try await squadRepository.setSquadStartingXI(
-                squadId: squadId,
-                startingXI: newStartingXI.map { $0.id }
-            )
-            print("✅ [SquadVM] Players swapped")
+            try await squadRepository.swapPlayers(slot1: slot1, slot2: slot2, squadId: squadId)
+            print("✅ [SquadVM] Players swapped successfully")
         } catch {
             errorMessage = error.localizedDescription
             print("❌ [SquadVM] Failed to swap players: \(error)")
-        }
-    }
-    
-    func makeSubstitution(benchPlayer: Player, startingPlayer: Player, squadId: UUID, startingXI: [Player]) async {
-        errorMessage = nil
-        
-        var newStartingXI = startingXI
-        if let index = newStartingXI.firstIndex(where: { $0.id == startingPlayer.id }) {
-            newStartingXI[index] = benchPlayer
-        }
-        
-        do {
-            try await squadRepository.setSquadStartingXI(
-                squadId: squadId,
-                startingXI: newStartingXI.map { $0.id }
-            )
-            print("✅ [SquadVM] Substitution made")
-        } catch {
-            errorMessage = error.localizedDescription
-            print("❌ [SquadVM] Failed to make substitution: \(error)")
         }
     }
 }

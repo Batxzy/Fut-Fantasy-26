@@ -8,8 +8,6 @@
 
 import Foundation
 
-import Foundation
-
 protocol SquadRepository {
     func createSquad(teamName: String) async throws -> Squad
     func updateSquad(_ squad: Squad) async throws
@@ -18,4 +16,5 @@ protocol SquadRepository {
     func setSquadStartingXI(squadId: UUID, startingXI: [Int]) async throws
     func setCaptain(playerId: Int, squadId: UUID) async throws
     func setViceCaptain(playerId: Int, squadId: UUID) async throws
+    func swapPlayers(slot1: PlayerSlot, slot2: PlayerSlot, squadId: UUID) async throws
 }

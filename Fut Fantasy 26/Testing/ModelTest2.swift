@@ -11,7 +11,7 @@ import SwiftData
 // MARK: - PLAYER
 
 @Model
-final class Player {
+final class Player: Hashable {
     @Attribute(.unique) var id: Int
     
     // Personal info
@@ -158,7 +158,7 @@ final class Player {
     }
 }
 
-// MARK: - Nation Enum
+// MARK: - Nation Enum (UNCHANGED)
 
 enum Nation: String, Codable, CaseIterable {
     // Group A
@@ -264,7 +264,7 @@ enum Nation: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - WorldCupGroup Enum (renamed from Group)
+// MARK: - WorldCupGroup Enum (UNCHANGED)
 
 enum WorldCupGroup: String, Codable, CaseIterable {
     case a = "Group A"
@@ -281,7 +281,7 @@ enum WorldCupGroup: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Player Position Enum
+// MARK: - Player Position Enum (UNCHANGED)
 
 enum PlayerPosition: String, Codable, CaseIterable {
     case goalkeeper = "GK"
@@ -337,7 +337,7 @@ enum PlayerPosition: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Squad Model (Manager's Team)
+// MARK: - Squad Model (Manager's Team) - **UPDATED WITH 2D STRUCTURE**
 
 @Model
 final class Squad {
@@ -358,15 +358,14 @@ final class Squad {
     var totalPoints: Int
     var matchdayPoints: Int
     
+    // **KEY CHANGE**: Store player IDs in 2D structure by position
+    // [goalkeepers, defenders, midfielders, forwards]
+    var startingXIIDs: [[Int]]
+    var benchIDs: [Int]
+    
     // Relationships
     @Relationship(deleteRule: .nullify)
     var players: [Player]? // All 15 players
-    
-    @Relationship(deleteRule: .nullify)
-    var startingXI: [Player]? // 11 starters
-    
-    @Relationship(deleteRule: .nullify)
-    var bench: [Player]? // 4 bench players (ordered by priority)
     
     @Relationship(deleteRule: .nullify)
     var captain: Player?
@@ -395,9 +394,57 @@ final class Squad {
         self.hasUnlimitedTransfers = false
         self.totalPoints = 0
         self.matchdayPoints = 0
+        
+        // **NEW**: Initialize 2D array: [GK, DEF, MID, FWD]
+        self.startingXIIDs = [[], [], [], []]
+        self.benchIDs = []
     }
     
-    // MARK: - Computed Properties
+    // MARK: - Computed Properties (BACKWARDS COMPATIBLE)
+    
+    var startingXI: [Player]? {
+        get {
+            guard let allPlayers = players else { return nil }
+            let playerDict = Dictionary(uniqueKeysWithValues: allPlayers.map { ($0.id, $0) })
+            
+            var result: [Player] = []
+            for positionGroup in startingXIIDs {
+                for playerId in positionGroup {
+                    if let player = playerDict[playerId] {
+                        result.append(player)
+                    }
+                }
+            }
+            return result.isEmpty ? nil : result
+        }
+        set {
+            // Convert flat array back to 2D structure
+            guard let newValue = newValue else {
+                startingXIIDs = [[], [], [], []]
+                return
+            }
+            
+            startingXIIDs = [
+                newValue.filter { $0.position == .goalkeeper }.map { $0.id },
+                newValue.filter { $0.position == .defender }.map { $0.id },
+                newValue.filter { $0.position == .midfielder }.map { $0.id },
+                newValue.filter { $0.position == .forward }.map { $0.id }
+            ]
+        }
+    }
+    
+    var bench: [Player]? {
+        get {
+            guard let allPlayers = players else { return nil }
+            let playerDict = Dictionary(uniqueKeysWithValues: allPlayers.map { ($0.id, $0) })
+            
+            let result = benchIDs.compactMap { playerDict[$0] }
+            return result.isEmpty ? nil : result
+        }
+        set {
+            benchIDs = newValue?.map { $0.id } ?? []
+        }
+    }
     
     var squadValue: Double {
         players?.reduce(0.0) { $0 + $1.price } ?? 0.0
@@ -412,12 +459,10 @@ final class Squad {
     }
     
     var isValidStartingXI: Bool {
-        guard startingXI?.count == 11 else { return false }
-        
-        let gkCount = startingPlayerCount(for: .goalkeeper)
-        let defCount = startingPlayerCount(for: .defender)
-        let midCount = startingPlayerCount(for: .midfielder)
-        let fwdCount = startingPlayerCount(for: .forward)
+        let gkCount = startingXIIDs[0].count
+        let defCount = startingXIIDs[1].count
+        let midCount = startingXIIDs[2].count
+        let fwdCount = startingXIIDs[3].count
         
         return gkCount == 1 && defCount >= 3 && midCount >= 2 && fwdCount >= 1
     }
@@ -429,7 +474,12 @@ final class Squad {
     }
     
     func startingPlayerCount(for position: PlayerPosition) -> Int {
-        startingXI?.filter { $0.position == position }.count ?? 0
+        switch position {
+        case .goalkeeper: return startingXIIDs[0].count
+        case .defender: return startingXIIDs[1].count
+        case .midfielder: return startingXIIDs[2].count
+        case .forward: return startingXIIDs[3].count
+        }
     }
     
     func canAddPlayer(position: PlayerPosition) -> Bool {
@@ -472,12 +522,13 @@ extension Squad {
     }
     
     var benchCount: Int {
-        bench?.count ?? 0
+        benchIDs.count
     }
     
     var startingXICount: Int {
-        startingXI?.count ?? 0
+        startingXIIDs.flatMap { $0 }.count
     }
+    
     
     // MARK: - Position Analysis
     

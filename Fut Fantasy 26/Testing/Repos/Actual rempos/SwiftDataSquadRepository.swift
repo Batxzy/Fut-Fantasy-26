@@ -35,6 +35,17 @@ final class SwiftDataSquadRepository: SquadRepository {
         return try modelContext.fetch(descriptor).first
     }
     
+    // MARK: - Helper to get position row index
+    
+    private func positionRowIndex(for position: PlayerPosition) -> Int {
+        switch position {
+        case .goalkeeper: return 0
+        case .defender: return 1
+        case .midfielder: return 2
+        case .forward: return 3
+        }
+    }
+    
     // MARK: - Write Operations
     
     func createSquad(teamName: String) async throws -> Squad {
@@ -97,37 +108,40 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.invalidData
         }
         
-        // Add player
+        // Add player to all players list
         if squad.players == nil {
             squad.players = []
         }
         squad.players?.append(player)
         
-        // ADDED: Automatically add to bench if not already in starting XI
-        if squad.startingXI == nil {
-            squad.startingXI = []
-        }
+        // **NEW LOGIC**: Add to 2D structure
+        let totalStarting = squad.startingXIIDs.flatMap { $0 }.count
         
-        if squad.bench == nil {
-            squad.bench = []
-        }
-        
-        // If we have less than 11 starters and position allows, add to starting XI
-        if let startingXI = squad.startingXI, startingXI.count < 11 {
-            let positionCount = startingXI.filter { $0.position == player.position }.count
+        if totalStarting < 11 {
+            // Add to starting XI in appropriate position row
+            let rowIndex = positionRowIndex(for: player.position)
+            let positionCount = squad.startingXIIDs[rowIndex].count
             
-            // Only add to starting XI if we don't exceed position limits
-            if (player.position == .goalkeeper && positionCount < 1) ||
-               (player.position == .defender && positionCount < 4) ||
-               (player.position == .midfielder && positionCount < 4) ||
-               (player.position == .forward && positionCount < 2) {
-                squad.startingXI?.append(player)
+            // Check position limits for starting XI
+            let canAddToStarting: Bool
+            switch player.position {
+            case .goalkeeper: canAddToStarting = positionCount < 1
+            case .defender: canAddToStarting = positionCount < 5
+            case .midfielder: canAddToStarting = positionCount < 5
+            case .forward: canAddToStarting = positionCount < 3
+            }
+            
+            if canAddToStarting {
+                squad.startingXIIDs[rowIndex].append(player.id)
+                print("   ➕ Added to starting XI row \(rowIndex)")
             } else {
-                squad.bench?.append(player)
+                squad.benchIDs.append(player.id)
+                print("   ➕ Added to bench (position limit)")
             }
         } else {
             // Add to bench if starting XI is full
-            squad.bench?.append(player)
+            squad.benchIDs.append(player.id)
+            print("   ➕ Added to bench (starting XI full)")
         }
         
         do {
@@ -147,10 +161,18 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.notFound
         }
         
+        // Remove from all players
         squad.players?.removeAll { $0.id == playerId }
-        squad.startingXI?.removeAll { $0.id == playerId }
-        squad.bench?.removeAll { $0.id == playerId }
         
+        // Remove from 2D structure
+        for i in 0..<squad.startingXIIDs.count {
+            squad.startingXIIDs[i].removeAll { $0 == playerId }
+        }
+        
+        // Remove from bench
+        squad.benchIDs.removeAll { $0 == playerId }
+        
+        // Remove captain/vice captain if needed
         if squad.captain?.id == playerId {
             squad.captain = nil
         }
@@ -188,6 +210,7 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.invalidData
         }
         
+        // Validate formation
         let gkCount = players.filter { $0.position == .goalkeeper }.count
         let defCount = players.filter { $0.position == .defender }.count
         let midCount = players.filter { $0.position == .midfielder }.count
@@ -198,12 +221,18 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.invalidData
         }
         
-        squad.startingXI = players
+        // **NEW LOGIC**: Organize into 2D structure
+        squad.startingXIIDs = [
+            players.filter { $0.position == .goalkeeper }.map { $0.id },
+            players.filter { $0.position == .defender }.map { $0.id },
+            players.filter { $0.position == .midfielder }.map { $0.id },
+            players.filter { $0.position == .forward }.map { $0.id }
+        ]
         
+        // Update bench
         if let allPlayers = squad.players {
-            squad.bench = allPlayers.filter { player in
-                !startingXI.contains(player.id)
-            }
+            let startingIDs = Set(startingXI)
+            squad.benchIDs = allPlayers.filter { !startingIDs.contains($0.id) }.map { $0.id }
         }
         
         do {
@@ -279,6 +308,89 @@ final class SwiftDataSquadRepository: SquadRepository {
         } catch {
             print("❌ [SquadRepo] Update failed: \(error)")
             throw RepositoryError.updateFailed(underlyingError: error)
+        }
+    }
+
+    func swapPlayers(slot1: PlayerSlot, slot2: PlayerSlot, squadId: UUID) async throws {
+        print("👥 [SquadRepo] Swapping players in squad \(squadId)")
+
+        guard let squad = try await fetchSquad(by: squadId) else {
+            print("❌ [SquadRepo] Squad not found for swap")
+            throw RepositoryError.notFound
+        }
+        
+        let player1: Player
+        switch slot1 {
+        case .starting(let p): player1 = p
+        case .bench(let p): player1 = p
+        }
+
+        let player2: Player
+        switch slot2 {
+        case .starting(let p): player2 = p
+        case .bench(let p): player2 = p
+        }
+
+        switch (slot1, slot2) {
+        case (.starting, .starting):
+            // **MARBLE STYLE**: Swap within the same position row
+            let row1 = positionRowIndex(for: player1.position)
+            let row2 = positionRowIndex(for: player2.position)
+            
+            guard row1 == row2 else {
+                print("❌ [SquadRepo] Cannot swap players from different positions")
+                return
+            }
+            
+            guard let index1 = squad.startingXIIDs[row1].firstIndex(of: player1.id),
+                  let index2 = squad.startingXIIDs[row1].firstIndex(of: player2.id) else {
+                print("❌ [SquadRepo] Could not find player indices in row")
+                return
+            }
+            
+            print("   🔄 BEFORE SWAP (row \(row1)): \(squad.startingXIIDs[row1])")
+            // **THIS IS THE KEY**: Direct array swap like marble example
+            squad.startingXIIDs[row1].swapAt(index1, index2)
+            print("   🔄 AFTER SWAP (row \(row1)): \(squad.startingXIIDs[row1])")
+            print("   ✅ Swapped starters: \(player1.name) <-> \(player2.name)")
+
+        case (.starting, .bench):
+            let row = positionRowIndex(for: player1.position)
+            
+            guard let startingIndex = squad.startingXIIDs[row].firstIndex(of: player1.id),
+                  let benchIndex = squad.benchIDs.firstIndex(of: player2.id) else {
+                print("❌ [SquadRepo] Could not find player indices")
+                return
+            }
+            
+            squad.startingXIIDs[row][startingIndex] = player2.id
+            squad.benchIDs[benchIndex] = player1.id
+            print("   ✅ Swapped starter/bench: \(player1.name) <-> \(player2.name)")
+
+        case (.bench, .starting):
+            let row = positionRowIndex(for: player2.position)
+            
+            guard let benchIndex = squad.benchIDs.firstIndex(of: player1.id),
+                  let startingIndex = squad.startingXIIDs[row].firstIndex(of: player2.id) else {
+                print("❌ [SquadRepo] Could not find player indices")
+                return
+            }
+            
+            squad.benchIDs[benchIndex] = player2.id
+            squad.startingXIIDs[row][startingIndex] = player1.id
+            print("   ✅ Swapped bench/starter: \(player1.name) <-> \(player2.name)")
+        
+        case (.bench, .bench):
+            print("   ⚠️ Bench-to-bench swaps not allowed")
+            return
+        }
+        
+        do {
+            try modelContext.save()
+            print("✅ [SquadRepo] Player swap successful and saved")
+        } catch {
+            print("❌ [SquadRepo] Player swap save failed: \(error)")
+            throw RepositoryError.saveFailed(underlyingError: error)
         }
     }
 }

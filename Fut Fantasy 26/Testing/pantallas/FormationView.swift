@@ -12,14 +12,11 @@ struct FormationView: View {
     let startingXI: [Player]
     let captain: Player?
     let viceCaptain: Player?
-    let isDragMode: Bool
-    let onPlayerTap: (Player) -> Void
-    let onPlayerMove: (Int, Int) -> Void
-    let playerRepository: PlayerRepository
-    let squadRepository: SquadRepository
+    let isEditMode: Bool
     
-    @State private var draggedPlayer: Player?
-    @State private var isDragging = false
+    @Binding var selectedSlot: PlayerSlot?
+    let isPlayerTappable: (PlayerSlot) -> Bool
+    let onPlayerTap: (PlayerSlot) -> Void
     
     var body: some View {
         GeometryReader { geometry in
@@ -166,7 +163,7 @@ struct FormationView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - Formation Line (FIXED)
+    // MARK: - Formation Line
     
     @ViewBuilder
     private func formationLine(
@@ -181,15 +178,15 @@ struct FormationView: View {
                 EmptyPlayerSlot()
                 Spacer()
             } else {
-                ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
+                ForEach(players) { player in
                     Spacer()
-                    
-                    if isDragMode {
-                        playerCardWithDrag(player: player)
-                    } else {
-                        playerCardWithNavigation(player: player)
-                    }
-                    
+                    playerCard(for: player)
+                        // Add ID and transition for animations
+                        .id(player.id)
+                        .transition(.asymmetric(
+                            insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
+                            removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
+                        ))
                     Spacer()
                 }
             }
@@ -197,95 +194,43 @@ struct FormationView: View {
         .frame(height: lineHeight)
     }
     
-    // MARK: - Player Card Builders (FIXED - Separated Logic)
+    // MARK: - Player Card Builder
     
-    private func playerCardWithDrag(player: Player) -> some View {
-        PitchPlayerCard(
+    private func playerCard(for player: Player) -> some View {
+        let slot = PlayerSlot.starting(player)
+        let isSelected = selectedSlot == slot
+        let tappable = isPlayerTappable(slot)
+        
+        return PitchPlayerCard(
             player: player,
             isCaptain: captain?.id == player.id,
             isViceCaptain: viceCaptain?.id == player.id,
-            isDragMode: isDragMode
+            isEditMode: isEditMode,
+            isSelected: isSelected,
+            isTappable: tappable
         )
-        .opacity(draggedPlayer?.id == player.id ? 0.4 : 1.0)
-        .onDrag {
-            self.draggedPlayer = player
-            return NSItemProvider(object: "\(player.id)" as NSString)
-        }
-        .onDrop(of: ["public.text"], isTargeted: nil) { providers in
-            handleDrop(on: player, providers: providers)
-        }
-    }
-    
-    private func playerCardWithNavigation(player: Player) -> some View {
-        NavigationLink(
-            destination: PlayerDetailView(
-                player: player,
-                viewModel: PlayerViewModel(repository: playerRepository),
-                playerRepository: playerRepository,
-                squadRepository: squadRepository
-            )
-        ) {
-            PitchPlayerCard(
-                player: player,
-                isCaptain: captain?.id == player.id,
-                isViceCaptain: viceCaptain?.id == player.id,
-                isDragMode: isDragMode
-            )
-        }
-        .buttonStyle(.plain)
         .onTapGesture {
-            if !isDragMode {
-                onPlayerTap(player)
-            }
+            onPlayerTap(slot)
         }
-    }
-    
-    // MARK: - Drop Handler (FIXED - Extracted)
-    
-    private func handleDrop(on player: Player, providers: [NSItemProvider]) -> Bool {
-        guard draggedPlayer != nil else { return false }
-        
-        var sourceIndex: Int = -1
-        var destinationIndex: Int = -1
-        
-        for (i, p) in startingXI.enumerated() {
-            if p.id == draggedPlayer?.id {
-                sourceIndex = i
-            }
-            if p.id == player.id {
-                destinationIndex = i
-            }
-        }
-        
-        if sourceIndex != -1 && destinationIndex != -1 {
-            if startingXI[sourceIndex].position == startingXI[destinationIndex].position {
-                onPlayerMove(sourceIndex, destinationIndex)
-                draggedPlayer = nil
-                return true
-            }
-        }
-        return false
     }
     
     // MARK: - Position Filters
+    // **CRITICAL**: These maintain the order from startingXI array
     
     private var goalkeepers: [Player] {
         startingXI.filter { $0.position == .goalkeeper }
     }
     
     private var defenders: [Player] {
-        let defs = startingXI.filter { $0.position == .defender }
-        return Array(defs.prefix(4))
+        startingXI.filter { $0.position == .defender }
     }
     
     private var midfielders: [Player] {
-        let mids = startingXI.filter { $0.position == .midfielder }
-        return Array(mids.prefix(3))
+        startingXI.filter { $0.position == .midfielder }
     }
     
     private var forwards: [Player] {
-        let fwds = startingXI.filter { $0.position == .forward }
-        return Array(fwds.prefix(3))
+        startingXI.filter { $0.position == .forward }
     }
 }
 
@@ -295,7 +240,9 @@ struct PitchPlayerCard: View {
     let player: Player
     let isCaptain: Bool
     let isViceCaptain: Bool
-    let isDragMode: Bool
+    let isEditMode: Bool
+    let isSelected: Bool
+    let isTappable: Bool
     
     var body: some View {
         VStack(spacing: 6) {
@@ -307,9 +254,12 @@ struct PitchPlayerCard: View {
             playerName
             playerPoints
         }
-        .opacity(isDragMode ? 0.8 : 1.0)
-        .scaleEffect(isDragMode ? 0.95 : 1.0)
-        .animation(.spring(response: 0.3), value: isDragMode)
+        // Apply visual effects based on state
+        .opacity(isEditMode && !isTappable ? 0.4 : 1.0)
+        .grayscale(isEditMode && !isTappable ? 0.8 : 0)
+        .scaleEffect(isSelected ? 1.1 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+        .animation(.easeInOut(duration: 0.2), value: isTappable)
     }
     
     private var playerCircle: some View {
@@ -344,6 +294,11 @@ struct PitchPlayerCard: View {
                     .foregroundStyle(.primary)
             }
         }
+        .overlay(
+            Circle()
+                .stroke(isSelected ? Color.yellow : Color.clear, lineWidth: 4)
+                .frame(width: 68, height: 68)
+        )
     }
     
     @ViewBuilder
@@ -448,35 +403,84 @@ struct EmptyPlayerSlot: View {
     }
 }
 
-// MARK: - Preview
 #Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Player.self, Squad.self,
-        configurations: config
-    )
-    
-    let context = container.mainContext
-    WorldCupDataSeeder.seedDataIfNeeded(context: context)
-    
-    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
-    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
-    
-    return ZStack {
-        Color.gray.opacity(0.2).ignoresSafeArea()
+    struct FormationPreview: View {
+        @State private var selectedSlot: PlayerSlot?
         
-        VStack {
-            FormationView(
-                startingXI: MockData.startingXI,
-                captain: MockData.mbappe,
-                viceCaptain: MockData.deBruyne,
-                isDragMode: false,
-                onPlayerTap: { _ in },
-                onPlayerMove: { _, _ in },
-                playerRepository: playerRepo,
-                squadRepository: squadRepo
-            )
-            .padding()
+        let startingXI = MockData.startingXI
+        let mbappe = MockData.mbappe
+        let deBruyne = MockData.deBruyne
+        
+        var body: some View {
+            ZStack {
+                Color.gray.opacity(0.2).ignoresSafeArea()
+                
+                VStack {
+                    FormationView(
+                        startingXI: startingXI,
+                        captain: mbappe,
+                        viceCaptain: deBruyne,
+                        isEditMode: true,
+                        selectedSlot: $selectedSlot,
+                        isPlayerTappable: { slot in
+                            return true
+                        },
+                        onPlayerTap: { tappedSlot in
+                            if selectedSlot == tappedSlot {
+                                selectedSlot = nil
+                            } else {
+                                selectedSlot = tappedSlot
+                            }
+                        }
+                    )
+                    .padding()
+                }
+            }
         }
     }
+    
+    return FormationPreview()
+}
+#Preview {
+    // A stateful view to host the preview
+    struct FormationPreview: View {
+        @State private var selectedSlot: PlayerSlot?
+        
+        // Dummy data for the preview
+        let startingXI = MockData.startingXI
+        let mbappe = MockData.mbappe
+        let deBruyne = MockData.deBruyne
+        
+        var body: some View {
+            ZStack {
+                Color.gray.opacity(0.2).ignoresSafeArea()
+                
+                VStack {
+                    FormationView(
+                        startingXI: startingXI,
+                        captain: mbappe,
+                        viceCaptain: deBruyne,
+                        isEditMode: true, // Set to true to see selection states
+                        selectedSlot: $selectedSlot,
+                        isPlayerTappable: { slot in
+                            // Preview logic: allow all taps
+                            return true
+                        },
+                        onPlayerTap: { tappedSlot in
+                            // Preview logic: simulate selection
+                            if selectedSlot == tappedSlot {
+                                selectedSlot = nil
+                            } else {
+                                selectedSlot = tappedSlot
+                            }
+                        }
+                    )
+                    .padding()
+                }
+            }
+        }
+    }
+    
+    // Return the stateful preview wrapper
+    return FormationPreview()
 }
