@@ -18,35 +18,52 @@ struct FormationView: View {
     let isPlayerTappable: (PlayerSlot) -> Bool
     let onPlayerTap: (PlayerSlot) -> Void
     
+    // For navigation to detail view
+    let playerRepository: PlayerRepository
+    let squadRepository: SquadRepository
+    
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                pitchBackground
+        ZStack {
+            pitchBackground
                 
-                if startingXI.isEmpty {
-                    emptyPitchState
-                } else {
+                .rotation3DEffect(
+                                .degrees(15), // Tilt angle
+                                axis: (x: 1.0, y: 0.0, z: 0.0),
+                                anchor: .center,
+                                perspective: 2 // Perspective depth (lower = more dramatic)
+                            )
+                .offset(y:-50)
+                .scaleEffect(0.95)
+            
+            
+            if startingXI.isEmpty {
+                emptyPitchState
+            } else {
+                GeometryReader { geometry in
                     VStack(spacing: 0) {
+                        // Goalkeeper
                         formationLine(
                             players: goalkeepers,
                             position: .goalkeeper,
                             geometry: geometry,
-                            lineHeight: geometry.size.height * 0.15
+                            lineHeight: geometry.size.height * 0.16
                         )
                         
                         Spacer()
                         
+                        // 4 Defenders
                         formationLine(
                             players: defenders,
                             position: .defender,
                             geometry: geometry,
-                            lineHeight: geometry.size.height * 0.20
+                            lineHeight: geometry.size.height * 0.18
                         )
                         
                         Spacer()
                         
+                        // 3 Midfielders
                         formationLine(
-                            players: midfielders,
+                            players: defensiveMidfielders,
                             position: .midfielder,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.20
@@ -54,16 +71,16 @@ struct FormationView: View {
                         
                         Spacer()
                         
+                        // 3 Forwards
                         formationLine(
                             players: forwards,
                             position: .forward,
                             geometry: geometry,
                             lineHeight: geometry.size.height * 0.20
                         )
-                        
-                        Spacer().frame(height: 20)
                     }
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 15)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
                 }
             }
         }
@@ -181,7 +198,6 @@ struct FormationView: View {
                 ForEach(players) { player in
                     Spacer()
                     playerCard(for: player)
-                        // Add ID and transition for animations
                         .id(player.id)
                         .transition(.asymmetric(
                             insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
@@ -209,28 +225,52 @@ struct FormationView: View {
             isSelected: isSelected,
             isTappable: tappable
         )
+        .contentShape(Rectangle())
         .onTapGesture {
-            onPlayerTap(slot)
+            if isEditMode {
+                onPlayerTap(slot)
+            }
         }
+        .background(
+            NavigationLink(destination: PlayerDetailView(
+                player: player,
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )) {
+                EmptyView()
+            }
+            .opacity(0)
+            .allowsHitTesting(!isEditMode)
+        )
     }
     
-    // MARK: - Position Filters
-    // **CRITICAL**: These maintain the order from startingXI array
+    
+    // MARK: - Position Filters (4-2-3-1 Formation)
     
     private var goalkeepers: [Player] {
-        startingXI.filter { $0.position == .goalkeeper }
+        let gks = startingXI.filter { $0.position == .goalkeeper }
+        return Array(gks.prefix(1)) // 1 GK
     }
-    
+
     private var defenders: [Player] {
-        startingXI.filter { $0.position == .defender }
+        let defs = startingXI.filter { $0.position == .defender }
+        return Array(defs.prefix(4)) // 4 DEF
     }
-    
-    private var midfielders: [Player] {
-        startingXI.filter { $0.position == .midfielder }
+
+    private var defensiveMidfielders: [Player] {
+        let mids = startingXI.filter { $0.position == .midfielder }
+        return Array(mids.prefix(3)) // All 3 MID (no split needed)
     }
-    
+
+    private var attackingMidfielders: [Player] {
+        // Return empty array since we don't have attacking mids in 4-3-3
+        return []
+    }
+
     private var forwards: [Player] {
-        startingXI.filter { $0.position == .forward }
+        let fwds = startingXI.filter { $0.position == .forward }
+        return Array(fwds.prefix(3)) // 3 FWD (was 1)
     }
 }
 
@@ -254,12 +294,10 @@ struct PitchPlayerCard: View {
             playerName
             playerPoints
         }
-        // Apply visual effects based on state
         .opacity(isEditMode && !isTappable ? 0.4 : 1.0)
         .grayscale(isEditMode && !isTappable ? 0.8 : 0)
         .scaleEffect(isSelected ? 1.1 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
-        .animation(.easeInOut(duration: 0.2), value: isTappable)
     }
     
     private var playerCircle: some View {
@@ -404,83 +442,68 @@ struct EmptyPlayerSlot: View {
 }
 
 #Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    
     struct FormationPreview: View {
         @State private var selectedSlot: PlayerSlot?
         
         let startingXI = MockData.startingXI
         let mbappe = MockData.mbappe
         let deBruyne = MockData.deBruyne
+        let playerRepo: PlayerRepository
+        let squadRepo: SquadRepository
         
         var body: some View {
-            ZStack {
-                Color.gray.opacity(0.2).ignoresSafeArea()
-                
-                VStack {
-                    FormationView(
-                        startingXI: startingXI,
-                        captain: mbappe,
-                        viceCaptain: deBruyne,
-                        isEditMode: true,
-                        selectedSlot: $selectedSlot,
-                        isPlayerTappable: { slot in
-                            return true
-                        },
-                        onPlayerTap: { tappedSlot in
-                            if selectedSlot == tappedSlot {
-                                selectedSlot = nil
-                            } else {
-                                selectedSlot = tappedSlot
-                            }
-                        }
-                    )
-                    .padding()
+            NavigationStack {
+                ZStack {
+                    Color.gray.opacity(0.2).ignoresSafeArea()
+                    
+                    VStack {
+                        FormationView(
+                            startingXI: startingXI,
+                            captain: mbappe,
+                            viceCaptain: deBruyne,
+                            isEditMode: true,
+                            selectedSlot: $selectedSlot,
+                            isPlayerTappable: { slot in
+                                return true
+                            },
+                            onPlayerTap: { tappedSlot in
+                                if selectedSlot == tappedSlot {
+                                    selectedSlot = nil
+                                } else {
+                                    selectedSlot = tappedSlot
+                                }
+                            },
+                            playerRepository: playerRepo,
+                            squadRepository: squadRepo
+                        )
+                        .padding()
+                    }
                 }
             }
         }
     }
     
-    return FormationPreview()
-}
-#Preview {
-    // A stateful view to host the preview
-    struct FormationPreview: View {
-        @State private var selectedSlot: PlayerSlot?
-        
-        // Dummy data for the preview
-        let startingXI = MockData.startingXI
-        let mbappe = MockData.mbappe
-        let deBruyne = MockData.deBruyne
-        
-        var body: some View {
-            ZStack {
-                Color.gray.opacity(0.2).ignoresSafeArea()
-                
-                VStack {
-                    FormationView(
-                        startingXI: startingXI,
-                        captain: mbappe,
-                        viceCaptain: deBruyne,
-                        isEditMode: true, // Set to true to see selection states
-                        selectedSlot: $selectedSlot,
-                        isPlayerTappable: { slot in
-                            // Preview logic: allow all taps
-                            return true
-                        },
-                        onPlayerTap: { tappedSlot in
-                            // Preview logic: simulate selection
-                            if selectedSlot == tappedSlot {
-                                selectedSlot = nil
-                            } else {
-                                selectedSlot = tappedSlot
-                            }
-                        }
-                    )
-                    .padding()
-                }
-            }
-        }
-    }
-    
-    // Return the stateful preview wrapper
-    return FormationPreview()
+    return FormationPreview(
+        playerRepo: playerRepo,
+        squadRepo: squadRepo
+    )
+    .modelContainer(container)
 }

@@ -117,18 +117,23 @@ struct SquadView: View {
                     isEditMode: isEditMode,
                     selectedSlot: $selectedSlot,
                     isPlayerTappable: isPlayerTappable,
-                    onPlayerTap: handlePlayerTap
+                    onPlayerTap: handlePlayerTap,
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
                 )
-                .padding()
+                .padding(.horizontal)
+                
                 
                 BenchView(
                     benchPlayers: squad.bench ?? [],
                     isEditMode: isEditMode,
                     selectedSlot: $selectedSlot,
                     isPlayerTappable: isPlayerTappable,
-                    onPlayerTap: handlePlayerTap
+                    onPlayerTap: handlePlayerTap,
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
                 )
-                .padding(.horizontal)
+                .padding()
                 
                 Button("Set Captain & Vice-Captain") {
                     showingCaptainSelection = true
@@ -191,24 +196,20 @@ struct SquadView: View {
     private func handlePlayerTap(on tappedSlot: PlayerSlot) {
         guard isEditMode else { return }
 
-        // SAME AS MARBLE EXAMPLE: If tapping a non-tappable slot, do nothing
         if !isPlayerTappable(slot: tappedSlot) {
             return
         }
 
-        // SAME AS MARBLE EXAMPLE: If tapping the currently selected slot, deselect it
         if selectedSlot == tappedSlot {
             selectedSlot = nil
             return
         }
 
-        // SAME AS MARBLE EXAMPLE: If no slot is selected yet, select the tapped one
         guard let firstSlot = selectedSlot else {
             selectedSlot = tappedSlot
             return
         }
         
-        // SAME AS MARBLE EXAMPLE: At this point, two valid slots are selected. Perform the swap.
         let secondSlot = tappedSlot
         
         Task {
@@ -219,12 +220,10 @@ struct SquadView: View {
     }
     
     private func isPlayerTappable(slot: PlayerSlot) -> Bool {
-        // SAME AS MARBLE EXAMPLE: If no player is selected, all slots are tappable
         guard let selected = selectedSlot else {
             return true
         }
         
-        // SAME AS MARBLE EXAMPLE: The selected slot itself is always tappable (to deselect)
         if selected == slot {
             return true
         }
@@ -242,18 +241,12 @@ struct SquadView: View {
         }
 
         switch (selected, slot) {
-        // --- Rule: Field <-> Field ---
-        // SAME AS MARBLE: Allow swaps only within the same "row" (position)
         case (.starting, .starting):
             return selectedPlayer.position == targetPlayer.position
         
-        // --- Rule: Field <-> Bench ---
-        // SAME AS MARBLE: Requires both slots to have a player and colors (positions) match
         case (.starting, .bench), (.bench, .starting):
             return selectedPlayer.position == targetPlayer.position
             
-        // --- Rule: Bench <-> Bench ---
-        // SAME AS MARBLE: Disallow swapping between two bench players
         case (.bench, .bench):
             return false
         }
@@ -278,6 +271,62 @@ struct SquadView: View {
     
     let playerRepo = SwiftDataPlayerRepository(modelContext: context)
     let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    
+    // ✅ CREATE SAMPLE SQUAD WITH PLAYERS
+    let squad = Squad(teamName: "Batxzy's Dream Team", ownerName: "Batxzy")
+    context.insert(squad)
+    
+    // Fetch some players from the seeded data
+    let fetchDescriptor = FetchDescriptor<Player>(
+        sortBy: [SortDescriptor(\.totalPoints, order: .reverse)]
+    )
+    
+    if let allPlayers = try? context.fetch(fetchDescriptor) {
+        // Get players for 4-2-3-1 formation
+        let goalkeepers = allPlayers.filter { $0.position == .goalkeeper }.prefix(2)
+        let defenders = allPlayers.filter { $0.position == .defender }.prefix(5)
+        let midfielders = allPlayers.filter { $0.position == .midfielder }.prefix(5)
+        let forwards = allPlayers.filter { $0.position == .forward }.prefix(3)
+        
+        var selectedPlayers: [Player] = []
+        selectedPlayers.append(contentsOf: goalkeepers)
+        selectedPlayers.append(contentsOf: defenders)
+        selectedPlayers.append(contentsOf: midfielders)
+        selectedPlayers.append(contentsOf: forwards)
+        
+        // Add players to squad
+        squad.players = Array(selectedPlayers.prefix(15))
+        
+        // Set up 4-2-3-1 formation (11 starters)
+        if selectedPlayers.count >= 11 {
+            let gk = Array(goalkeepers.prefix(1))
+            let def = Array(defenders.prefix(4))
+            let mid = Array(midfielders.prefix(5))
+            let fwd = Array(forwards.prefix(1))
+            
+            // Build 2D structure for starting XI
+            squad.startingXIIDs = [
+                gk.map { $0.id },      // 1 GK
+                def.map { $0.id },     // 4 DEF
+                mid.map { $0.id },     // 5 MID (will split into 2-3)
+                fwd.map { $0.id }      // 1 FWD
+            ]
+            
+            // Remaining players go to bench (4 players)
+            let startingIDs = Set(gk.map { $0.id } + def.map { $0.id } + mid.map { $0.id } + fwd.map { $0.id })
+            squad.benchIDs = selectedPlayers.filter { !startingIDs.contains($0.id) }.prefix(4).map { $0.id }
+            
+            // Set captain and vice-captain
+            if let captain = fwd.first {
+                squad.captain = captain
+            }
+            if let viceCaptain = mid.first {
+                squad.viceCaptain = viceCaptain
+            }
+        }
+    }
+    
+    try? context.save()
     
     return SquadView(
         viewModel: SquadViewModel(squadRepository: squadRepo, playerRepository: playerRepo),

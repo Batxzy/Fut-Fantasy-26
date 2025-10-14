@@ -16,6 +16,10 @@ struct BenchView: View {
     let isPlayerTappable: (PlayerSlot) -> Bool
     let onPlayerTap: (PlayerSlot) -> Void
     
+    // For navigation to detail view
+    let playerRepository: PlayerRepository
+    let squadRepository: SquadRepository
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -41,24 +45,12 @@ struct BenchView: View {
             } else {
                 HStack(spacing: 12) {
                     ForEach(benchPlayers) { player in
-                        let slot = PlayerSlot.bench(player)
-                        let isSelected = selectedSlot == slot
-                        let tappable = isPlayerTappable(slot)
-                        
-                        BenchPlayerCard(
-                            player: player,
-                            isSelected: isSelected,
-                            isTappable: isEditMode && tappable
-                        )
-                        .onTapGesture {
-                            onPlayerTap(slot)
-                        }
-                        // Add ID and transition for animations
-                        .id(player.id)
-                        .transition(.asymmetric(
-                            insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
-                            removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
-                        ))
+                        benchPlayerCard(for: player)
+                            .id(player.id)
+                            .transition(.asymmetric(
+                                insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
+                                removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
+                            ))
                     }
                     
                     // Empty slots
@@ -72,6 +64,42 @@ struct BenchView: View {
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
+        )
+    }
+    
+    // MARK: - Bench Player Card Builder
+    
+    @ViewBuilder
+    private func benchPlayerCard(for player: Player) -> some View {
+        let slot = PlayerSlot.bench(player)
+        let isSelected = selectedSlot == slot
+        let tappable = isPlayerTappable(slot)
+        
+        // **FIX**: Don't conditionally change view structure
+        BenchPlayerCard(
+            player: player,
+            isSelected: isSelected,
+            isTappable: isEditMode ? tappable : true // Always tappable in view mode
+        )
+        .contentShape(Rectangle()) // Make entire area tappable
+        .onTapGesture {
+            if isEditMode {
+                // Edit mode: swap logic
+                onPlayerTap(slot)
+            }
+        }
+        .background(
+            // Navigation only active in view mode
+            NavigationLink(destination: PlayerDetailView(
+                player: player,
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )) {
+                EmptyView()
+            }
+            .opacity(0)
+            .allowsHitTesting(!isEditMode) // Disable navigation in edit mode
         )
     }
 }
@@ -95,11 +123,10 @@ struct BenchPlayerCard: View {
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
             }
-            // **FIX:** Move the outline outside the image ZStack
             .overlay {
                 Circle()
                     .stroke(isSelected ? Color.yellow : positionColor, lineWidth: isSelected ? 4 : 2)
-                    .frame(width: 58, height: 58) // Slightly larger than the circle
+                    .frame(width: 58, height: 58)
             }
             
             Text(player.name)
@@ -120,7 +147,6 @@ struct BenchPlayerCard: View {
         .grayscale(isTappable ? 0 : 0.8)
         .scaleEffect(isSelected ? 1.1 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
-        .animation(.easeInOut(duration: 0.2), value: isTappable)
     }
     
     private var positionColor: Color {
