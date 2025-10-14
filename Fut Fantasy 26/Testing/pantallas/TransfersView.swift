@@ -9,7 +9,7 @@ struct TransfersView: View {
     // ✅ @Query for squad observation
     @Query private var squads: [Squad]
     
-    // ✅ @Query for all players (for replacement selection)
+    // ✅ @Query for all players
     @Query(sort: \Player.totalPoints, order: .reverse) private var allPlayers: [Player]
     
     @Environment(\.dismiss) private var dismiss
@@ -17,7 +17,6 @@ struct TransfersView: View {
     @State private var showingPlayerSelection = false
     @State private var isProcessing = false
     @State private var pendingTransfers: [TransferMove] = []
-    @State private var showingCaptainSelection = false
     
     var squad: Squad? {
         squads.first
@@ -29,7 +28,6 @@ struct TransfersView: View {
                 transferHeader(squad: squad)
                 
                 Divider()
-                
                 
                 if !pendingTransfers.isEmpty {
                     pendingTransfersSection
@@ -61,23 +59,6 @@ struct TransfersView: View {
                     onPlayerSelected: { newPlayer in
                         addPendingTransfer(out: playerToRemove, in: newPlayer)
                         selectedPlayerToRemove = nil
-                    }
-                )
-            }
-        }
-        .sheet(isPresented: $showingCaptainSelection) {
-            if let squad = squad {
-                CaptainSelectionView(
-                    squad: squad,
-                    onCaptainSelected: { player in
-                        Task {
-                            await viewModel.setCaptain(player, squadId: squad.id)
-                        }
-                    },
-                    onViceCaptainSelected: { player in
-                        Task {
-                            await viewModel.setViceCaptain(player, squadId: squad.id)
-                        }
                     }
                 )
             }
@@ -129,73 +110,35 @@ struct TransfersView: View {
     @ViewBuilder
     private func squadList(squad: Squad) -> some View {
         List {
-            Section("Current Squad") {
+            Section("Current Squad (\((squad.players ?? []).count))") {
                 ForEach(squad.players ?? [], id: \.id) { player in
-                    HStack {
-                        NavigationLink(destination: PlayerDetailView(
-                            player: player,
-                            viewModel: PlayerViewModel(repository: playerRepository),
-                            playerRepository: playerRepository,
-                            squadRepository: squadRepository
-                        )) {
-                            PlayerRowView(player: player)
-                        }
+                    HStack(spacing: 12) {
+                        // ✅ Just player info, no navigation
+                        PlayerRowView(player: player)
                         
                         Spacer()
                         
+                        // ✅ Simple blue arrow button
                         Button {
                             selectedPlayerToRemove = player
                             showingPlayerSelection = true
                         } label: {
                             Image(systemName: "arrow.right.circle.fill")
+                                .font(.title2)
                                 .foregroundStyle(.blue)
                         }
                         .buttonStyle(.plain)
                         .disabled(isProcessing || isPendingTransfer(player))
-                        .opacity(isPendingTransfer(player) ? 0.6 : 1.0)
+                        .opacity(isPendingTransfer(player) ? 0.3 : 1.0)
                     }
                 }
-            }
-            
-            if let captain = squad.captain {
-                Section("Team Captain") {
-                    PlayerRowView(player: captain)
-                        .overlay(alignment: .trailing) {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                                .padding(.trailing, 8)
-                        }
-                }
-            }
-            
-            if let viceCaptain = squad.viceCaptain {
-                Section("Vice Captain") {
-                    PlayerRowView(player: viceCaptain)
-                        .overlay(alignment: .trailing) {
-                            Text("V")
-                                .font(.caption)
-                                .padding(4)
-                                .background(Circle().fill(.purple))
-                                .foregroundStyle(.white)
-                                .padding(.trailing, 8)
-                        }
-                }
-            }
-            
-            Section("Leadership") {
-                Button("Set Captain & Vice-Captain") {
-                    showingCaptainSelection = true
-                }
-                .disabled(isProcessing)
             }
         }
     }
     
-
-    
     private var pendingTransfersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Pending Transfers")
+            Text("Pending Transfers (\(pendingTransfers.count))")
                 .font(.headline)
                 .padding(.horizontal)
             
@@ -380,36 +323,47 @@ struct PlayerSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            if filteredPlayers.isEmpty {
-                ContentUnavailableView(
-                    "No Replacements Found",
-                    systemImage: "person.3.fill",
-                    description: Text("Try adjusting your search. Ensure you have enough budget.")
-                )
-            } else {
-                List(filteredPlayers, id: \.id) { player in
-                    Button {
-                        onPlayerSelected(player)
-                        dismiss()
-                    } label: {
-                        HStack {
-                            PlayerRowView(player: player)
-                            
-                            Spacer()
-                            
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundStyle(.blue)
+            Group {
+                if filteredPlayers.isEmpty {
+                    ContentUnavailableView(
+                        "No Replacements Found",
+                        systemImage: "person.3.fill",
+                        description: Text("Try adjusting your search or budget.")
+                    )
+                } else {
+                    List {
+                        Section("Available Players (\(filteredPlayers.count))") {
+                            ForEach(filteredPlayers, id: \.id) { player in
+                                Button {
+                                    onPlayerSelected(player)
+                                    dismiss()
+                                } label: {
+                                    HStack {
+                                        PlayerRowView(player: player)
+                                        
+                                        Spacer()
+                                        
+                        
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title2)
+                                            .foregroundStyle(.tint)
+                                            .symbolRenderingMode(.hierarchical)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .tint(.green)
+                            }
                         }
                     }
                 }
             }
-        }
-        .navigationTitle("Select Replacement")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "Search players")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+            .navigationTitle("Select Replacement")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search players")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
             }
         }
     }

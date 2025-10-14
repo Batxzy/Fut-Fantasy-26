@@ -212,37 +212,45 @@ struct FormationView: View {
     
     // MARK: - Player Card Builder
     
+    @ViewBuilder
     private func playerCard(for player: Player) -> some View {
         let slot = PlayerSlot.starting(player)
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        return PitchPlayerCard(
-            player: player,
-            isCaptain: captain?.id == player.id,
-            isViceCaptain: viceCaptain?.id == player.id,
-            isEditMode: isEditMode,
-            isSelected: isSelected,
-            isTappable: tappable
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if isEditMode {
+        if isEditMode {
+            // Edit mode: only tap to swap
+            PitchPlayerCard(
+                player: player,
+                isCaptain: captain?.id == player.id,
+                isViceCaptain: viceCaptain?.id == player.id,
+                isEditMode: isEditMode,
+                isSelected: isSelected,
+                isTappable: tappable
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
                 onPlayerTap(slot)
             }
-        }
-        .background(
+        } else {
+            // View mode: NavigationLink to detail
             NavigationLink(destination: PlayerDetailView(
                 player: player,
                 viewModel: PlayerViewModel(repository: playerRepository),
                 playerRepository: playerRepository,
                 squadRepository: squadRepository
             )) {
-                EmptyView()
+                PitchPlayerCard(
+                    player: player,
+                    isCaptain: captain?.id == player.id,
+                    isViceCaptain: viceCaptain?.id == player.id,
+                    isEditMode: isEditMode,
+                    isSelected: isSelected,
+                    isTappable: true
+                )
             }
-            .opacity(0)
-            .allowsHitTesting(!isEditMode)
-        )
+            .buttonStyle(.plain)
+        }
     }
     
     

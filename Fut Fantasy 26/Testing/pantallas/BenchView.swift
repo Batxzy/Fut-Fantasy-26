@@ -75,32 +75,33 @@ struct BenchView: View {
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        // **FIX**: Don't conditionally change view structure
-        BenchPlayerCard(
-            player: player,
-            isSelected: isSelected,
-            isTappable: isEditMode ? tappable : true // Always tappable in view mode
-        )
-        .contentShape(Rectangle()) // Make entire area tappable
-        .onTapGesture {
-            if isEditMode {
-                // Edit mode: swap logic
+        if isEditMode {
+            // Edit mode: only tap to swap
+            BenchPlayerCard(
+                player: player,
+                isSelected: isSelected,
+                isTappable: tappable
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
                 onPlayerTap(slot)
             }
-        }
-        .background(
-            // Navigation only active in view mode
+        } else {
+            // View mode: NavigationLink to detail
             NavigationLink(destination: PlayerDetailView(
                 player: player,
                 viewModel: PlayerViewModel(repository: playerRepository),
                 playerRepository: playerRepository,
                 squadRepository: squadRepository
             )) {
-                EmptyView()
+                BenchPlayerCard(
+                    player: player,
+                    isSelected: isSelected,
+                    isTappable: true
+                )
             }
-            .opacity(0)
-            .allowsHitTesting(!isEditMode) // Disable navigation in edit mode
-        )
+            .buttonStyle(.plain)
+        }
     }
 }
 
