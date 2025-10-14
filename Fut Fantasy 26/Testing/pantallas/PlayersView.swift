@@ -77,11 +77,7 @@ struct PlayersView: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                        .padding()
-                }
+                
                 
                 if viewModel.isLoading {
                     ProgressView()

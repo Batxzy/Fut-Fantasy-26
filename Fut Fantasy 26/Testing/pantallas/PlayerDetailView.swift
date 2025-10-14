@@ -7,6 +7,7 @@
  import SwiftData
  import SwiftUI
 
+
 struct PlayerDetailView: View {
     let player: Player
     @Bindable var viewModel: PlayerViewModel
@@ -17,7 +18,6 @@ struct PlayerDetailView: View {
     @Query private var squads: [Squad]
     
     @State private var showingAddConfirmation = false
-    @State private var isProcessing = false
     
     var currentSquad: Squad? {
         squads.first
@@ -36,15 +36,7 @@ struct PlayerDetailView: View {
                 // ADD TO SQUAD BUTTON
                 actionButton
                     .padding(.horizontal)
-                
-                // Error message
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal)
-                }
-                
+                                
                 // Stats
                 statsSection
                 
@@ -138,23 +130,22 @@ struct PlayerDetailView: View {
                 Button {
                     showingAddConfirmation = true
                 } label: {
-                    if isProcessing {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    } else {
-                        Label("Add to Squad", systemImage: "plus.circle.fill")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(.blue)
-                            .foregroundStyle(.white)
-                            .cornerRadius(12)
-                    }
+                    Label("Add to Squad", systemImage: "plus.circle.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.blue)
+                        .foregroundStyle(.white)
+                        .cornerRadius(12)
                 }
-                .disabled(isProcessing)
             }
         } else {
-            ProgressView()
+            // Replace ProgressView with a "Create Squad" message
+            Label("No Squad Available", systemImage: "exclamationmark.triangle")
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(.gray.opacity(0.2))
+                .foregroundStyle(.secondary)
+                .cornerRadius(12)
         }
     }
     
@@ -196,24 +187,17 @@ struct PlayerDetailView: View {
     
     private func addPlayerToSquad() async {
         guard let squad = currentSquad else { return }
-        
-        isProcessing = true
-        
-        // Create a SquadViewModel instance to handle the write
-        let squadViewModel = SquadViewModel(
-            squadRepository: squadRepository,
-            playerRepository: playerRepository
-        )
-        
-        await squadViewModel.addPlayerToSquad(player, squadId: squad.id)
-        
-        if let error = squadViewModel.errorMessage {
-            viewModel.errorMessage = error
+                
+        do {
+            try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
+            print("✅ [PlayerDetail] Player added successfully")
+        } catch {
+            viewModel.errorMessage = error.localizedDescription
+            print("❌ [PlayerDetail] Failed to add player: \(error)")
         }
-        
-        isProcessing = false
     }
 }
+
 
 // MARK: - Preview
 #Preview {

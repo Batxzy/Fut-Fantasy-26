@@ -200,6 +200,7 @@ extension Notification.Name {
     let context = container.mainContext
     
     // Seed data
+
     WorldCupDataSeeder.seedDataIfNeeded(context: context)
     
     // Create repositories

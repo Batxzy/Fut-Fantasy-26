@@ -103,6 +103,33 @@ final class SwiftDataSquadRepository: SquadRepository {
         }
         squad.players?.append(player)
         
+        // ADDED: Automatically add to bench if not already in starting XI
+        if squad.startingXI == nil {
+            squad.startingXI = []
+        }
+        
+        if squad.bench == nil {
+            squad.bench = []
+        }
+        
+        // If we have less than 11 starters and position allows, add to starting XI
+        if let startingXI = squad.startingXI, startingXI.count < 11 {
+            let positionCount = startingXI.filter { $0.position == player.position }.count
+            
+            // Only add to starting XI if we don't exceed position limits
+            if (player.position == .goalkeeper && positionCount < 1) ||
+               (player.position == .defender && positionCount < 4) ||
+               (player.position == .midfielder && positionCount < 4) ||
+               (player.position == .forward && positionCount < 2) {
+                squad.startingXI?.append(player)
+            } else {
+                squad.bench?.append(player)
+            }
+        } else {
+            // Add to bench if starting XI is full
+            squad.bench?.append(player)
+        }
+        
         do {
             try modelContext.save()
             print("✅ [SquadRepo] Player added successfully")

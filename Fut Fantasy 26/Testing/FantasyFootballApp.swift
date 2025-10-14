@@ -47,7 +47,14 @@ struct FantasyFootballApp: App {
             .task {
                 print("🚀 [App] Starting data seeding...")
                 await seedDataIfNeeded()
-                await seedSquadIfNeeded()
+                
+                // Fix this line with the proper function call
+                await WorldCupDataSeeder.seedSquadIfNeeded(
+                    squadRepository: createSquadRepository(),
+                    playerRepository: createPlayerRepository(),
+                    context: modelContainer.mainContext
+                )
+                
                 print("✅ [App] All seeding tasks completed!")
             }
         }
@@ -80,7 +87,7 @@ struct FantasyFootballApp: App {
     private func seedDataIfNeeded() async {
         WorldCupDataSeeder.seedDataIfNeeded(context: modelContainer.mainContext)
     }
-    
+    /*
     @MainActor
     private func seedSquadIfNeeded() async {
         await WorldCupDataSeeder.seedSquadIfNeeded(
@@ -89,4 +96,5 @@ struct FantasyFootballApp: App {
             context: modelContainer.mainContext
         )
     }
+     */
 }

@@ -389,7 +389,7 @@ final class Squad {
         self.teamName = teamName
         self.ownerName = ownerName
         self.initialBudget = initialBudget
-        self.freeTransfersRemaining = 1
+        self.freeTransfersRemaining = 5
         self.totalTransfersMade = 0
         self.pointsDeductedFromTransfers = 0
         self.hasUnlimitedTransfers = false
@@ -646,7 +646,7 @@ enum TournamentStage: String, Codable, CaseIterable {
     
     var maxPlayersPerNation: Int {
         switch self {
-        case .groupStage: return 3
+        case .groupStage: return 30
         case .roundOf16: return 4
         case .quarterFinals: return 5
         case .semiFinals, .thirdPlace: return 6

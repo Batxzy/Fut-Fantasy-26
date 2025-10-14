@@ -33,6 +33,34 @@ class WorldCupDataSeeder {
         }
     }
     
+    // MARK: - Create user squad
+    static func seedSquadIfNeeded(
+        squadRepository: SquadRepository,
+        playerRepository: PlayerRepository,
+        context: ModelContext
+    ) async {
+        print("👥 [Seeder] Checking squad status...")
+        
+        do {
+            // Check if squad already exists
+            let squadDescriptor = FetchDescriptor<Squad>()
+            let existingSquads = try context.fetch(squadDescriptor)
+            
+            if !existingSquads.isEmpty {
+                print("✅ [Seeder] Squad already exists. No action needed.")
+                return
+            }
+            
+            // Create new empty squad
+            let newSquad = try await squadRepository.createSquad(teamName: "My Team")
+            print("✅ [Seeder] Created new empty squad with ID: \(newSquad.id)")
+            
+        } catch {
+            print("❌ [Seeder] ERROR during squad seeding: \(error)")
+            print("   Error details: \(error.localizedDescription)")
+        }
+    }
+    
     // MARK: - Helper to Fetch User Squad
     
     private static func fetchUserSquad(context: ModelContext) throws -> Squad? {
@@ -43,7 +71,8 @@ class WorldCupDataSeeder {
     
     // MARK: - Squad Seeding (HARDCODED FIX)
     
-    @MainActor
+    
+    /* @MainActor
     static func seedSquadIfNeeded(
         squadRepository: SquadRepository,
         playerRepository: PlayerRepository,
@@ -52,101 +81,145 @@ class WorldCupDataSeeder {
         print("👥 [Seeder] Checking squad status...")
         
         do {
+            // Check if we have players
             let playerCount = try context.fetchCount(FetchDescriptor<Player>())
             guard playerCount > 0 else {
                 print("⚠️ [Seeder] No players found in database. Cannot seed squad.")
                 return
             }
             
-            // ✅ Fetch squad directly from context
-            var squad = try fetchUserSquad(context: context)
+            // Fetch existing squad
+            let squadDescriptor = FetchDescriptor<Squad>()
+            let existingSquads = try context.fetch(squadDescriptor)
             
-            if let existingSquad = squad, (existingSquad.players?.count ?? 0) == 15 {
-                print("✅ Squad is already full with 15 players. No action needed.")
+            // Check if squad already exists and is complete
+            if let existingSquad = existingSquads.first,
+               (existingSquad.players?.count ?? 0) == 15,
+               (existingSquad.startingXI?.count ?? 0) == 11 {
+                print("✅ Squad is already complete with 15 players and 11 starters. No action needed.")
                 return
             }
             
-            print("⚠️ Squad is incomplete or missing. Creating new squad.")
+            print("⚠️ Squad is incomplete or missing. Resetting and creating new squad...")
             
-            // Delete old squad if exists
-            if let existingSquad = squad {
-                context.delete(existingSquad)
-                try context.save()
-                print("✅ Old squad deleted")
+            // Delete ALL existing squads
+            for squad in existingSquads {
+                context.delete(squad)
             }
+            try context.save()
+            print("✅ Old squads deleted")
             
             // Create new squad
-            squad = try await squadRepository.createSquad(teamName: "My Team")
-            print("✅ New empty squad created.")
+            let newSquad = try await squadRepository.createSquad(teamName: "My Team")
+            print("✅ New empty squad created with ID: \(newSquad.id)")
             
             // --- HARDCODED PLAYER SELECTION ---
             print("👥 [Seeder] Assembling a hardcoded default squad...")
             
             let defaultSquadPlayerIDs: [Int] = [
-                1, 12,  // GK
-                2, 13, 24, 35, 40,  // DEF
-                6, 16, 28, 37, 41,  // MID
-                31, 38, 43  // FWD
+                1, 12,  // GK (2)
+                2, 13, 24, 35, 40,  // DEF (5)
+                6, 16, 28, 37, 41,  // MID (5)
+                31, 38, 43  // FWD (3)
             ]
             
+            // Fetch the specific players
             let predicate = #Predicate<Player> { defaultSquadPlayerIDs.contains($0.id) }
-            let descriptor = FetchDescriptor<Player>(predicate: predicate)
-            let playersForSquad = try context.fetch(descriptor)
+            let playerDescriptor = FetchDescriptor<Player>(predicate: predicate)
+            let playersForSquad = try context.fetch(playerDescriptor)
             
             guard playersForSquad.count == 15 else {
-                print("❌ Failed to fetch the 15 hardcoded players. Check IDs. Found \(playersForSquad.count)")
+                print("❌ Failed to fetch the 15 hardcoded players. Found \(playersForSquad.count)")
+                print("   Missing IDs: \(Set(defaultSquadPlayerIDs).subtracting(playersForSquad.map { $0.id }))")
                 return
             }
             
             print("✅ Fetched 15 specific players. Adding to squad...")
+            
+            // Add players one by one
             for player in playersForSquad {
-                try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad!.id)
+                try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: newSquad.id)
+                print("   ✓ Added: \(player.name) (\(player.position.rawValue))")
             }
             
-            // ✅ Refresh squad from context
-            squad = try fetchUserSquad(context: context)
+            print("✅ All 15 players added to squad")
             
-            guard let allPlayers = squad?.players else {
-                print("❌ Squad players are nil after adding them.")
+            // Refresh squad from context
+            let refreshedSquads = try context.fetch(squadDescriptor)
+            guard let squad = refreshedSquads.first else {
+                print("❌ Cannot find squad after refresh")
                 return
             }
             
+            guard let allPlayers = squad.players, allPlayers.count == 15 else {
+                print("❌ Squad doesn't have 15 players after adding. Count: \(squad.players?.count ?? 0)")
+                return
+            }
+            
+            print("✅ Squad confirmed with 15 players. Building starting XI...")
+            
+            // Sort and organize by position
             let sortedPlayers = allPlayers.sorted { $0.id < $1.id }
             
-            let gks = sortedPlayers.filter { $0.position == PlayerPosition.goalkeeper }
-            let defs = sortedPlayers.filter { $0.position == PlayerPosition.defender }
-            let mids = sortedPlayers.filter { $0.position == PlayerPosition.midfielder }
-            let fwds = sortedPlayers.filter { $0.position == PlayerPosition.forward }
+            let gks = sortedPlayers.filter { $0.position == .goalkeeper }
+            let defs = sortedPlayers.filter { $0.position == .defender }
+            let mids = sortedPlayers.filter { $0.position == .midfielder }
+            let fwds = sortedPlayers.filter { $0.position == .forward }
             
-            let startingXI = Array(gks.prefix(1)) + Array(defs.prefix(4)) + Array(mids.prefix(4)) + Array(fwds.prefix(2))
+            print("   Position breakdown: GK(\(gks.count)), DEF(\(defs.count)), MID(\(mids.count)), FWD(\(fwds.count))")
+            
+            // Build starting XI (1-4-4-2 formation)
+            let startingXI = Array(gks.prefix(1)) +
+                             Array(defs.prefix(4)) +
+                             Array(mids.prefix(4)) +
+                             Array(fwds.prefix(2))
             
             guard startingXI.count == 11 else {
-                print("❌ Could not form a starting XI of 11. Players found: GK(\(gks.count)), D(\(defs.count)), M(\(mids.count)), F(\(fwds.count))")
+                print("❌ Could not form a starting XI of 11. Got \(startingXI.count) players")
                 return
             }
             
-            print("✅ [Seeder] Setting starting XI...")
-            try await squadRepository.setSquadStartingXI(squadId: squad!.id, startingXI: startingXI.map { $0.id })
-            print("✅ [Seeder] Starting XI set")
+            print("✅ Starting XI formed with 11 players. Setting lineup...")
             
-            if let captain = startingXI.first(where: { $0.name == "K. Mbappé" }),
-               let viceCaptain = startingXI.first(where: { $0.name == "H. Kane" }) {
-                try await squadRepository.setCaptain(playerId: captain.id, squadId: squad!.id)
-                try await squadRepository.setViceCaptain(playerId: viceCaptain.id, squadId: squad!.id)
-                print("✅ [Seeder] Captain and vice-captain set")
+            // Set starting XI
+            try await squadRepository.setSquadStartingXI(
+                squadId: squad.id,
+                startingXI: startingXI.map { $0.id }
+            )
+            print("✅ Starting XI set successfully")
+            
+            // Set captain and vice-captain
+            if let mbappe = startingXI.first(where: { $0.name.contains("Mbappé") }) {
+                try await squadRepository.setCaptain(playerId: mbappe.id, squadId: squad.id)
+                print("✅ Captain set: \(mbappe.name)")
+                
+                if let kane = startingXI.first(where: { $0.name.contains("Kane") }) {
+                    try await squadRepository.setViceCaptain(playerId: kane.id, squadId: squad.id)
+                    print("✅ Vice-captain set: \(kane.name)")
+                }
             }
             
-            // ✅ Final refresh
-            squad = try fetchUserSquad(context: context)
+            // Final verification
+            let finalSquads = try context.fetch(squadDescriptor)
+            guard let finalSquad = finalSquads.first else {
+                print("❌ Cannot find squad for final verification")
+                return
+            }
             
             print("\n🎉 [Seeder] Squad setup complete!")
-            print("   - Players: \(squad?.players?.count ?? 0)/15")
-            print("   - Budget: \(squad?.displayBudget ?? "N/A")\n")
+            print("   ✓ Team Name: \(finalSquad.teamName)")
+            print("   ✓ Players: \(finalSquad.players?.count ?? 0)/15")
+            print("   ✓ Starting XI: \(finalSquad.startingXI?.count ?? 0)/11")
+            print("   ✓ Bench: \(finalSquad.bench?.count ?? 0)/4")
+            print("   ✓ Captain: \(finalSquad.captain?.name ?? "None")")
+            print("   ✓ Vice-Captain: \(finalSquad.viceCaptain?.name ?? "None")")
+            print("   ✓ Budget: \(finalSquad.displayBudget)\n")
             
         } catch {
             print("❌ [Seeder] ERROR during squad seeding: \(error)")
+            print("   Error details: \(error.localizedDescription)")
         }
-    }
+    } */
     
     // MARK: - Matchdays
     

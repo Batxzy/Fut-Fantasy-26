@@ -30,9 +30,6 @@ struct TransfersView: View {
                 
                 Divider()
                 
-                if let error = viewModel.errorMessage {
-                    errorBanner(error)
-                }
                 
                 if !pendingTransfers.isEmpty {
                     pendingTransfersSection
@@ -194,18 +191,7 @@ struct TransfersView: View {
         }
     }
     
-    private func errorBanner(_ error: String) -> some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.yellow)
-            Text(error)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(.red.opacity(0.1))
-    }
+
     
     private var pendingTransfersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
