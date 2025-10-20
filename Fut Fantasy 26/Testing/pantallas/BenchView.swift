@@ -75,32 +75,29 @@ struct BenchView: View {
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        if isEditMode {
-            // Edit mode: only tap to swap
+        ZStack {
             BenchPlayerCard(
                 player: player,
                 isSelected: isSelected,
                 isTappable: tappable
             )
-            .contentShape(Rectangle())
-            .onTapGesture {
+            
+            if !isEditMode {
+                NavigationLink(destination: PlayerDetailView(
+                    player: player,
+                    viewModel: PlayerViewModel(repository: playerRepository),
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
+                )) {
+                    Color.clear
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isEditMode {
                 onPlayerTap(slot)
             }
-        } else {
-            // View mode: NavigationLink to detail
-            NavigationLink(destination: PlayerDetailView(
-                player: player,
-                viewModel: PlayerViewModel(repository: playerRepository),
-                playerRepository: playerRepository,
-                squadRepository: squadRepository
-            )) {
-                BenchPlayerCard(
-                    player: player,
-                    isSelected: isSelected,
-                    isTappable: true
-                )
-            }
-            .buttonStyle(.plain)
         }
     }
 }
@@ -147,7 +144,7 @@ struct BenchPlayerCard: View {
         .opacity(isTappable ? 1.0 : 0.4)
         .grayscale(isTappable ? 0 : 0.8)
         .scaleEffect(isSelected ? 1.1 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: [isSelected,isTappable])
     }
     
     private var positionColor: Color {

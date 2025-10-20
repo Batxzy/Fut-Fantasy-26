@@ -27,10 +27,10 @@ struct FormationView: View {
             pitchBackground
                 
                 .rotation3DEffect(
-                                .degrees(15), // Tilt angle
+                                .degrees(15),
                                 axis: (x: 1.0, y: 0.0, z: 0.0),
                                 anchor: .center,
-                                perspective: 2 // Perspective depth (lower = more dramatic)
+                                perspective: 2
                             )
                 .offset(y:-50)
                 .scaleEffect(0.95)
@@ -41,7 +41,7 @@ struct FormationView: View {
             } else {
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
-                        // Goalkeeper
+                        
                         formationLine(
                             players: goalkeepers,
                             position: .goalkeeper,
@@ -51,7 +51,7 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // 4 Defenders
+                    
                         formationLine(
                             players: defenders,
                             position: .defender,
@@ -61,7 +61,7 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // 3 Midfielders
+
                         formationLine(
                             players: defensiveMidfielders,
                             position: .midfielder,
@@ -71,7 +71,7 @@ struct FormationView: View {
                         
                         Spacer()
                         
-                        // 3 Forwards
+                        
                         formationLine(
                             players: forwards,
                             position: .forward,
@@ -218,8 +218,7 @@ struct FormationView: View {
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        if isEditMode {
-            // Edit mode: only tap to swap
+        ZStack {
             PitchPlayerCard(
                 player: player,
                 isCaptain: captain?.id == player.id,
@@ -228,51 +227,45 @@ struct FormationView: View {
                 isSelected: isSelected,
                 isTappable: tappable
             )
-            .contentShape(Rectangle())
-            .onTapGesture {
+            
+            if !isEditMode {
+                NavigationLink(destination: PlayerDetailView(
+                    player: player,
+                    viewModel: PlayerViewModel(repository: playerRepository),
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
+                )) {
+                    Color.clear
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isEditMode {
                 onPlayerTap(slot)
             }
-        } else {
-            // View mode: NavigationLink to detail
-            NavigationLink(destination: PlayerDetailView(
-                player: player,
-                viewModel: PlayerViewModel(repository: playerRepository),
-                playerRepository: playerRepository,
-                squadRepository: squadRepository
-            )) {
-                PitchPlayerCard(
-                    player: player,
-                    isCaptain: captain?.id == player.id,
-                    isViceCaptain: viceCaptain?.id == player.id,
-                    isEditMode: isEditMode,
-                    isSelected: isSelected,
-                    isTappable: true
-                )
-            }
-            .buttonStyle(.plain)
         }
     }
     
     
-    // MARK: - Position Filters (4-2-3-1 Formation)
+    // MARK: - Position Filters (4-2-3-1)
     
     private var goalkeepers: [Player] {
         let gks = startingXI.filter { $0.position == .goalkeeper }
-        return Array(gks.prefix(1)) // 1 GK
+        return Array(gks.prefix(1))
     }
 
     private var defenders: [Player] {
         let defs = startingXI.filter { $0.position == .defender }
-        return Array(defs.prefix(4)) // 4 DEF
+        return Array(defs.prefix(4))
     }
 
     private var defensiveMidfielders: [Player] {
         let mids = startingXI.filter { $0.position == .midfielder }
-        return Array(mids.prefix(3)) // All 3 MID (no split needed)
+        return Array(mids.prefix(3))
     }
 
     private var attackingMidfielders: [Player] {
-        // Return empty array since we don't have attacking mids in 4-3-3
         return []
     }
 
@@ -305,7 +298,7 @@ struct PitchPlayerCard: View {
         .opacity(isEditMode && !isTappable ? 0.4 : 1.0)
         .grayscale(isEditMode && !isTappable ? 0.8 : 0)
         .scaleEffect(isSelected ? 1.1 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: [isSelected,isTappable])
     }
     
     private var playerCircle: some View {

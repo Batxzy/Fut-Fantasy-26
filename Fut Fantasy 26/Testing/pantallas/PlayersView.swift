@@ -23,7 +23,9 @@ struct PlayersView: View {
     @State private var selectedPosition: PlayerPosition?
     @State private var selectedNation: Nation?
     @State private var maxPrice: Double?
+    @State private var isSearching = false
     @State private var sortType: PlayerSortType = .points
+    @Namespace private var namespace
     
     // Computed filtered players
     var filteredPlayers: [Player] {
@@ -88,25 +90,31 @@ struct PlayersView: View {
             }
             .navigationTitle("Players")
             .navigationBarTitleDisplayMode(.automatic)
-            .searchable(
-                text: $searchText,
-                placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: "Search by name"
-            )
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingFilters = true
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .symbolVariant(hasActiveFilters ? .fill : .none)
-                            .foregroundStyle(hasActiveFilters ? Color.accentColor : .primary)
+                    .searchable(
+                        text: $searchText,
+                        isPresented: $isSearching,
+                        placement: .navigationBarDrawer(displayMode: .automatic),
+                        prompt: "Search by name"
+                    )
+                    .searchToolbarBehavior(.minimize)
+                    .textInputAutocapitalization(.never)
+                    .toolbar {
+                        
+                        ToolbarSpacer(.flexible,placement: .topBarTrailing)
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                showingFilters = true
+                            } label: {
+                                Image(systemName: "line.3.horizontal.decrease.circle")
+                                    .symbolVariant(hasActiveFilters ? .fill : .none)
+                                    .foregroundStyle(hasActiveFilters ? Color.accentColor : .primary)
+                            }
+                            .matchedTransitionSource(id: "transition_id", in: namespace)
+                        }
+                        
                     }
-                }
-            }
-            .toolbarBackground(.automatic)
+                    .scrollEdgeEffectStyle(.soft, for: .top)
+            
             .sheet(isPresented: $showingFilters) {
                 PlayerFiltersView(
                     selectedPosition: $selectedPosition,
@@ -123,6 +131,7 @@ struct PlayersView: View {
                         sortType = .points
                     }
                 )
+                .navigationTransition(.zoom(sourceID: "transition_id", in: namespace))
             }
         }
     }

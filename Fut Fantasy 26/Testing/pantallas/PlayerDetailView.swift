@@ -7,14 +7,17 @@
  import SwiftData
  import SwiftUI
 
+// MARK: - Actions
+
+
 
 struct PlayerDetailView: View {
+    
     let player: Player
     @Bindable var viewModel: PlayerViewModel
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
-    // ✅ @Query to observe squad changes
     @Query private var squads: [Squad]
     
     @State private var showingAddConfirmation = false
@@ -27,20 +30,30 @@ struct PlayerDetailView: View {
         currentSquad?.players?.contains(where: { $0.id == player.id }) ?? false
     }
     
+    private func addPlayerToSquad() async {
+        guard let squad = currentSquad else { return }
+                
+        do {
+            try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
+            print("✅ [PlayerDetail] Player added successfully")
+        } catch {
+            viewModel.errorMessage = error.localizedDescription
+            print("❌ [PlayerDetail] Failed to add player: \(error)")
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header
+                
                 playerHeader
                 
-                // ADD TO SQUAD BUTTON
+                
                 actionButton
                     .padding(.horizontal)
-                                
-                // Stats
+                
                 statsSection
                 
-                // Information
                 infoSection
                 
                 Spacer()
@@ -182,22 +195,7 @@ struct PlayerDetailView: View {
             .padding(.horizontal)
         }
     }
-    
-    // MARK: - Actions
-    
-    private func addPlayerToSquad() async {
-        guard let squad = currentSquad else { return }
-                
-        do {
-            try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
-            print("✅ [PlayerDetail] Player added successfully")
-        } catch {
-            viewModel.errorMessage = error.localizedDescription
-            print("❌ [PlayerDetail] Failed to add player: \(error)")
-        }
-    }
 }
-
 
 // MARK: - Preview
 #Preview {

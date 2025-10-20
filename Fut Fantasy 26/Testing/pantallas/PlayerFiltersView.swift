@@ -24,7 +24,9 @@ struct PlayerFiltersView: View {
             Form {
                 Section("Position") {
                     Picker("Position", selection: $selectedPosition) {
+                        
                         Text("All").tag(nil as PlayerPosition?)
+                        
                         ForEach([PlayerPosition.goalkeeper, .defender, .midfielder, .forward], id: \.self) { position in
                             Text(position.rawValue).tag(position as PlayerPosition?)
                         }

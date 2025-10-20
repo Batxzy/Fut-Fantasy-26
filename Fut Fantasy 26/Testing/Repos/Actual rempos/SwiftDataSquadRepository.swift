@@ -161,18 +161,14 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.notFound
         }
         
-        // Remove from all players
         squad.players?.removeAll { $0.id == playerId }
         
-        // Remove from 2D structure
         for i in 0..<squad.startingXIIDs.count {
             squad.startingXIIDs[i].removeAll { $0 == playerId }
         }
         
-        // Remove from bench
         squad.benchIDs.removeAll { $0 == playerId }
         
-        // Remove captain/vice captain if needed
         if squad.captain?.id == playerId {
             squad.captain = nil
         }
@@ -210,7 +206,6 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.invalidData
         }
         
-        // Validate formation
         let gkCount = players.filter { $0.position == .goalkeeper }.count
         let defCount = players.filter { $0.position == .defender }.count
         let midCount = players.filter { $0.position == .midfielder }.count
@@ -221,7 +216,6 @@ final class SwiftDataSquadRepository: SquadRepository {
             throw RepositoryError.invalidData
         }
         
-        // **NEW LOGIC**: Organize into 2D structure
         squad.startingXIIDs = [
             players.filter { $0.position == .goalkeeper }.map { $0.id },
             players.filter { $0.position == .defender }.map { $0.id },
@@ -229,7 +223,6 @@ final class SwiftDataSquadRepository: SquadRepository {
             players.filter { $0.position == .forward }.map { $0.id }
         ]
         
-        // Update bench
         if let allPlayers = squad.players {
             let startingIDs = Set(startingXI)
             squad.benchIDs = allPlayers.filter { !startingIDs.contains($0.id) }.map { $0.id }
@@ -333,7 +326,6 @@ final class SwiftDataSquadRepository: SquadRepository {
 
         switch (slot1, slot2) {
         case (.starting, .starting):
-            // **MARBLE STYLE**: Swap within the same position row
             let row1 = positionRowIndex(for: player1.position)
             let row2 = positionRowIndex(for: player2.position)
             
@@ -349,7 +341,6 @@ final class SwiftDataSquadRepository: SquadRepository {
             }
             
             print("   🔄 BEFORE SWAP (row \(row1)): \(squad.startingXIIDs[row1])")
-            // **THIS IS THE KEY**: Direct array swap like marble example
             squad.startingXIIDs[row1].swapAt(index1, index2)
             print("   🔄 AFTER SWAP (row \(row1)): \(squad.startingXIIDs[row1])")
             print("   ✅ Swapped starters: \(player1.name) <-> \(player2.name)")

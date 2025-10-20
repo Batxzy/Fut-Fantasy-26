@@ -6,10 +6,8 @@ struct TransfersView: View {
     let squadRepository: SquadRepository
     @Bindable var viewModel: SquadViewModel
     
-    // ✅ @Query for squad observation
     @Query private var squads: [Squad]
     
-    // ✅ @Query for all players
     @Query(sort: \Player.totalPoints, order: .reverse) private var allPlayers: [Player]
     
     @Environment(\.dismiss) private var dismiss
@@ -49,8 +47,8 @@ struct TransfersView: View {
                 .opacity(pendingTransfers.isEmpty ? 0.5 : 1.0)
             }
         }
-        .sheet(isPresented: $showingPlayerSelection) {
-            if let playerToRemove = selectedPlayerToRemove, let squad = squad {
+        .sheet(item: $selectedPlayerToRemove) { playerToRemove in
+            if let squad = squad {
                 PlayerSelectionView(
                     allPlayers: allPlayers,
                     playerToReplace: playerToRemove,
@@ -105,6 +103,8 @@ struct TransfersView: View {
             .padding()
         }
         .background(.regularMaterial)
+
+        
     }
     
     @ViewBuilder
@@ -113,21 +113,18 @@ struct TransfersView: View {
             Section("Current Squad (\((squad.players ?? []).count))") {
                 ForEach(squad.players ?? [], id: \.id) { player in
                     HStack(spacing: 12) {
-                        // ✅ Just player info, no navigation
                         PlayerRowView(player: player)
                         
                         Spacer()
                         
-                        // ✅ Simple blue arrow button
                         Button {
                             selectedPlayerToRemove = player
-                            showingPlayerSelection = true
                         } label: {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.title2)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.white)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.glassProminent)
                         .disabled(isProcessing || isPendingTransfer(player))
                         .opacity(isPendingTransfer(player) ? 0.3 : 1.0)
                     }

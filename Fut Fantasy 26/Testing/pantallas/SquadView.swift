@@ -14,10 +14,10 @@ enum PlayerSlot: Equatable, Hashable {
 }
 
 struct SquadView: View {
-    // ✅ @Query automatically fetches and observes squad
+   
     @Query private var squads: [Squad]
     
-    // ✅ ViewModel only for write operations
+    
     @Bindable var viewModel: SquadViewModel
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
@@ -25,10 +25,8 @@ struct SquadView: View {
     @State private var isEditMode = false
     @State private var showingCaptainSelection = false
     
-    // State for the new tap-to-swap functionality
     @State private var selectedSlot: PlayerSlot?
     
-    // User only has one squad
     var squad: Squad? {
         squads.first
     }
@@ -51,14 +49,12 @@ struct SquadView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
-                        // Edit button with animated pen icon
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                                 isEditMode.toggle()
                                 if !isEditMode {
                                     selectedSlot = nil
                                 }
-                            }
+                            
                         } label: {
                             Image(systemName: isEditMode ? "pencil.circle.fill" : "pencil.circle")
                                 .symbolRenderingMode(.hierarchical)
@@ -122,7 +118,7 @@ struct SquadView: View {
                     squadRepository: squadRepository
                 )
                 .padding(.horizontal)
-                
+                .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
                 
                 BenchView(
                     benchPlayers: squad.bench ?? [],
@@ -134,6 +130,7 @@ struct SquadView: View {
                     squadRepository: squadRepository
                 )
                 .padding()
+                .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
                 
                 Button("Set Captain & Vice-Captain") {
                     showingCaptainSelection = true
@@ -144,9 +141,8 @@ struct SquadView: View {
             .padding(.vertical)
         }
         .scrollContentBackground(.hidden)
-        // **MARBLE STYLE**: Single bouncy animation for the whole array
-        .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
-        .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
+        
+        
     }
     
     @ViewBuilder
@@ -272,17 +268,14 @@ struct SquadView: View {
     let playerRepo = SwiftDataPlayerRepository(modelContext: context)
     let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
     
-    // ✅ CREATE SAMPLE SQUAD WITH PLAYERS
     let squad = Squad(teamName: "Batxzy's Dream Team", ownerName: "Batxzy")
     context.insert(squad)
     
-    // Fetch some players from the seeded data
     let fetchDescriptor = FetchDescriptor<Player>(
         sortBy: [SortDescriptor(\.totalPoints, order: .reverse)]
     )
     
     if let allPlayers = try? context.fetch(fetchDescriptor) {
-        // Get players for 4-2-3-1 formation
         let goalkeepers = allPlayers.filter { $0.position == .goalkeeper }.prefix(2)
         let defenders = allPlayers.filter { $0.position == .defender }.prefix(5)
         let midfielders = allPlayers.filter { $0.position == .midfielder }.prefix(5)
@@ -294,29 +287,24 @@ struct SquadView: View {
         selectedPlayers.append(contentsOf: midfielders)
         selectedPlayers.append(contentsOf: forwards)
         
-        // Add players to squad
         squad.players = Array(selectedPlayers.prefix(15))
         
-        // Set up 4-2-3-1 formation (11 starters)
         if selectedPlayers.count >= 11 {
             let gk = Array(goalkeepers.prefix(1))
             let def = Array(defenders.prefix(4))
             let mid = Array(midfielders.prefix(5))
             let fwd = Array(forwards.prefix(1))
             
-            // Build 2D structure for starting XI
             squad.startingXIIDs = [
-                gk.map { $0.id },      // 1 GK
-                def.map { $0.id },     // 4 DEF
-                mid.map { $0.id },     // 5 MID (will split into 2-3)
-                fwd.map { $0.id }      // 1 FWD
+                gk.map { $0.id },
+                def.map { $0.id },
+                mid.map { $0.id },
+                fwd.map { $0.id }
             ]
             
-            // Remaining players go to bench (4 players)
             let startingIDs = Set(gk.map { $0.id } + def.map { $0.id } + mid.map { $0.id } + fwd.map { $0.id })
             squad.benchIDs = selectedPlayers.filter { !startingIDs.contains($0.id) }.prefix(4).map { $0.id }
             
-            // Set captain and vice-captain
             if let captain = fwd.first {
                 squad.captain = captain
             }

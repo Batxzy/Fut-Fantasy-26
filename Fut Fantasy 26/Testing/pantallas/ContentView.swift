@@ -183,7 +183,7 @@ extension Notification.Name {
 }
 
 
-// MARK: - Preview (FIXED)
+// MARK: - Preview
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container: ModelContainer
@@ -209,7 +209,7 @@ extension Notification.Name {
     let matchdayRepo = SwiftDataMatchdayRepository(modelContext: context)
     let fixtureRepo = SwiftDataFixtureRepository(modelContext: context)
     
-    // Return the view
+    
     return ContentView(
         playerRepository: playerRepo,
         squadRepository: squadRepo,
