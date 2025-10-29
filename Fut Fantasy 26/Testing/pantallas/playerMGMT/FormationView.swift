@@ -91,28 +91,19 @@ struct FormationView: View {
     
     private var pitchBackground: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.green.opacity(0.3),
-                    Color.green.opacity(0.4),
-                    Color.green.opacity(0.3),
-                    Color.green.opacity(0.4),
-                    Color.green.opacity(0.3)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
             
+            hardStripes
             pitchLines
             cornerCircles
         }
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        
     }
     
     private var pitchLines: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .stroke(.white.opacity(0.8), lineWidth: 2)
                 .frame(height: 50)
                 .padding(.horizontal, 60)
                 .padding(.top, 10)
@@ -120,18 +111,18 @@ struct FormationView: View {
             Spacer()
             
             Circle()
-                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .stroke(.white.opacity(0.8), lineWidth: 2)
                 .frame(width: 80, height: 80)
             
             Rectangle()
-                .fill(.white.opacity(0.4))
+                .fill(.white.opacity(0.8))
                 .frame(height: 2)
                 .offset(y: -40)
             
             Spacer()
             
             Rectangle()
-                .stroke(.white.opacity(0.4), lineWidth: 2)
+                .stroke(.white.opacity(0.8), lineWidth: 2)
                 .frame(height: 50)
                 .padding(.horizontal, 60)
                 .padding(.bottom, 10)
@@ -157,7 +148,7 @@ struct FormationView: View {
     private var cornerArc: some View {
         Circle()
             .trim(from: 0, to: 0.25)
-            .stroke(.white.opacity(0.4), lineWidth: 2)
+            .stroke(.white.opacity(0.8 ), lineWidth: 2)
             .frame(width: 30, height: 30)
     }
     
@@ -178,6 +169,15 @@ struct FormationView: View {
                 .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    private var hardStripes: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<24) { i in
+                Rectangle()
+                    .fill(i % 2 == 0 ? Color.pitchGreenDark : Color.pitchGreen)
+            }
+        }
     }
     
     // MARK: - Formation Line
@@ -275,172 +275,7 @@ struct FormationView: View {
     }
 }
 
-// MARK: - Player Card Component
 
-struct PitchPlayerCard: View {
-    let player: Player
-    let isCaptain: Bool
-    let isViceCaptain: Bool
-    let isEditMode: Bool
-    let isSelected: Bool
-    let isTappable: Bool
-    
-    var body: some View {
-        VStack(spacing: 6) {
-            ZStack(alignment: .topTrailing) {
-                playerCircle
-                captainBadge
-            }
-            
-            playerName
-            playerPoints
-        }
-        .opacity(isEditMode && !isTappable ? 0.4 : 1.0)
-        .grayscale(isEditMode && !isTappable ? 0.8 : 0)
-        .scaleEffect(isSelected ? 1.1 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: [isSelected,isTappable])
-    }
-    
-    private var playerCircle: some View {
-        ZStack {
-            Circle()
-                .fill(positionColor.opacity(0.9))
-                .frame(width: 60, height: 60)
-                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-            
-            Circle()
-                .fill(.white)
-                .frame(width: 56, height: 56)
-            
-            VStack(spacing: 2) {
-                AsyncImage(url: URL(string: player.nationFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                }
-                .frame(width: 32, height: 20)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 3)
-                        .stroke(Color.black.opacity(0.1), lineWidth: 0.5)
-                }
-                
-                Text(playerInitials)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
-        }
-        .overlay(
-            Circle()
-                .stroke(isSelected ? Color.yellow : Color.clear, lineWidth: 4)
-                .frame(width: 68, height: 68)
-        )
-    }
-    
-    @ViewBuilder
-    private var captainBadge: some View {
-        if isCaptain {
-            Text("C")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(.blue))
-                .overlay {
-                    Circle().stroke(.white, lineWidth: 1.5)
-                }
-                .offset(x: 6, y: -6)
-                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-        } else if isViceCaptain {
-            Text("V")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(.purple))
-                .overlay {
-                    Circle().stroke(.white, lineWidth: 1.5)
-                }
-                .offset(x: 6, y: -6)
-                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-        }
-    }
-    
-    private var playerName: some View {
-        Text(player.lastName.isEmpty ? player.name : player.lastName)
-            .font(.system(size: 11, weight: .semibold))
-            .lineLimit(1)
-            .frame(width: 70)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(
-                Capsule()
-                    .fill(.white.opacity(0.95))
-                    .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
-            )
-    }
-    
-    private var playerPoints: some View {
-        Text("\(player.totalPoints)")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(
-                Capsule()
-                    .fill(.black.opacity(0.6))
-            )
-    }
-    
-    private var playerInitials: String {
-        let firstInitial = player.firstName.prefix(1).uppercased()
-        let lastInitial = player.lastName.prefix(1).uppercased()
-        return "\(firstInitial)\(lastInitial)"
-    }
-    
-    private var positionColor: Color {
-        switch player.position {
-        case .goalkeeper: return Color.yellow
-        case .defender: return Color.blue
-        case .midfielder: return Color.green
-        case .forward: return Color.red
-        }
-    }
-}
-
-// MARK: - Empty Player Slot
-
-struct EmptyPlayerSlot: View {
-    var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.2))
-                    .frame(width: 60, height: 60)
-                
-                Circle()
-                    .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(width: 56, height: 56)
-                
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            
-            Text("Empty")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.6))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(
-                    Capsule()
-                        .fill(.white.opacity(0.1))
-                )
-        }
-    }
-}
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -506,5 +341,54 @@ struct EmptyPlayerSlot: View {
         playerRepo: playerRepo,
         squadRepo: squadRepo
     )
+    .modelContainer(container)
+}
+
+#Preview("Empty State") {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
+    
+    let context = container.mainContext
+    // We don't need to seed data for an empty state
+    // WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let playerRepo = SwiftDataPlayerRepository(modelContext: context)
+    let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
+    
+    // We don't need the helper struct here, we can use .constant
+    
+    return NavigationStack {
+        ZStack {
+            Color.gray.opacity(0.2).ignoresSafeArea()
+            
+            VStack {
+                FormationView(
+                    startingXI: [],          // <-- Pass an empty array
+                    captain: nil,            // <-- Pass nil
+                    viceCaptain: nil,        // <-- Pass nil
+                    isEditMode: false,
+                    selectedSlot: .constant(nil), // <-- Use .constant for the binding
+                    isPlayerTappable: { slot in
+                        return false // Not tappable in empty state
+                    },
+                    onPlayerTap: { tappedSlot in
+                        // No action
+                    },
+                    playerRepository: playerRepo,
+                    squadRepository: squadRepo
+                )
+                .padding()
+            }
+        }
+    }
     .modelContainer(container)
 }
