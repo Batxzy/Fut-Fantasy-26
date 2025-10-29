@@ -10,13 +10,13 @@ import SwiftUI
 import SwiftData
 
 struct PlayersView: View {
-
+    
     @Query(sort: \Player.totalPoints, order: .reverse) private var allPlayers: [Player]
     
-    // ✅ ViewModel only for write operations
     @Bindable var viewModel: PlayerViewModel
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
+    var preSelectedPosition: PlayerPosition? = nil
     
     @State private var showingFilters = false
     @State private var searchText = ""
@@ -27,11 +27,9 @@ struct PlayersView: View {
     @State private var sortType: PlayerSortType = .points
     @Namespace private var namespace
     
-    // Computed filtered players
     var filteredPlayers: [Player] {
         var filtered = allPlayers
         
-        // Apply search filter
         if !searchText.isEmpty {
             filtered = filtered.filter {
                 $0.name.localizedStandardContains(searchText) ||
@@ -40,22 +38,18 @@ struct PlayersView: View {
             }
         }
         
-        // Apply position filter
         if let position = selectedPosition {
             filtered = filtered.filter { $0.position == position }
         }
         
-        // Apply nation filter
         if let nation = selectedNation {
             filtered = filtered.filter { $0.nation == nation }
         }
         
-        // Apply price filter
         if let maxPrice = maxPrice {
             filtered = filtered.filter { $0.price <= maxPrice }
         }
         
-        // Apply sorting
         switch sortType {
         case .points:
             filtered.sort { $0.totalPoints > $1.totalPoints }
@@ -77,61 +71,59 @@ struct PlayersView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            VStack {
-                
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .padding()
-                }
-                
-                playerList
+        VStack {
+            if viewModel.isLoading {
+                ProgressView()
+                    .padding()
             }
-            .navigationTitle("Players")
-            .navigationBarTitleDisplayMode(.automatic)
-                    .searchable(
-                        text: $searchText,
-                        isPresented: $isSearching,
-                        placement: .navigationBarDrawer(displayMode: .automatic),
-                        prompt: "Search by name"
-                    )
-                    .searchToolbarBehavior(.minimize)
-                    .textInputAutocapitalization(.never)
-                    .toolbar {
-                        
-                        ToolbarSpacer(.flexible,placement: .topBarTrailing)
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                showingFilters = true
-                            } label: {
-                                Image(systemName: "line.3.horizontal.decrease.circle")
-                                    .symbolVariant(hasActiveFilters ? .fill : .none)
-                                    .foregroundStyle(hasActiveFilters ? Color.accentColor : .primary)
-                            }
-                            .matchedTransitionSource(id: "transition_id", in: namespace)
-                        }
-                        
-                    }
-                    .scrollEdgeEffectStyle(.soft, for: .top)
             
-            .sheet(isPresented: $showingFilters) {
-                PlayerFiltersView(
-                    selectedPosition: $selectedPosition,
-                    selectedNation: $selectedNation,
-                    maxPrice: $maxPrice,
-                    sortType: $sortType,
-                    onApply: {
-                        showingFilters = false
-                    },
-                    onReset: {
-                        selectedPosition = nil
-                        selectedNation = nil
-                        maxPrice = nil
-                        sortType = .points
-                    }
-                )
-                .navigationTransition(.zoom(sourceID: "transition_id", in: namespace))
+            playerList
+        }
+        .navigationTitle("Players")
+        .navigationBarTitleDisplayMode(.automatic)
+        .searchable(
+            text: $searchText,
+            isPresented: $isSearching,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: "Search by name"
+        )
+        .searchToolbarBehavior(.minimize)
+        .textInputAutocapitalization(.never)
+        .toolbar {
+            ToolbarSpacer(.flexible, placement: .topBarTrailing)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingFilters = true
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .symbolVariant(hasActiveFilters ? .fill : .none)
+                        .foregroundStyle(hasActiveFilters ? Color.accentColor : .primary)
+                }
+                .matchedTransitionSource(id: "transition_id", in: namespace)
+            }
+        }
+        .scrollEdgeEffectStyle(.soft, for: .top)
+        .sheet(isPresented: $showingFilters) {
+            PlayerFiltersView(
+                selectedPosition: $selectedPosition,
+                selectedNation: $selectedNation,
+                maxPrice: $maxPrice,
+                sortType: $sortType,
+                onApply: {
+                    showingFilters = false
+                },
+                onReset: {
+                    selectedPosition = nil
+                    selectedNation = nil
+                    maxPrice = nil
+                    sortType = .points
+                }
+            )
+            .navigationTransition(.zoom(sourceID: "transition_id", in: namespace))
+        }
+        .onAppear {
+            if let position = preSelectedPosition, selectedPosition == nil {
+                selectedPosition = position
             }
         }
     }
@@ -165,7 +157,6 @@ struct PlayersView: View {
         selectedPosition != nil || selectedNation != nil || maxPrice != nil || sortType != .points
     }
 }
-
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)

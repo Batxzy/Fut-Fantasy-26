@@ -17,15 +17,15 @@ struct SquadView: View {
    
     @Query private var squads: [Squad]
     
-    
     @Bindable var viewModel: SquadViewModel
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
     @State private var isEditMode = false
     @State private var showingCaptainSelection = false
-    
     @State private var selectedSlot: PlayerSlot?
+    @State private var navigateToPlayers = false
+    @State private var filterPosition: PlayerPosition?
     
     var squad: Squad? {
         squads.first
@@ -50,11 +50,10 @@ struct SquadView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 16) {
                         Button {
-                                isEditMode.toggle()
-                                if !isEditMode {
-                                    selectedSlot = nil
-                                }
-                            
+                            isEditMode.toggle()
+                            if !isEditMode {
+                                selectedSlot = nil
+                            }
                         } label: {
                             Image(systemName: isEditMode ? "pencil.circle.fill" : "pencil.circle")
                                 .symbolRenderingMode(.hierarchical)
@@ -64,7 +63,6 @@ struct SquadView: View {
                         }
                         .disabled((squad?.startingXI?.isEmpty) ?? true)
                         
-                        // Transfers button
                         NavigationLink {
                             TransfersView(
                                 playerRepository: playerRepository,
@@ -97,29 +95,49 @@ struct SquadView: View {
                     )
                 }
             }
+            
+            .navigationDestination(isPresented: $navigateToPlayers) {
+                PlayersView(
+                    viewModel: PlayerViewModel(repository: playerRepository),
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository,
+                    preSelectedPosition: filterPosition
+                )
+            }
         }
     }
     
     @ViewBuilder
     private func squadContent(squad: Squad) -> some View {
         ScrollView {
-            VStack(spacing: 24) {
-                squadHeader(squad: squad)
+            
+            VStack(spacing: 32){
                 
-                FormationView(
-                    startingXI: squad.startingXI ?? [],
-                    captain: squad.captain,
-                    viceCaptain: squad.viceCaptain,
-                    isEditMode: isEditMode,
-                    selectedSlot: $selectedSlot,
-                    isPlayerTappable: isPlayerTappable,
-                    onPlayerTap: handlePlayerTap,
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository
-                )
-                .padding(.horizontal)
-                .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
-                
+                VStack(spacing: 0) {
+                    squadHeader(squad: squad)
+                    
+                    FormationView(
+                        startingXI: squad.startingXI ?? [],
+                        captain: squad.captain,
+                        viceCaptain: squad.viceCaptain,
+                        isEditMode: isEditMode,
+                        selectedSlot: $selectedSlot,
+                        isPlayerTappable: isPlayerTappable,
+                        onPlayerTap: handlePlayerTap,
+                        onEmptySlotTap: { position in
+                            filterPosition = position
+                            navigateToPlayers = true
+                        },
+                        playerRepository: playerRepository,
+                        squadRepository: squadRepository
+                    )
+                    .padding(.horizontal,31)
+                    .debugOutline()
+                    .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
+                    
+                   
+                }
+
                 BenchView(
                     benchPlayers: squad.bench ?? [],
                     isEditMode: isEditMode,
@@ -129,20 +147,24 @@ struct SquadView: View {
                     playerRepository: playerRepository,
                     squadRepository: squadRepository
                 )
-                .padding()
-                .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.regularMaterial)
+                    )
+                    .padding(.horizontal, 31)
+                    .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
                 
                 Button("Set Captain & Vice-Captain") {
                     showingCaptainSelection = true
                 }
                 .buttonStyle(.bordered)
                 .padding()
+                
             }
-            .padding(.vertical)
+            
+           
         }
         .scrollContentBackground(.hidden)
-        
-        
     }
     
     @ViewBuilder
@@ -184,7 +206,6 @@ struct SquadView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
         )
-        .padding(.horizontal)
     }
     
     // MARK: - Tap and Swap Logic

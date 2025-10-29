@@ -41,8 +41,6 @@ struct PitchPlayerCard: View {
                 .fill(.white)
                 .frame(width: 65, height: 65)
             
-            VStack(spacing: 2) {
-                
                 // imagen del pais
                 AsyncImage(url: URL(string: player.nationFlagURL)) { image in
                     image
@@ -55,7 +53,6 @@ struct PitchPlayerCard: View {
                 .frame(width: 32, height: 20)
                 .clipShape(RoundedRectangle(cornerRadius: 3))
     
-            }
         }
         .overlay(
             Circle()
@@ -129,36 +126,34 @@ struct PitchPlayerCard: View {
 // MARK: - Empty Player Slot
 
 struct EmptyPlayerSlot: View {
-    // 1. Add this property
     let position: PlayerPosition
+    let onTap: () -> Void
     
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
                 Circle()
-                    .fill(.white.opacity(0.2))
+                    .fill(Color.grayBg)
                     .frame(width: 60, height: 60)
-                
-                Circle()
-                    .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5, 3]))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(width: 56, height: 56)
                 
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.black.opacity(0.5))
             }
             
             Text(position.rawValue)
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.black.opacity(0.6))
                 .frame(width: 65)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(
                     Capsule()
-                        .fill(.white.opacity(0.1))
+                        .fill(Color.grayBg)
                 )
+        }
+        .onTapGesture {
+            onTap()
         }
     }
 }
@@ -193,7 +188,7 @@ struct EmptyPlayerSlot: View {
 }
 
 #Preview("Empty Slot") {
-    EmptyPlayerSlot(position: .defender)
+    EmptyPlayerSlot(position: .defender, onTap: {})
         .padding(50)
         .background(Color.pitchGreenDark) // So you can see the white elements
 }

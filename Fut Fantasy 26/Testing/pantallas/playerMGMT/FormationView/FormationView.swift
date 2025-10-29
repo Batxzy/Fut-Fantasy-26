@@ -17,74 +17,66 @@ struct FormationView: View {
     @Binding var selectedSlot: PlayerSlot?
     let isPlayerTappable: (PlayerSlot) -> Bool
     let onPlayerTap: (PlayerSlot) -> Void
-    
-    // For navigation to detail view
+    let onEmptySlotTap: (PlayerPosition) -> Void
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
     var body: some View {
         ZStack {
             pitchBackground
-                
                 .rotation3DEffect(
-                                .degrees(15),
-                                axis: (x: 1.0, y: 0.0, z: 0.0),
-                                anchor: .center,
-                                perspective: 2
-                            )
-                .offset(y:-50)
-                .scaleEffect(0.95)
+                    .degrees(15),
+                    axis: (x: 1.0, y: 0.0, z: 0.0),
+                    anchor: .center,
+                    perspective: 2
+                )
+                .offset(y:-59)
+                .scaleEffect(1.028)
+               
             
-            
-            if startingXI.isEmpty {
-                emptyPitchState
-            } else {
-                GeometryReader { geometry in
-                    VStack(spacing: 0) {
-                        
-                        formationLine(
-                            players: goalkeepers,
-                            position: .goalkeeper,
-                            geometry: geometry,
-                            lineHeight: geometry.size.height * 0.16
-                        )
-                        
-                        Spacer()
-                        
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    formationLine(
+                        players: goalkeepers,
+                        position: .goalkeeper,
+                        geometry: geometry,
+                        lineHeight: geometry.size.height * 0.16
+                    )
                     
-                        formationLine(
-                            players: defenders,
-                            position: .defender,
-                            geometry: geometry,
-                            lineHeight: geometry.size.height * 0.18
-                        )
-                        
-                        Spacer()
-                        
-
-                        formationLine(
-                            players: defensiveMidfielders,
-                            position: .midfielder,
-                            geometry: geometry,
-                            lineHeight: geometry.size.height * 0.20
-                        )
-                        
-                        Spacer()
-                        
-                        
-                        formationLine(
-                            players: forwards,
-                            position: .forward,
-                            geometry: geometry,
-                            lineHeight: geometry.size.height * 0.20
-                        )
-                    }
-                    .padding(.vertical, 15)
-                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    Spacer()
+                    
+                    formationLine(
+                        players: defenders,
+                        position: .defender,
+                        geometry: geometry,
+                        lineHeight: geometry.size.height * 0.18
+                    )
+                    
+                    Spacer()
+                    
+                    formationLine(
+                        players: defensiveMidfielders,
+                        position: .midfielder,
+                        geometry: geometry,
+                        lineHeight: geometry.size.height * 0.20
+                    )
+                    
+                    Spacer()
+                    
+                    formationLine(
+                        players: forwards,
+                        position: .forward,
+                        geometry: geometry,
+                        lineHeight: geometry.size.height * 0.20
+                    )
                 }
+                .padding(.vertical, 15)
+                .frame(width: geometry.size.width, height: geometry.size.height)
             }
         }
         .aspectRatio(0.7, contentMode: .fit)
+        .padding(.bottom,25)
+        .padding(.top, 10)
     }
     
 
@@ -98,26 +90,43 @@ struct FormationView: View {
         geometry: GeometryProxy,
         lineHeight: CGFloat
     ) -> some View {
+        let expectedCount = expectedPlayerCount(for: position)
+        let emptySlotCount = max(0, expectedCount - players.count)
+        
         HStack(spacing: 0) {
-            if players.isEmpty {
+            ForEach(players) { player in
                 Spacer()
-                EmptyPlayerSlot(position: position )
+                playerCard(for: player)
+                    .id(player.id)
+                    .transition(.asymmetric(
+                        insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
+                        removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
+                    ))
                 Spacer()
-            } else {
-                ForEach(players) { player in
-                    Spacer()
-                    playerCard(for: player)
-                        .id(player.id)
-                        .transition(.asymmetric(
-                            insertion: .scale.animation(.spring(response: 0.4, dampingFraction: 0.6)),
-                            removal: .scale.animation(.spring(response: 0.3, dampingFraction: 0.7))
-                        ))
-                    Spacer()
-                }
+            }
+            
+            ForEach(0..<emptySlotCount, id: \.self) { _ in
+                Spacer()
+                EmptyPlayerSlot(
+                    position: position,
+                    onTap: { onEmptySlotTap(position) }
+                )
+                Spacer()
             }
         }
         .frame(height: lineHeight)
     }
+    
+    private func expectedPlayerCount(for position: PlayerPosition) -> Int {
+        switch position {
+        case .goalkeeper: return 1
+        case .defender: return 4
+        case .midfielder: return 3
+        case .forward: return 3
+        }
+    }
+    
+    
     
     // MARK: - Player Card Builder
     
@@ -185,11 +194,7 @@ struct FormationView: View {
 }
 
 
-
-
-
-
-//MARK: - Previews
+// MARK: - Previews
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -241,6 +246,9 @@ struct FormationView: View {
                                     selectedSlot = tappedSlot
                                 }
                             },
+                            onEmptySlotTap: { position in
+                                print("Empty slot tapped: \(position)")
+                            },
                             playerRepository: playerRepo,
                             squadRepository: squadRepo
                         )
@@ -276,7 +284,6 @@ struct FormationView: View {
     let playerRepo = SwiftDataPlayerRepository(modelContext: context)
     let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
     
-    
     return NavigationStack {
         ZStack {
             Color.gray.opacity(0.2).ignoresSafeArea()
@@ -289,9 +296,12 @@ struct FormationView: View {
                     isEditMode: false,
                     selectedSlot: .constant(nil),
                     isPlayerTappable: { slot in
-                        return false
+                        false
                     },
                     onPlayerTap: { tappedSlot in
+                    },
+                    onEmptySlotTap: { position in
+                        print("Empty slot tapped: \(position)")
                     },
                     playerRepository: playerRepo,
                     squadRepository: squadRepo

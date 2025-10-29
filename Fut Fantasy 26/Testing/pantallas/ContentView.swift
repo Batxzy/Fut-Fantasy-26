@@ -24,19 +24,8 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // Players tab
-            if let playerViewModel = playerViewModel,
-               let squadViewModel = squadViewModel {
-                PlayersView(
-                    viewModel: playerViewModel,
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository
-                )
-                .tabItem {
-                    Label("Players", systemImage: "person.3")
-                }
-                .tag(0)
+            if let squadViewModel = squadViewModel {
                 
-                // My Squad tab
                 SquadView(
                     viewModel: squadViewModel,
                     playerRepository: playerRepository,
@@ -45,7 +34,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("My Squad", systemImage: "sportscourt")
                 }
-                .tag(1)
+                .tag(0)
             }
             
             // Fixtures tab
@@ -56,14 +45,14 @@ struct ContentView: View {
             .tabItem {
                 Label("Fixtures", systemImage: "calendar")
             }
-            .tag(2)
+            .tag(1)
             
             // Leaderboard tab
             LeaderboardView()
                 .tabItem {
                     Label("Leaderboard", systemImage: "list.number")
                 }
-                .tag(3)
+                .tag(2)
         }
         .onAppear {
             if playerViewModel == nil {
