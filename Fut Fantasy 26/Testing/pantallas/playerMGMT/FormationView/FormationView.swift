@@ -87,98 +87,7 @@ struct FormationView: View {
         .aspectRatio(0.7, contentMode: .fit)
     }
     
-    // MARK: - Background Components
-    
-    private var pitchBackground: some View {
-        ZStack {
-            
-            hardStripes
-            pitchLines
-            cornerCircles
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        
-    }
-    
-    private var pitchLines: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .stroke(.white.opacity(0.8), lineWidth: 2)
-                .frame(height: 50)
-                .padding(.horizontal, 60)
-                .padding(.top, 10)
-            
-            Spacer()
-            
-            Circle()
-                .stroke(.white.opacity(0.8), lineWidth: 2)
-                .frame(width: 80, height: 80)
-            
-            Rectangle()
-                .fill(.white.opacity(0.8))
-                .frame(height: 2)
-                .offset(y: -40)
-            
-            Spacer()
-            
-            Rectangle()
-                .stroke(.white.opacity(0.8), lineWidth: 2)
-                .frame(height: 50)
-                .padding(.horizontal, 60)
-                .padding(.bottom, 10)
-        }
-    }
-    
-    private var cornerCircles: some View {
-        VStack {
-            HStack {
-                cornerArc
-                Spacer()
-                cornerArc.rotation3DEffect(.degrees(90), axis: (x: 0, y: 1, z: 0))
-            }
-            Spacer()
-            HStack {
-                cornerArc.rotation3DEffect(.degrees(-90), axis: (x: 1, y: 0, z: 0))
-                Spacer()
-                cornerArc.rotation3DEffect(.degrees(180), axis: (x: 1, y: 1, z: 0))
-            }
-        }
-    }
-    
-    private var cornerArc: some View {
-        Circle()
-            .trim(from: 0, to: 0.25)
-            .stroke(.white.opacity(0.8 ), lineWidth: 2)
-            .frame(width: 30, height: 30)
-    }
-    
-    private var emptyPitchState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "sportscourt")
-                .font(.system(size: 60))
-                .foregroundStyle(.white.opacity(0.3))
-            
-            Text("No Starting XI Selected")
-                .font(.headline)
-                .foregroundStyle(.white.opacity(0.7))
-            
-            Text("Add 11 players to your squad and set your starting lineup")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.5))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    private var hardStripes: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<24) { i in
-                Rectangle()
-                    .fill(i % 2 == 0 ? Color.pitchGreenDark : Color.pitchGreen)
-            }
-        }
-    }
+
     
     // MARK: - Formation Line
     
@@ -192,7 +101,7 @@ struct FormationView: View {
         HStack(spacing: 0) {
             if players.isEmpty {
                 Spacer()
-                EmptyPlayerSlot()
+                EmptyPlayerSlot(position: position )
                 Spacer()
             } else {
                 ForEach(players) { player in
@@ -277,6 +186,11 @@ struct FormationView: View {
 
 
 
+
+
+
+//MARK: - Previews
+
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container: ModelContainer
@@ -358,13 +272,10 @@ struct FormationView: View {
     }
     
     let context = container.mainContext
-    // We don't need to seed data for an empty state
-    // WorldCupDataSeeder.seedDataIfNeeded(context: context)
     
     let playerRepo = SwiftDataPlayerRepository(modelContext: context)
     let squadRepo = SwiftDataSquadRepository(modelContext: context, playerRepository: playerRepo)
     
-    // We don't need the helper struct here, we can use .constant
     
     return NavigationStack {
         ZStack {
@@ -372,16 +283,15 @@ struct FormationView: View {
             
             VStack {
                 FormationView(
-                    startingXI: [],          // <-- Pass an empty array
-                    captain: nil,            // <-- Pass nil
-                    viceCaptain: nil,        // <-- Pass nil
+                    startingXI: [],
+                    captain: nil,
+                    viceCaptain: nil,
                     isEditMode: false,
-                    selectedSlot: .constant(nil), // <-- Use .constant for the binding
+                    selectedSlot: .constant(nil),
                     isPlayerTappable: { slot in
-                        return false // Not tappable in empty state
+                        return false
                     },
                     onPlayerTap: { tappedSlot in
-                        // No action
                     },
                     playerRepository: playerRepo,
                     squadRepository: squadRepo

@@ -129,6 +129,9 @@ struct PitchPlayerCard: View {
 // MARK: - Empty Player Slot
 
 struct EmptyPlayerSlot: View {
+    // 1. Add this property
+    let position: PlayerPosition
+    
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
@@ -146,9 +149,10 @@ struct EmptyPlayerSlot: View {
                     .foregroundStyle(.white.opacity(0.5))
             }
             
-            Text("Empty")
+            Text(position.rawValue)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.6))
+                .frame(width: 65)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(
@@ -186,4 +190,10 @@ struct EmptyPlayerSlot: View {
         isTappable: true
     )
     .modelContainer(container)
+}
+
+#Preview("Empty Slot") {
+    EmptyPlayerSlot(position: .defender)
+        .padding(50)
+        .background(Color.pitchGreenDark) // So you can see the white elements
 }
