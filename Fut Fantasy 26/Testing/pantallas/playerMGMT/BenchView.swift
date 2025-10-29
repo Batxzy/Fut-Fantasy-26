@@ -20,8 +20,8 @@ struct BenchView: View {
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
-    @Binding var selectedPlayerForDetail: Player?
-    @Binding var navigateToAddPlayer: Bool
+    @State private var selectedPlayerForDetail: Player?
+    @State private var navigateToAddPlayer = false
     
     var body: some View {
         VStack(spacing: 12) {
@@ -36,7 +36,7 @@ struct BenchView: View {
                     .foregroundStyle(.secondary)
             }
             
-            HStack(spacing: 16) {
+            HStack(spacing: 8) {
                 ForEach(benchPlayers) { player in
                     benchPlayerCard(for: player)
                         .id(player.id)
@@ -55,11 +55,21 @@ struct BenchView: View {
             }
         }
         .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial))
-        .padding(.horizontal,24)
-        .debugOutline()
+        .navigationDestination(item: $selectedPlayerForDetail) { player in
+            PlayerDetailView(
+                player: player,
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )
+        }
+        .navigationDestination(isPresented: $navigateToAddPlayer) {
+            PlayersView(
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )
+        }
     }
     
     private func benchPlayerCard(for player: Player) -> some View {
@@ -72,7 +82,6 @@ struct BenchView: View {
             isSelected: isSelected,
             isTappable: tappable
         )
-        .contentShape(Rectangle())
         .onTapGesture {
             if isEditMode {
                 onPlayerTap(slot)
@@ -82,7 +91,8 @@ struct BenchView: View {
         }
     }
 }
-//MARK: - Las tarjetas en si
+
+// MARK: - Las tarjetas en si
 struct BenchPlayerCard: View {
     let player: Player
     let isSelected: Bool
@@ -91,7 +101,7 @@ struct BenchPlayerCard: View {
     var body: some View {
         VStack(spacing: 8) {
             
-            ZStack{
+            ZStack {
                 Circle()
                     .fill(.white)
                     .frame(width: 65, height: 65)
@@ -121,6 +131,11 @@ struct BenchPlayerCard: View {
         .grayscale(isTappable ? 0 : 0.8)
         .scaleEffect(isSelected ? 1.1 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: [isSelected,isTappable])
+        .padding(.vertical,8)
+        .padding(.horizontal,4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial))
     }
     
     private var playerName: some View {
@@ -149,14 +164,13 @@ struct BenchPlayerCard: View {
     }
 }
 
-
 struct EmptyBenchSlot: View {
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
                     .fill(Color.grayBg)
-                    .frame(width: 60, height: 60)
+                    .frame(width: 65, height: 65)
                 
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .semibold))
@@ -166,7 +180,7 @@ struct EmptyBenchSlot: View {
             Text("Empty")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.black.opacity(0.6))
-                .frame(width: 65)
+                .frame(width: 65,height: 15)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(
@@ -174,11 +188,15 @@ struct EmptyBenchSlot: View {
                         .fill(Color.grayBg)
                 )
         }
+        .padding(.vertical,8)
+        .padding(.horizontal,4)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial))
     }
 }
 
-
-//MARK: - Previews
+// MARK: - Previews
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -201,8 +219,6 @@ struct EmptyBenchSlot: View {
     
     struct BenchPreview: View {
         @State private var selectedSlot: PlayerSlot?
-        @State private var selectedPlayerForDetail: Player?
-        @State private var navigateToAddPlayer = false
         
         let benchPlayers = [MockData.mbappe, MockData.deBruyne]
         let playerRepo: PlayerRepository
@@ -225,26 +241,9 @@ struct EmptyBenchSlot: View {
                         }
                     },
                     playerRepository: playerRepo,
-                    squadRepository: squadRepo,
-                    selectedPlayerForDetail: $selectedPlayerForDetail,
-                    navigateToAddPlayer: $navigateToAddPlayer
+                    squadRepository: squadRepo
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            }
-            .navigationDestination(isPresented: $navigateToAddPlayer) {
-                PlayersView(
-                    viewModel: PlayerViewModel(repository: playerRepo),
-                    playerRepository: playerRepo,
-                    squadRepository: squadRepo
-                )
-            }
-            .navigationDestination(item: $selectedPlayerForDetail) { player in
-                PlayerDetailView(
-                    player: player,
-                    viewModel: PlayerViewModel(repository: playerRepo),
-                    playerRepository: playerRepo,
-                    squadRepository: squadRepo
-                )
             }
         }
     }
@@ -255,6 +254,7 @@ struct EmptyBenchSlot: View {
     )
     .modelContainer(container)
 }
+
 #Preview("Bench Player Card - Selected") {
     let samplePlayer = Player(
         id: 10,
@@ -323,5 +323,4 @@ struct EmptyBenchSlot: View {
         .padding(50)
         .background(Color.gray.opacity(0.2))
 }
-
 

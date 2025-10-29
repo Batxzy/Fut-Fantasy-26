@@ -15,9 +15,12 @@ struct FormationView: View {
     let isEditMode: Bool
     
     @Binding var selectedSlot: PlayerSlot?
+    @State private var selectedPlayerForDetail: Player?
+    @State private var navigateToAddPlayer = false
+    @State private var filterPosition: PlayerPosition?
+    
     let isPlayerTappable: (PlayerSlot) -> Bool
     let onPlayerTap: (PlayerSlot) -> Void
-    let onEmptySlotTap: (PlayerPosition) -> Void
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
@@ -30,10 +33,9 @@ struct FormationView: View {
                     anchor: .center,
                     perspective: 2
                 )
-                .offset(y:-59)
+                .offset(y: -59)
                 .scaleEffect(1.028)
                
-            
             GeometryReader { geometry in
                 VStack(spacing: 0) {
                     formationLine(
@@ -75,12 +77,25 @@ struct FormationView: View {
             }
         }
         .aspectRatio(0.7, contentMode: .fit)
-        .padding(.bottom,25)
+        .padding(.bottom, 25)
         .padding(.top, 10)
+        .navigationDestination(item: $selectedPlayerForDetail) { player in
+            PlayerDetailView(
+                player: player,
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository
+            )
+        }
+        .navigationDestination(isPresented: $navigateToAddPlayer) {
+            PlayersView(
+                viewModel: PlayerViewModel(repository: playerRepository),
+                playerRepository: playerRepository,
+                squadRepository: squadRepository,
+                preSelectedPosition: filterPosition
+            )
+        }
     }
-    
-
-    
     // MARK: - Formation Line
     
     @ViewBuilder
@@ -109,7 +124,10 @@ struct FormationView: View {
                 Spacer()
                 EmptyPlayerSlot(
                     position: position,
-                    onTap: { onEmptySlotTap(position) }
+                    onTap: {
+                        filterPosition = position
+                        navigateToAddPlayer = true
+                    }
                 )
                 Spacer()
             }
@@ -126,8 +144,6 @@ struct FormationView: View {
         }
     }
     
-    
-    
     // MARK: - Player Card Builder
     
     @ViewBuilder
@@ -136,37 +152,25 @@ struct FormationView: View {
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        ZStack {
-            PitchPlayerCard(
-                player: player,
-                isCaptain: captain?.id == player.id,
-                isViceCaptain: viceCaptain?.id == player.id,
-                isEditMode: isEditMode,
-                isSelected: isSelected,
-                isTappable: tappable
-            )
-            
-            if !isEditMode {
-                NavigationLink(destination: PlayerDetailView(
-                    player: player,
-                    viewModel: PlayerViewModel(repository: playerRepository),
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository
-                )) {
-                    Color.clear
-                }
-            }
-        }
+        PitchPlayerCard(
+            player: player,
+            isCaptain: captain?.id == player.id,
+            isViceCaptain: viceCaptain?.id == player.id,
+            isEditMode: isEditMode,
+            isSelected: isSelected,
+            isTappable: tappable
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if isEditMode {
                 onPlayerTap(slot)
+            } else {
+                selectedPlayerForDetail = player
             }
         }
     }
     
-    
-    // MARK: - Position Filters (4-2-3-1)
+    // MARK: - Position Filters
     
     private var goalkeepers: [Player] {
         let gks = startingXI.filter { $0.position == .goalkeeper }
@@ -183,16 +187,11 @@ struct FormationView: View {
         return Array(mids.prefix(3))
     }
 
-    private var attackingMidfielders: [Player] {
-        return []
-    }
-
     private var forwards: [Player] {
         let fwds = startingXI.filter { $0.position == .forward }
-        return Array(fwds.prefix(3)) // 3 FWD (was 1)
+        return Array(fwds.prefix(3))
     }
 }
-
 
 // MARK: - Previews
 
@@ -246,9 +245,6 @@ struct FormationView: View {
                                     selectedSlot = tappedSlot
                                 }
                             },
-                            onEmptySlotTap: { position in
-                                print("Empty slot tapped: \(position)")
-                            },
                             playerRepository: playerRepo,
                             squadRepository: squadRepo
                         )
@@ -299,9 +295,6 @@ struct FormationView: View {
                         false
                     },
                     onPlayerTap: { tappedSlot in
-                    },
-                    onEmptySlotTap: { position in
-                        print("Empty slot tapped: \(position)")
                     },
                     playerRepository: playerRepo,
                     squadRepository: squadRepo

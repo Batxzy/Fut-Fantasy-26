@@ -24,11 +24,6 @@ struct SquadView: View {
     @State private var isEditMode = false
     @State private var showingCaptainSelection = false
     @State private var selectedSlot: PlayerSlot?
-    @State private var navigateToPlayers = false
-    @State private var filterPosition: PlayerPosition?
-    
-    @State private var selectedPlayerForDetail: Player?
-       @State private var navigateToAddPlayer = false
     
     var squad: Squad? {
         squads.first
@@ -98,35 +93,15 @@ struct SquadView: View {
                     )
                 }
             }
-            
-            .navigationDestination(isPresented: $navigateToAddPlayer) {
-                        PlayersView(
-                            viewModel: PlayerViewModel(repository: playerRepository),
-                            playerRepository: playerRepository,
-                            squadRepository: squadRepository
-                        )
-                    }
-            .navigationDestination(item: $selectedPlayerForDetail) { player in
-                    PlayerDetailView(
-                        player: player,
-                        viewModel: PlayerViewModel(repository: playerRepository),
-                        playerRepository: playerRepository,
-                        squadRepository: squadRepository
-                    )
-                }
         }
     }
     
     private func squadContent(squad: Squad) -> some View {
         ScrollView {
-            
-            VStack(spacing: 32){
-                
+            VStack(spacing: 12) {
                 VStack(spacing: 0) {
                     squadHeader(squad: squad)
                     
-                    
-                    /*
                     FormationView(
                         startingXI: squad.startingXI ?? [],
                         captain: squad.captain,
@@ -135,42 +110,29 @@ struct SquadView: View {
                         selectedSlot: $selectedSlot,
                         isPlayerTappable: isPlayerTappable,
                         onPlayerTap: handlePlayerTap,
-                        onEmptySlotTap: { position in
-                            filterPosition = position
-                            navigateToPlayers = true
-                        },
                         playerRepository: playerRepository,
                         squadRepository: squadRepository
                     )
-                    .debugOutline()
+                    .padding(.horizontal, 24)
                     .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
-                    */
-                   
                 }
-
              
                 BenchView(
-                        benchPlayers: squad.bench ?? [],
-                        isEditMode: isEditMode,
-                        selectedSlot: $selectedSlot,
-                        isPlayerTappable: isPlayerTappable,
-                        onPlayerTap: handlePlayerTap,
-                        playerRepository: playerRepository,
-                        squadRepository: squadRepository,
-                        selectedPlayerForDetail: $selectedPlayerForDetail,
-                        navigateToAddPlayer: $navigateToAddPlayer
-                    )
-                .background(Color.red)
-               // .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
-                
-                 
+                    benchPlayers: squad.bench ?? [],
+                    isEditMode: isEditMode,
+                    selectedSlot: $selectedSlot,
+                    isPlayerTappable: isPlayerTappable,
+                    onPlayerTap: handlePlayerTap,
+                    playerRepository: playerRepository,
+                    squadRepository: squadRepository
+                )
+                .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
                 
                 Button("Set Captain & Vice-Captain") {
                     showingCaptainSelection = true
                 }
                 .buttonStyle(.bordered)
-                
-            }           
+            }
         }
         .scrollContentBackground(.hidden)
     }
@@ -207,8 +169,7 @@ struct SquadView: View {
                 }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(.regularMaterial)
