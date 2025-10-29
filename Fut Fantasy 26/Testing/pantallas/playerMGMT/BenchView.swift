@@ -6,8 +6,8 @@
 //
 
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct BenchView: View {
     let benchPlayers: [Player]
@@ -17,29 +17,25 @@ struct BenchView: View {
     let isPlayerTappable: (PlayerSlot) -> Bool
     let onPlayerTap: (PlayerSlot) -> Void
     
-
     let playerRepository: PlayerRepository
     let squadRepository: SquadRepository
     
+    @Binding var selectedPlayerForDetail: Player?
+    @Binding var navigateToAddPlayer: Bool
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            
-            //stack de arriba
+        VStack(spacing: 12) {
             HStack {
                 Image(systemName: "person.2.fill")
                     .foregroundStyle(.secondary)
                 Text("Bench")
                     .font(.headline)
-                
                 Spacer()
-                
                 Text("\(benchPlayers.count)/4")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             
-            
-            // stack de las cartas
             HStack(spacing: 16) {
                 ForEach(benchPlayers) { player in
                     benchPlayerCard(for: player)
@@ -51,57 +47,41 @@ struct BenchView: View {
                 }
                 
                 ForEach(0..<(4 - benchPlayers.count), id: \.self) { _ in
-                    NavigationLink(destination: PlayersView(
-                        viewModel: PlayerViewModel(repository: playerRepository),
-                        playerRepository: playerRepository,
-                        squadRepository: squadRepository
-                    )) {
-                        EmptyBenchSlot()
-                    }
+                    EmptyBenchSlot()
+                        .onTapGesture {
+                            navigateToAddPlayer = true
+                        }
                 }
             }
         }
+        .padding(22)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.regularMaterial))
+        .padding(.horizontal,24)
+        .debugOutline()
     }
     
-    // MARK: - Bench Player Card Builder
-    
-    
-// crea la tarjeta y controla si puedes ir a la vista de detalle o si no te deja y los cambios
-    
-    @ViewBuilder
     private func benchPlayerCard(for player: Player) -> some View {
         let slot = PlayerSlot.bench(player)
         let isSelected = selectedSlot == slot
         let tappable = isPlayerTappable(slot)
         
-        ZStack {
-            BenchPlayerCard(
-                player: player,
-                isSelected: isSelected,
-                isTappable: tappable
-            )
-            
-            if !isEditMode {
-                NavigationLink(destination: PlayerDetailView(
-                    player: player,
-                    viewModel: PlayerViewModel(repository: playerRepository),
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository
-                )) {
-                    Color.clear
-                }
-            }
-        }
+        return BenchPlayerCard(
+            player: player,
+            isSelected: isSelected,
+            isTappable: tappable
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if isEditMode {
                 onPlayerTap(slot)
+            } else {
+                selectedPlayerForDetail = player
             }
         }
     }
 }
-
-
 //MARK: - Las tarjetas en si
 struct BenchPlayerCard: View {
     let player: Player
@@ -221,6 +201,8 @@ struct EmptyBenchSlot: View {
     
     struct BenchPreview: View {
         @State private var selectedSlot: PlayerSlot?
+        @State private var selectedPlayerForDetail: Player?
+        @State private var navigateToAddPlayer = false
         
         let benchPlayers = [MockData.mbappe, MockData.deBruyne]
         let playerRepo: PlayerRepository
@@ -228,26 +210,41 @@ struct EmptyBenchSlot: View {
         
         var body: some View {
             NavigationStack {
-                    
-                    VStack {
-                        BenchView(
-                            benchPlayers: benchPlayers,
-                            isEditMode: false,
-                            selectedSlot: $selectedSlot,
-                            isPlayerTappable: { slot in
-                                return true
-                            },
-                            onPlayerTap: { tappedSlot in
-                                if selectedSlot == tappedSlot {
-                                    selectedSlot = nil
-                                } else {
-                                    selectedSlot = tappedSlot
-                                }
-                            },
-                            playerRepository: playerRepo,
-                            squadRepository: squadRepo
-                        )
-                    }
+                BenchView(
+                    benchPlayers: benchPlayers,
+                    isEditMode: false,
+                    selectedSlot: $selectedSlot,
+                    isPlayerTappable: { slot in
+                        return true
+                    },
+                    onPlayerTap: { tappedSlot in
+                        if selectedSlot == tappedSlot {
+                            selectedSlot = nil
+                        } else {
+                            selectedSlot = tappedSlot
+                        }
+                    },
+                    playerRepository: playerRepo,
+                    squadRepository: squadRepo,
+                    selectedPlayerForDetail: $selectedPlayerForDetail,
+                    navigateToAddPlayer: $navigateToAddPlayer
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+            .navigationDestination(isPresented: $navigateToAddPlayer) {
+                PlayersView(
+                    viewModel: PlayerViewModel(repository: playerRepo),
+                    playerRepository: playerRepo,
+                    squadRepository: squadRepo
+                )
+            }
+            .navigationDestination(item: $selectedPlayerForDetail) { player in
+                PlayerDetailView(
+                    player: player,
+                    viewModel: PlayerViewModel(repository: playerRepo),
+                    playerRepository: playerRepo,
+                    squadRepository: squadRepo
+                )
             }
         }
     }
@@ -258,7 +255,6 @@ struct EmptyBenchSlot: View {
     )
     .modelContainer(container)
 }
-
 #Preview("Bench Player Card - Selected") {
     let samplePlayer = Player(
         id: 10,

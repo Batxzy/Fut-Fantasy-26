@@ -27,6 +27,9 @@ struct SquadView: View {
     @State private var navigateToPlayers = false
     @State private var filterPosition: PlayerPosition?
     
+    @State private var selectedPlayerForDetail: Player?
+       @State private var navigateToAddPlayer = false
+    
     var squad: Squad? {
         squads.first
     }
@@ -96,18 +99,24 @@ struct SquadView: View {
                 }
             }
             
-            .navigationDestination(isPresented: $navigateToPlayers) {
-                PlayersView(
-                    viewModel: PlayerViewModel(repository: playerRepository),
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository,
-                    preSelectedPosition: filterPosition
-                )
-            }
+            .navigationDestination(isPresented: $navigateToAddPlayer) {
+                        PlayersView(
+                            viewModel: PlayerViewModel(repository: playerRepository),
+                            playerRepository: playerRepository,
+                            squadRepository: squadRepository
+                        )
+                    }
+            .navigationDestination(item: $selectedPlayerForDetail) { player in
+                    PlayerDetailView(
+                        player: player,
+                        viewModel: PlayerViewModel(repository: playerRepository),
+                        playerRepository: playerRepository,
+                        squadRepository: squadRepository
+                    )
+                }
         }
     }
     
-    @ViewBuilder
     private func squadContent(squad: Squad) -> some View {
         ScrollView {
             
@@ -116,6 +125,8 @@ struct SquadView: View {
                 VStack(spacing: 0) {
                     squadHeader(squad: squad)
                     
+                    
+                    /*
                     FormationView(
                         startingXI: squad.startingXI ?? [],
                         captain: squad.captain,
@@ -131,43 +142,39 @@ struct SquadView: View {
                         playerRepository: playerRepository,
                         squadRepository: squadRepository
                     )
-                    .padding(.horizontal,31)
                     .debugOutline()
                     .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
-                    
+                    */
                    
                 }
 
+             
                 BenchView(
-                    benchPlayers: squad.bench ?? [],
-                    isEditMode: isEditMode,
-                    selectedSlot: $selectedSlot,
-                    isPlayerTappable: isPlayerTappable,
-                    onPlayerTap: handlePlayerTap,
-                    playerRepository: playerRepository,
-                    squadRepository: squadRepository
-                )
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.regularMaterial)
+                        benchPlayers: squad.bench ?? [],
+                        isEditMode: isEditMode,
+                        selectedSlot: $selectedSlot,
+                        isPlayerTappable: isPlayerTappable,
+                        onPlayerTap: handlePlayerTap,
+                        playerRepository: playerRepository,
+                        squadRepository: squadRepository,
+                        selectedPlayerForDetail: $selectedPlayerForDetail,
+                        navigateToAddPlayer: $navigateToAddPlayer
                     )
-                    .padding(.horizontal, 31)
-                    .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
+                .background(Color.red)
+               // .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
+                
+                 
                 
                 Button("Set Captain & Vice-Captain") {
                     showingCaptainSelection = true
                 }
                 .buttonStyle(.bordered)
-                .padding()
                 
-            }
-            
-           
+            }           
         }
         .scrollContentBackground(.hidden)
     }
     
-    @ViewBuilder
     private func squadHeader(squad: Squad) -> some View {
         VStack(spacing: 12) {
             Text(squad.teamName)
