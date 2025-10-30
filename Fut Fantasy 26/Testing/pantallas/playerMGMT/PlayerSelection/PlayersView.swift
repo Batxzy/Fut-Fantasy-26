@@ -207,38 +207,40 @@ struct PlayersView: View {
         } else {
             ScrollView {
                 ZStack(alignment: .top) {
-                    
+                    Color(.mainBg)
                     GeometryReader { geometry in
                         let minY = geometry.frame(in: .global).minY
-                        let scale = minY > 0 ? 1.0 + (minY / 500) : 1.0
+                        let scale = max(1.0, 1.0 + (minY / 500))
                         
                         Image("Vector")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: geometry.size.width)
                             .scaleEffect(scale)
-                            .opacity(0.80)
                             .offset(y: -minY - 60)
-                        
-                        
                     }
-                    .frame(height: 240)  // Increased height to cover more area
+                    .frame(height: 240)
                     
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            stops: [
-                                Gradient.Stop(color: .mainBg, location: 0.00),
-                                Gradient.Stop(color: .mainBg.opacity(0), location: 1.00),
-                            ],
-                            startPoint: UnitPoint(x: 0.5, y: 0),
-                            endPoint: UnitPoint(x: 0.5, y: 1)
-                        )
-                        .frame(height: 100)
+                    GeometryReader { geometry in
+                        let minY = geometry.frame(in: .global).minY
                         
-                        Spacer()
+                        VStack(spacing: 0) {
+                            
+                            LinearGradient(
+                                stops: [
+                                    Gradient.Stop(color: .mainBg.opacity(0.05), location: 0.00),
+                                    Gradient.Stop(color: .mainBg, location: 1.00),
+                                ],
+                                startPoint: UnitPoint(x: 0.5, y: 0),
+                                endPoint: UnitPoint(x: 0.5, y: 1)
+                            )
+                        }
+                        .frame(height: 240)
+                        .offset(y: -minY - 45)
                     }
+                    .frame(height: 240)
                     .allowsHitTesting(false)
-                                   
+                    
                     LazyVStack(spacing: 0) {
                         
                         Color.clear.frame(height: 170)
@@ -281,8 +283,6 @@ struct PlayersView: View {
                                 .padding(.leading, 16)
                         }
                     }
-                    
-                    
                 }
             }
             .edgesIgnoringSafeArea(.top)
