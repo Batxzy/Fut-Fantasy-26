@@ -113,7 +113,7 @@ struct PlayersView: View {
         .searchable(
             text: $searchText,
             isPresented: $isSearching,
-            placement: .navigationBarDrawer(displayMode: .automatic),
+            placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Search by name"
         )
         .searchToolbarBehavior(.minimize)
@@ -176,19 +176,18 @@ struct PlayersView: View {
     @ViewBuilder
     private var budgetHeaderView: some View {
         if let squad = currentSquad {
-            HStack(spacing: 8) {
-                Image("vector")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
+            VStack(alignment: .center, spacing: 4) {
+                Text("Budget")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.8))
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Budget")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                HStack(spacing: 3) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
                     
-                    Text(String(format: "$%.1fM", squad.currentBudget))
-                        .font(.system(size: 16, weight: .bold))
+                    Text(squad.displayBudgetNoDecimals)
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.white)
                 }
             }
@@ -217,9 +216,9 @@ struct PlayersView: View {
                             .aspectRatio(contentMode: .fill)
                             .frame(width: geometry.size.width)
                             .scaleEffect(scale)
-                            .offset(y: -minY - 60)
+                            .offset(y: -minY - 1)
                     }
-                    .frame(height: 240)
+                    .frame(height: 230)
                     
                     GeometryReader { geometry in
                         let minY = geometry.frame(in: .global).minY
@@ -229,21 +228,25 @@ struct PlayersView: View {
                             LinearGradient(
                                 stops: [
                                     Gradient.Stop(color: .mainBg.opacity(0.05), location: 0.00),
+                                    Gradient.Stop(color: .mainBg.opacity(0.5), location: 0.7),
                                     Gradient.Stop(color: .mainBg, location: 1.00),
                                 ],
                                 startPoint: UnitPoint(x: 0.5, y: 0),
                                 endPoint: UnitPoint(x: 0.5, y: 1)
                             )
+                            .frame(height: 230)
+                            
+                            
+                            Color.mainBg
                         }
-                        .frame(height: 240)
-                        .offset(y: -minY - 45)
+                        .offset(y: -minY - 1)
                     }
-                    .frame(height: 240)
+                    .frame(height:300)
                     .allowsHitTesting(false)
                     
                     LazyVStack(spacing: 0) {
                         
-                        Color.clear.frame(height: 170)
+                        Color.clear.opacity(0.40).frame(height: 230)
                         
                         ForEach(filteredPlayers, id: \.id) { player in
                             ZStack {
