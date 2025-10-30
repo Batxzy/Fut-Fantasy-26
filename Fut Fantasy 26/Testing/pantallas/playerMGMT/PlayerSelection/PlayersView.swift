@@ -12,6 +12,7 @@ import SwiftData
 struct PlayersView: View {
     
     @Query(sort: \Player.totalPoints, order: .reverse) private var allPlayers: [Player]
+    @Query private var squads: [Squad]
     
     @Bindable var viewModel: PlayerViewModel
     let playerRepository: PlayerRepository
@@ -25,7 +26,34 @@ struct PlayersView: View {
     @State private var maxPrice: Double?
     @State private var isSearching = false
     @State private var sortType: PlayerSortType = .points
+    @State private var playerToAdd: Player?
+    @State private var showAddConfirmation = false
     @Namespace private var namespace
+    
+    var currentSquad: Squad? {
+        squads.first
+    }
+    
+    func isInSquad(_ player: Player) -> Bool {
+        currentSquad?.players?.contains(where: { $0.id == player.id }) ?? false
+    }
+    
+    func canAddPlayer(_ player: Player) -> Bool {
+        guard let squad = currentSquad else { return false }
+        return !isInSquad(player) && !squad.isFull && squad.currentBudget >= player.price
+    }
+    
+    private func addPlayerToSquad() async {
+        guard let squad = currentSquad, let player = playerToAdd else { return }
+        
+        do {
+            try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
+            print("✅ [PlayersView] Player added successfully")
+        } catch {
+            viewModel.errorMessage = error.localizedDescription
+            print("❌ [PlayersView] Failed to add player: \(error)")
+        }
+    }
     
     var filteredPlayers: [Player] {
         var filtered = allPlayers
@@ -121,6 +149,18 @@ struct PlayersView: View {
             )
             .navigationTransition(.zoom(sourceID: "transition_id", in: namespace))
         }
+        .alert("Add \(playerToAdd?.name ?? "")?", isPresented: $showAddConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Add", role: .none) {
+                Task {
+                    await addPlayerToSquad()
+                }
+            }
+        } message: {
+            if let player = playerToAdd {
+                Text("Add \(player.name) to your squad for \(player.displayPrice)?")
+            }
+        }
         .onAppear {
             if let position = preSelectedPosition, selectedPosition == nil {
                 selectedPosition = position
@@ -138,16 +178,39 @@ struct PlayersView: View {
             )
         } else {
             List(filteredPlayers, id: \.id) { player in
-                NavigationLink(
-                    destination: PlayerDetailView(
+                ZStack {
+                    NavigationLink(destination: PlayerDetailView(
                         player: player,
                         viewModel: viewModel,
                         playerRepository: playerRepository,
                         squadRepository: squadRepository
-                    )
-                ) {
-                    PlayerRowView(player: player)
+                    )) {
+                        EmptyView()
+                    }
+                    .opacity(0)
+                    
+                    HStack(spacing: 12) {
+                        PlayerRowView(player: player)
+                        
+                        Spacer()
+                        
+                        Button {
+                            playerToAdd = player
+                            showAddConfirmation = true
+                        } label: {
+                            Image(systemName: isInSquad(player) ? "checkmark.circle.fill" : "plus.circle")
+                                .font(.system(size: 24,))
+                                .foregroundStyle(isInSquad(player) ? .wpAqua : (canAddPlayer(player) ? .wpAqua : .wpAqua))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isInSquad(player) || !canAddPlayer(player))
+                    }
+                    .padding(.leading, 16)
+                    .padding(.trailing, 16)
+                    .padding(.vertical, 16)  // Changed from 8 to 16
                 }
+                .listRowSeparator(.visible, edges: .bottom)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             }
             .listStyle(.plain)
         }

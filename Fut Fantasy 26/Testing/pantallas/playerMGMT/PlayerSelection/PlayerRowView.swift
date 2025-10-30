@@ -9,6 +9,9 @@
 import SwiftUI
 import SwiftData
 
+import SwiftUI
+import SwiftData
+
 struct PlayerRowView: View {
     let player: Player
     
@@ -22,52 +25,63 @@ struct PlayerRowView: View {
             } placeholder: {
                 Circle().fill(Color.gray.opacity(0.2))
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 45, height: 45)
             .clipShape(Circle())
             
+            Rectangle()
+                .foregroundStyle(Color.wpAqua)
+                .frame(width: 2, height: 38)
+            
             // Player info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(player.name)
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(player.name)
+                        .font(Font.custom("SF Compact", size: 18))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.95)
+                    
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.circle.fill")
+                            .foregroundStyle(Color.wpAqua)
+                        
+                        Text(String(format: "%.1fM", player.price))
+                            .font(Font.custom("SF Compact", size: 15))
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
                 HStack(spacing: 8) {
-                    // Nation flag
-                    AsyncImage(url: player.nationFlagURL.isEmpty ? nil : URL(string: player.nationFlagURL)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Color.gray.opacity(0.2)
-                    }
-                    .frame(width: 20, height: 12)
-                    .clipShape(RoundedRectangle(cornerRadius: 2))
-                    
-                    // Position
                     Text(player.position.rawValue)
-                        .font(.caption)
+                        .font(.caption.bold())
+                        .foregroundStyle(player.position == .goalkeeper ? .black : .white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background {
                             Capsule()
-                                .fill(Color.gray.opacity(0.2))
+                                .fill(player.position.displayColor)
                         }
+                    
+                    Text(player.nationName)
+                        .font(Font.custom("SF Compact", size: 15))
+                        .foregroundColor(.white.opacity(0.68))
                 }
             }
-            
-            Spacer()
-            
-            // Stats
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(player.totalPoints)")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text(player.displayPrice)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
         }
-        .padding(.vertical, 4)
+    }
+}
+
+extension PlayerPosition {
+    var displayColor: Color {
+        switch self {
+        case .goalkeeper:
+            return .wpGreen
+        case .defender:
+            return .wpBlue
+        case .midfielder:
+            return .wpPurple
+        case .forward:
+            return .wpred
+        }
     }
 }
 

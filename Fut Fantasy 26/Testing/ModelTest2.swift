@@ -499,17 +499,21 @@ extension Squad {
     // MARK: - Display Formatters
     
     var displayBudget: String {
-        String(format: "£%.1fM", currentBudget)
+        String(format: "%.1fM", currentBudget)
     }
     
     var displayTotalValue: String {
-        String(format: "£%.1fM", squadValue)
+        String(format: "%.1fM", squadValue)
     }
     
     var displaySpentBudget: String {
         let spent = initialBudget - currentBudget
-        return String(format: "£%.1fM", spent)
+        return String(format: "%.1fM", spent)
     }
+    
+    var displayBudgetNoDecimals: String {
+            return String(format: "%.0fM", currentBudget)
+        }
     
     // MARK: - Squad Status
     

@@ -91,6 +91,7 @@ struct PitchPlayerCard: View {
     private var playerName: some View {
         Text(formattedPlayerName)
             .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.black)
             .lineLimit(1)
             .minimumScaleFactor(0.95)
             .frame(width: 65)

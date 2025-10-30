@@ -15,6 +15,7 @@ enum PlayerSlot: Equatable, Hashable {
 
 struct SquadView: View {
    
+    
     @Query private var squads: [Squad]
     
     @Bindable var viewModel: SquadViewModel
@@ -29,9 +30,13 @@ struct SquadView: View {
         squads.first
     }
     
+    
     var body: some View {
         NavigationStack {
             ZStack {
+                Color(.mainBg)
+                    .ignoresSafeArea()
+                
                 if let squad = squad {
                     squadContent(squad: squad)
                 } else {
@@ -76,6 +81,7 @@ struct SquadView: View {
                 }
             }
             .toolbarBackground(.automatic, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .sheet(isPresented: $showingCaptainSelection) {
                 if let squad = squad {
                     CaptainSelectionView(
@@ -99,9 +105,7 @@ struct SquadView: View {
     private func squadContent(squad: Squad) -> some View {
         ScrollView {
             VStack(spacing: 12) {
-                VStack(spacing: 0) {
-                    squadHeader(squad: squad)
-                    
+                ZStack(alignment: .top) {
                     FormationView(
                         startingXI: squad.startingXI ?? [],
                         captain: squad.captain,
@@ -114,7 +118,25 @@ struct SquadView: View {
                         squadRepository: squadRepository
                     )
                     .padding(.horizontal, 24)
+                    .padding(.top, 80)
                     .animation(.bouncy(duration: 0.75), value: squad.startingXI?.map { $0.id })
+                    
+                    VStack(spacing: 0) {
+                        LinearGradient(
+                            stops: [
+                                Gradient.Stop(color:.mainBg, location: 0.00),
+                                Gradient.Stop(color: .mainBg.opacity(0), location: 1.00),
+                            ],
+                            startPoint: UnitPoint(x: 0.5, y: 0),
+                            endPoint: UnitPoint(x: 0.5, y: 1)
+                        )
+                        .frame(height: 150)
+                        
+                        Spacer()
+                    }
+                    .allowsHitTesting(false)
+                    
+                    squadHeader(squad: squad)
                 }
              
                 BenchView(
@@ -138,42 +160,37 @@ struct SquadView: View {
     }
     
     private func squadHeader(squad: Squad) -> some View {
-        VStack(spacing: 12) {
-            Text(squad.teamName)
-                .font(.title2)
-                .fontWeight(.bold)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Players")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.white)
+                Text("\(squad.players?.count ?? 0)/15")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
             
-            HStack(spacing: 32) {
-                VStack {
-                    Text("Budget")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(squad.displayBudget)
-                        .font(.headline)
-                }
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Budget")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(.white)
                 
-                VStack {
-                    Text("Team Value")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(squad.displayTotalValue)
-                        .font(.headline)
-                }
-                
-                VStack {
-                    Text("Players")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text("\(squad.players?.count ?? 0)/15")
-                        .font(.headline)
+                HStack(spacing: 3) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.white)
+                    
+                    Text(squad.displayBudgetNoDecimals)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.regularMaterial)
-        )
+        .padding(.horizontal, 24)
+        .padding(.bottom, 2)
+        .padding(.top,12)
     }
     
     // MARK: - Tap and Swap Logic
