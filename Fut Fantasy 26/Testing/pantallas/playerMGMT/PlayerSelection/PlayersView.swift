@@ -99,7 +99,8 @@ struct PlayersView: View {
     }
     
     var body: some View {
-        VStack {
+
+        VStack(spacing: 0) {
             if viewModel.isLoading {
                 ProgressView()
                     .padding()
@@ -108,7 +109,7 @@ struct PlayersView: View {
             playerList
         }
         .navigationTitle("Players")
-        .navigationBarTitleDisplayMode(.automatic)
+        .navigationBarTitleDisplayMode(.large)
         .searchable(
             text: $searchText,
             isPresented: $isSearching,
@@ -118,18 +119,22 @@ struct PlayersView: View {
         .searchToolbarBehavior(.minimize)
         .textInputAutocapitalization(.never)
         .toolbar {
-            ToolbarSpacer(.flexible, placement: .topBarTrailing)
+            ToolbarItem(placement: .principal) {
+                budgetHeaderView
+            }
+            
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingFilters = true
                 } label: {
                     Image(systemName: "line.3.horizontal.decrease.circle")
                         .symbolVariant(hasActiveFilters ? .fill : .none)
-                        .foregroundStyle(hasActiveFilters ? Color.accentColor : .primary)
                 }
                 .matchedTransitionSource(id: "transition_id", in: namespace)
             }
         }
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .scrollEdgeEffectStyle(.soft, for: .top)
         .sheet(isPresented: $showingFilters) {
             PlayerFiltersView(
@@ -169,6 +174,29 @@ struct PlayersView: View {
     }
     
     @ViewBuilder
+    private var budgetHeaderView: some View {
+        if let squad = currentSquad {
+            HStack(spacing: 8) {
+                Image("vector")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Budget")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                    
+                    Text(String(format: "$%.1fM", squad.currentBudget))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+        }
+    }
+    
+    
+    @ViewBuilder
     private var playerList: some View {
         if filteredPlayers.isEmpty {
             ContentUnavailableView(
@@ -177,42 +205,87 @@ struct PlayersView: View {
                 description: Text("Try adjusting your filters or search")
             )
         } else {
-            List(filteredPlayers, id: \.id) { player in
-                ZStack {
-                    NavigationLink(destination: PlayerDetailView(
-                        player: player,
-                        viewModel: viewModel,
-                        playerRepository: playerRepository,
-                        squadRepository: squadRepository
-                    )) {
-                        EmptyView()
-                    }
-                    .opacity(0)
+            ScrollView {
+                ZStack(alignment: .top) {
                     
-                    HStack(spacing: 12) {
-                        PlayerRowView(player: player)
+                    GeometryReader { geometry in
+                        let minY = geometry.frame(in: .global).minY
+                        let scale = minY > 0 ? 1.0 + (minY / 500) : 1.0
+                        
+                        Image("Vector")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width)
+                            .scaleEffect(scale)
+                            .opacity(0.80)
+                            .offset(y: -minY - 60)
+                        
+                        
+                    }
+                    .frame(height: 240)  // Increased height to cover more area
+                    
+                    VStack(spacing: 0) {
+                        LinearGradient(
+                            stops: [
+                                Gradient.Stop(color: .mainBg, location: 0.00),
+                                Gradient.Stop(color: .mainBg.opacity(0), location: 1.00),
+                            ],
+                            startPoint: UnitPoint(x: 0.5, y: 0),
+                            endPoint: UnitPoint(x: 0.5, y: 1)
+                        )
+                        .frame(height: 100)
                         
                         Spacer()
-                        
-                        Button {
-                            playerToAdd = player
-                            showAddConfirmation = true
-                        } label: {
-                            Image(systemName: isInSquad(player) ? "checkmark.circle.fill" : "plus.circle")
-                                .font(.system(size: 24,))
-                                .foregroundStyle(isInSquad(player) ? .wpAqua : (canAddPlayer(player) ? .wpAqua : .wpAqua))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(isInSquad(player) || !canAddPlayer(player))
                     }
-                    .padding(.leading, 16)
-                    .padding(.trailing, 16)
-                    .padding(.vertical, 16)  // Changed from 8 to 16
+                    .allowsHitTesting(false)
+                                   
+                    LazyVStack(spacing: 0) {
+                        
+                        Color.clear.frame(height: 170)
+                        
+                        ForEach(filteredPlayers, id: \.id) { player in
+                            ZStack {
+                                NavigationLink(destination: PlayerDetailView(
+                                    player: player,
+                                    viewModel: viewModel,
+                                    playerRepository: playerRepository,
+                                    squadRepository: squadRepository
+                                )) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                                
+                                HStack(spacing: 12) {
+                                    PlayerRowView(player: player)
+                                    
+                                    Spacer()
+                                    
+                                    Button {
+                                        playerToAdd = player
+                                        showAddConfirmation = true
+                                    } label: {
+                                        Image(systemName: isInSquad(player) ? "checkmark.circle.fill" : "plus.circle")
+                                            .font(.system(size: 24))
+                                            .foregroundStyle(isInSquad(player) ? .wpAqua : (canAddPlayer(player) ? .wpAqua : .wpAqua))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(isInSquad(player) || !canAddPlayer(player))
+                                }
+                                .padding(.leading, 16)
+                                .padding(.trailing, 16)
+                                .padding(.vertical, 16)
+                            }
+                            .background(Color(.systemGray6))
+                            
+                            Divider()
+                                .padding(.leading, 16)
+                        }
+                    }
+                    
+                    
                 }
-                .listRowSeparator(.visible, edges: .bottom)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             }
-            .listStyle(.plain)
+            .edgesIgnoringSafeArea(.top)
         }
     }
     

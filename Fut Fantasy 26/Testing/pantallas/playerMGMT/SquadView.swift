@@ -130,7 +130,7 @@ struct SquadView: View {
                             startPoint: UnitPoint(x: 0.5, y: 0),
                             endPoint: UnitPoint(x: 0.5, y: 1)
                         )
-                        .frame(height: 150)
+                        .frame(height: 100)
                         
                         Spacer()
                     }
