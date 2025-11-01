@@ -926,6 +926,54 @@ final class MatchdaySquad {
     }
 }
 
+//MARK: - Teamstandings
+@Model
+final class TeamStandings {
+    @Attribute(.unique) var id: UUID
+    var nation: Nation
+    var group: WorldCupGroup?
+    
+    // Table stats
+    var position: Int
+    var played: Int
+    var wins: Int
+    var draws: Int
+    var losses: Int
+    var goalsFor: Int
+    var goalsAgainst: Int
+    var points: Int
+    
+    var goalDifference: Int {
+        goalsFor - goalsAgainst
+    }
+    
+    init(
+        nation: Nation,
+        group: WorldCupGroup?,
+        position: Int,
+        played: Int,
+        wins: Int,
+        draws: Int,
+        losses: Int,
+        goalsFor: Int,
+        goalsAgainst: Int
+    ) {
+        self.id = UUID()
+        self.nation = nation
+        self.group = group
+        self.position = position
+        self.played = played
+        self.wins = wins
+        self.draws = draws
+        self.losses = losses
+        self.goalsFor = goalsFor
+        self.goalsAgainst = goalsAgainst
+        self.points = (wins * 3) + draws
+    }
+}
+
+
+
 // MARK: - Transfer Model
 
 @Model

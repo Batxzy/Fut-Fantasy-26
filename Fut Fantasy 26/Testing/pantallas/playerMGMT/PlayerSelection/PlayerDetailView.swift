@@ -43,24 +43,69 @@ struct PlayerDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                
-                playerHeader
-                
-                
-                actionButton
-                    .padding(.horizontal)
-                
-                statsSection
-                
-                infoSection
-                
-                Spacer()
+        ZStack(alignment: .bottom) {
+            Color(.mainBg)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                ZStack(alignment: .top) {
+                    GeometryReader { geometry in
+                        let minY = geometry.frame(in: .global).minY
+                        let scale = max(1.0, 1.0 + (minY / 500))
+                        
+                        Image("Vector")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width)
+                            .scaleEffect(scale)
+                            .offset(y: -minY - 1)
+                    }
+                    .frame(height: 200)
+                    
+                    GeometryReader { geometry in
+                        let minY = geometry.frame(in: .global).minY
+                        
+                        VStack(spacing: 0) {
+                            LinearGradient(
+                                stops: [
+                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.00),
+                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.7),
+                                    Gradient.Stop(color: .mainBg, location: 1.00),
+                                ],
+                                startPoint: UnitPoint(x: 0.5, y: 0),
+                                endPoint: UnitPoint(x: 0.5, y: 1)
+                            )
+                            .frame(height: 200)
+                            
+                            Color.mainBg
+                        }
+                        .offset(y: -minY - 1)
+                    }
+                    .allowsHitTesting(false)
+                    
+                    VStack(spacing: 20) {
+                        Color.clear.frame(height: 140)
+                        
+                        playerHeader
+                        
+                        Rectangle()
+                            .frame(height: 1)
+                            .foregroundStyle(.grayBg.opacity(0.8))
+                            .padding(.horizontal, 20)
+                        
+                        statsSection
+                    }
+                }
             }
+            .edgesIgnoringSafeArea(.top)
+            
+            actionButton
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
         }
-        .navigationTitle("Player Details")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        
         .alert("Add \(player.name)?", isPresented: $showingAddConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Add", role: .none) {
@@ -76,7 +121,8 @@ struct PlayerDetailView: View {
     // MARK: - View Components
     
     private var playerHeader: some View {
-        VStack(spacing: 12) {
+        
+        HStack(spacing:10){
             AsyncImage(url: player.imageURL.isEmpty ? nil : URL(string: player.imageURL)) { image in
                 image
                     .resizable()
@@ -84,35 +130,56 @@ struct PlayerDetailView: View {
             } placeholder: {
                 Circle().fill(Color.gray.opacity(0.2))
             }
-            .frame(width: 120, height: 120)
+            .frame(width: 100, height: 100)
             .clipShape(Circle())
-            
-            Text(player.name)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            HStack(spacing: 12) {
-                AsyncImage(url: player.nationFlagURL.isEmpty ? nil : URL(string: player.nationFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.2)
+
+            VStack(alignment: .center){
+                HStack(spacing: 12){
+                    Rectangle()
+                        .foregroundStyle(Color.wpAqua)
+                        .frame(width: 2, height: 38)
+                    
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 5) {
+                            Text(player.name)
+                                .font(Font.custom("SF Compact", size: 18))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.95)
+                            
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.circle.fill")
+                                    .foregroundStyle(Color.wpAqua)
+                                
+                                Text(String(format: "%.0fM", player.price))
+                                    .font(Font.custom("SF Compact", size: 15))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Text(player.position.rawValue)
+                                .font(.caption.bold())
+                                .foregroundStyle(player.position == .goalkeeper ? .black : .white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background {
+                                    Capsule()
+                                        .fill(player.position.displayColor)
+                                }
+                            
+                            Text(player.nationName)
+                                .font(Font.custom("SF Compact", size: 15))
+                                .foregroundColor(.white.opacity(0.68))
+                        }
+                    }
                 }
-                .frame(width: 32, height: 20)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                
-                Text(player.nation.rawValue)
-                    .font(.subheadline)
-                
-                Text("•")
-                
-                Text(player.position.rawValue)
-                    .font(.subheadline)
             }
-            .foregroundColor(.secondary)
+            .padding(10)
+            .padding(.bottom ,5)
+            .frame(height: 100, alignment: .bottom)
+            
+            
         }
-        .padding()
     }
     
     @ViewBuilder
@@ -163,18 +230,28 @@ struct PlayerDetailView: View {
     }
     
     private var statsSection: some View {
-        VStack(spacing: 16) {
-            HStack {
-                StatBox(title: "Total Points", value: "\(player.totalPoints)")
-                StatBox(title: "Price", value: player.displayPrice)
-            }
+        
+        VStack(alignment: .leading, spacing: 12){
             
-            HStack {
-                StatBox(title: "Form", value: "\(player.matchdayPoints)")
-                StatBox(title: "Appearances", value: "\(player.appearances)")
+            Text("stats")
+                .font(.headline)
+                .padding(.horizontal)
+            
+            VStack(spacing: 0) {
+                StatRow(label: "Total Points", value: "\(player.totalPoints)")
+                Divider()
+                StatRow(label: "Matchday Points", value: "\(player.matchdayPoints)")
+                Divider()
+                StatRow(label: "Price", value: player.displayPriceNoDecimals,)
+                Divider()
+                StatRow(label: "Appearances", value: "\(player.appearances)")
             }
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
         }
-        .padding(.horizontal)
+        
+        
     }
     
     private var infoSection: some View {
@@ -190,9 +267,9 @@ struct PlayerDetailView: View {
                 Divider()
                 InfoRow(label: "Group", value: player.group?.rawValue ?? "N/A")
             }
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding(.horizontal)
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .padding(.horizontal)
         }
     }
 }
@@ -226,4 +303,10 @@ struct PlayerDetailView: View {
         )
     }
     .modelContainer(container)
+}
+
+extension Player {
+    var displayPriceNoDecimals: String {
+        return String(format: "$%.0fM", price)
+    }
 }

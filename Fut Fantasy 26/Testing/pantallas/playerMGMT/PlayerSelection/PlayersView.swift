@@ -116,7 +116,7 @@ struct PlayersView: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "Search by name"
         )
-        .searchToolbarBehavior(.minimize)
+        .searchToolbarBehavior(.automatic)
         .textInputAutocapitalization(.never)
         .toolbar {
             ToolbarItem(placement: .principal) {

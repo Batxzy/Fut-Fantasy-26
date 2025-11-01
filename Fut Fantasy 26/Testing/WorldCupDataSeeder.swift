@@ -24,6 +24,7 @@ class WorldCupDataSeeder {
         seedMatchdays(context: context)
         seedPlayers(context: context)
         seedFixtures(context: context)
+        seedStandings(context: context)
         
         do {
             try context.save()
@@ -347,6 +348,35 @@ class WorldCupDataSeeder {
                 city: nil
             )
             context.insert(newFixture)
+        }
+    }
+    
+    //MARK: - Standings
+    
+    static func seedStandings(context: ModelContext) {
+        let standingsData: [(Nation, WorldCupGroup, Int, Int, Int, Int, Int, Int, Int)] = [
+            // (nation, group, position, played, wins, draws, losses, goalsFor, goalsAgainst)
+            (.mexico, .c, 1, 1, 1, 0, 0, 39, 0),
+            (.spain, .e, 2, 2, 0, 0, 0, 36, 0),
+            (.argentina, .c, 3, 3, 0, 0, 0, 33, 0),
+            (.netherlands, .a, 4, 4, 0, 0, 0, 29, 0),
+            (.england, .b, 5, 5, 0, 0, 0, 26, 0),
+            (.brazil, .g, 6, 6, 0, 0, 0, 23, 0),
+        ]
+        
+        for data in standingsData {
+            let standing = TeamStandings(
+                nation: data.0,
+                group: data.1,
+                position: data.2,
+                played: data.3,
+                wins: data.4,
+                draws: data.5,
+                losses: data.6,
+                goalsFor: data.7,
+                goalsAgainst: data.8
+            )
+            context.insert(standing)
         }
     }
     

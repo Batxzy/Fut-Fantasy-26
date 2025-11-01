@@ -8,23 +8,21 @@
 
 import SwiftUI
 
-struct StatBox: View {
-    let title: String
+struct StatRow: View {
+    let label: String
     let value: String
+    var color: Color = .white 
     
     var body: some View {
-        VStack(spacing: 8) {
+        HStack {
+            Text(label)
+                .foregroundColor(.white)
+            Spacer()
             Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity)
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
     }
 }
 
@@ -35,7 +33,7 @@ struct InfoRow: View {
     var body: some View {
         HStack {
             Text(label)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white)
             Spacer()
             Text(value)
                 .fontWeight(.medium)
@@ -47,8 +45,8 @@ struct InfoRow: View {
 // MARK: - Previews
 #Preview("StatBox") {
     VStack {
-        StatBox(title: "Total Points", value: "125")
-        StatBox(title: "Price", value: "£12.0m")
+        StatRow(label: "Total Points", value: "125", color: .wpred)
+        StatRow(label: "Price", value: "£12.0m", color: .wpAqua)
     }
     .padding()
 }
