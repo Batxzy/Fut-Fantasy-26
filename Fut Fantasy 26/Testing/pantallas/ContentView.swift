@@ -36,7 +36,7 @@ struct ContentView: View {
             }
             
             // Earn tab
-            Text("Earn View Coming Soon")
+            EarnView()
                 .tabItem {
                     Label("Earn", systemImage: "star.circle.fill")
                 }

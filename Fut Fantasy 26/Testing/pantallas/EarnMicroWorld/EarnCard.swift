@@ -18,7 +18,7 @@ struct EarnCard: View {
     let backgroundColor: Color
     let accentColor: Color
     let backgroundIconColor: Color?
-    let foregroundIconColor: Color?
+    let foregroundIconMaskColor: Color?
     let earnButtonBackgroundColor: Color?
     let earnButtonTextColor: Color?
     let earnButtonIconColors: (Color, Color)?
@@ -27,6 +27,12 @@ struct EarnCard: View {
     let backgroundIcon: AnyView
     let foregroundIcon: AnyView
     let foregroundIconScale: CGFloat
+    let foregroundIconRenderingMode: IconRenderingMode
+    
+    enum IconRenderingMode {
+        case masked
+        case original
+    }
     
     init(
         title: String = "Question of the day",
@@ -35,14 +41,18 @@ struct EarnCard: View {
         action: @escaping () -> Void = { print("Card tapped") },
         backgroundColor: Color = .wpBlueOcean,
         accentColor: Color = .wpMint,
+        
         backgroundIconColor: Color? = nil,
-        foregroundIconColor: Color? = nil,
+        foregroundIconMaskColor: Color? = nil,
+        
         earnButtonBackgroundColor: Color? = nil,
         earnButtonTextColor: Color? = nil,
         earnButtonIconColors: (Color, Color)? = nil,
+        
         backgroundIcon: AnyView? = nil,
         foregroundIcon: AnyView,
-        foregroundIconScale: CGFloat = 0.69
+        foregroundIconScale: CGFloat = 0.69,
+        foregroundIconRenderingMode: IconRenderingMode = .masked
     ) {
         self.title = title
         self.question = question
@@ -51,25 +61,34 @@ struct EarnCard: View {
         self.backgroundColor = backgroundColor
         self.accentColor = accentColor
         self.backgroundIconColor = backgroundIconColor
-        self.foregroundIconColor = foregroundIconColor
+        self.foregroundIconMaskColor = foregroundIconMaskColor
         self.earnButtonBackgroundColor = earnButtonBackgroundColor
         self.earnButtonTextColor = earnButtonTextColor
         self.earnButtonIconColors = earnButtonIconColors
         self.backgroundIcon = backgroundIcon ?? AnyView(Icon26())
         self.foregroundIcon = foregroundIcon
         self.foregroundIconScale = foregroundIconScale
+        self.foregroundIconRenderingMode = foregroundIconRenderingMode
     }
     
     var body: some View {
         VStack(alignment: .center, spacing: 0) {
-            HStack(spacing: 12) {
+            HStack(spacing: 24) {
                 ZStack {
                     backgroundIcon
                         .foregroundStyle(backgroundIconColor ?? .wpGreenYellow)
                     
-                    foregroundIcon
-                        .foregroundStyle(foregroundIconColor ?? backgroundColor)
-                        .scaleEffect(foregroundIconScale)
+                    Group {
+                        switch foregroundIconRenderingMode {
+                        case .masked:
+                            Rectangle()
+                                .fill(foregroundIconMaskColor ?? backgroundColor)
+                                .mask(foregroundIcon)
+                        case .original:
+                            foregroundIcon
+                        }
+                    }
+                    .scaleEffect(foregroundIconScale)
                 }
                 .frame(width: 77, height: 117)
                 
@@ -90,7 +109,7 @@ struct EarnCard: View {
                             .foregroundStyle(.white)
                             .lineLimit(2, reservesSpace: true)
                     }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
                     VStack() {
                         EarnButton(
@@ -169,7 +188,7 @@ struct EarnCard: View {
         backgroundColor: .wpRedBright,
         accentColor: .white,
         backgroundIconColor: .wpMint,
-        foregroundIconColor: .white,
+        foregroundIconMaskColor: .white,
         earnButtonBackgroundColor: .white,
         earnButtonTextColor: .wpRedBright,
         earnButtonIconColors: (.wpMint, .wpRedBright),
@@ -179,3 +198,18 @@ struct EarnCard: View {
     )
 }
 
+#Preview("Image with Custom Mask") {
+    EarnCard(
+        question: "World Cup history!",
+        points: 1200,
+        backgroundColor: .wpRedBright,
+        accentColor: .white,
+        foregroundIcon: AnyView(
+            Image("Throphy")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        ),
+        foregroundIconScale: 0.7,
+        foregroundIconRenderingMode: .masked
+    )
+}
