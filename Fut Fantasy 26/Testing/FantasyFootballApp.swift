@@ -22,7 +22,9 @@ struct FantasyFootballApp: App {
                 MatchdaySquad.self,
                 Transfer.self,
                 Fixture.self,
-                TeamStandings.self
+                TeamStandings.self,
+                Question.self,
+                UserQuestionProgress.self
             ])
             
             let configuration = ModelConfiguration(
@@ -87,6 +89,7 @@ struct FantasyFootballApp: App {
     @MainActor
     private func seedDataIfNeeded() async {
         WorldCupDataSeeder.seedDataIfNeeded(context: modelContainer.mainContext)
+        QuestionSeeder.seedQuestionsIfNeeded(context: modelContainer.mainContext)
     }
     /*
     @MainActor
