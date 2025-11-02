@@ -347,6 +347,7 @@ final class Squad {
     
     // Budget
     var initialBudget: Double // £100m
+    var earnedCoins: Double // Coins earned from questions and challenges
     
     // Transfer Management
     var freeTransfersRemaining: Int
@@ -388,6 +389,7 @@ final class Squad {
         self.teamName = teamName
         self.ownerName = ownerName
         self.initialBudget = initialBudget
+        self.earnedCoins = 0.0
         self.freeTransfersRemaining = 5
         self.totalTransfersMade = 0
         self.pointsDeductedFromTransfers = 0
@@ -451,7 +453,7 @@ final class Squad {
     }
     
     var currentBudget: Double {
-        initialBudget - squadValue
+        initialBudget + earnedCoins - squadValue
     }
     
     var isFullSquad: Bool {
