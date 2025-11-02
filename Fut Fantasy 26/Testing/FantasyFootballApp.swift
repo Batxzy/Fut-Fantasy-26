@@ -21,7 +21,8 @@ struct FantasyFootballApp: App {
                 MatchdayPerformance.self,
                 MatchdaySquad.self,
                 Transfer.self,
-                Fixture.self
+                Fixture.self,
+                TeamStandings.self
             ])
             
             let configuration = ModelConfiguration(

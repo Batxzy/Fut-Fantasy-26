@@ -9,46 +9,56 @@ import SwiftUI
 import SwiftData
 
 struct MatchesView: View {
-    @State private var selectedDate: Date = Date()
+    @State private var selectedDate: Date?
     let dates: [Date]
     let fixtures: [Fixture]
     
-    var filteredFixtures: [Fixture] {
-        fixtures.filter { fixture in
-            Calendar.current.isDate(fixture.kickoffTime, inSameDayAs: selectedDate)
+    var groupedFixtures: [(Date, [Fixture])] {
+        let grouped = Dictionary(grouping: fixtures) { fixture in
+            Calendar.current.startOfDay(for: fixture.kickoffTime)
         }
+        return grouped.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
     }
     
     var body: some View {
-            
-            VStack(spacing: 16) {
-                DateCapsuleSelector(
-                    dates: dates,
-                    selectedDate: $selectedDate
+        VStack(spacing: 16) {
+            DateCapsuleSelector(
+                dates: dates,
+                selectedDate: Binding(
+                    get: { selectedDate },
+                    set: { selectedDate = $0 }
                 )
-                
+            )
+            
+            ScrollViewReader { proxy in
                 ScrollView {
-                    if !filteredFixtures.isEmpty {
-                        MatchesPerDayCard(
-                            date: selectedDate,
-                            fixtures: filteredFixtures
-                        )
-                        .padding(.horizontal, 28)
-                    } else {
-                        Text("No matches on this date")
-                            .foregroundColor(.gray)
-                            .padding(.top, 40)
+                    VStack(spacing: 24) {
+                        ForEach(groupedFixtures, id: \.0) { date, dayFixtures in
+                            MatchesPerDayCard(
+                                date: date,
+                                fixtures: dayFixtures
+                            )
+                            .id(date)
+                            .padding(.horizontal, 28)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
+                .onChange(of: selectedDate) { oldValue, newValue in
+                    if let newValue = newValue {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(Calendar.current.startOfDay(for: newValue), anchor: .top)
+                        }
                     }
                 }
             }
-        
+        }
     }
 }
 
-
 struct DateCapsuleSelector: View {
     let dates: [Date]
-    @Binding var selectedDate: Date
+    @Binding var selectedDate: Date?
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -56,7 +66,7 @@ struct DateCapsuleSelector: View {
                 ForEach(dates, id: \.self) { date in
                     DateCapsule(
                         date: date,
-                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate)
+                        isSelected: selectedDate != nil && Calendar.current.isDate(date, inSameDayAs: selectedDate!)
                     )
                     .onTapGesture {
                         selectedDate = date
@@ -92,6 +102,7 @@ struct DateCapsule: View {
             .animation(.bouncy(duration: 0.4), value: isSelected)
     }
 }
+
 
 //MARK: - Match card
 struct MatchCard: View {
@@ -249,35 +260,22 @@ struct MatchesPerDayCard: View {
 
 
 
-// MARK: - Standalone Preview for Design Focus
-#Preview("Match Card Design") {
-    ZStack {
-        Color.black.ignoresSafeArea()
-        
-        VStack(spacing: 20) {
-            MatchCard(fixture: Fixture(
-                id: 1,
-                matchdayNumber: 1,
-                homeNation: .england,
-                awayNation: .mexico,
-                kickoffTime: Date(),
-                group: .c
-            ))
-            
-            MatchCard(fixture: {
-                let fixture = Fixture(
-                    id: 2,
-                    matchdayNumber: 1,
-                    homeNation: .brazil,
-                    awayNation: .argentina,
-                    kickoffTime: Date(),
-                    group: .g
-                )
-                fixture.homeScore = 3
-                fixture.awayScore = 0
-                fixture.isFinished = true
-                return fixture
-            }())
-        }
-    }
+//MARK: - Preview Matches view**
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Matchday.self, Fixture.self,
+        configurations: config
+    )
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedMatchdays(context: context)
+    WorldCupDataSeeder.seedFixtures(context: context)
+    
+    let matchdays = try! context.fetch(FetchDescriptor<Matchday>())
+    let fixtures = try! context.fetch(FetchDescriptor<Fixture>())
+    let dates = matchdays.map { $0.deadline }.sorted()
+    
+    return MatchesView(dates: dates, fixtures: fixtures)
+        .modelContainer(container)
 }

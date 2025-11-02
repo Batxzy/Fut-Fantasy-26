@@ -21,10 +21,11 @@ class WorldCupDataSeeder {
         }
         
         print("🌱 Seeding initial World Cup data...")
+        seedStandings(context: context)
         seedMatchdays(context: context)
         seedPlayers(context: context)
         seedFixtures(context: context)
-        seedStandings(context: context)
+      
         
         do {
             try context.save()
@@ -259,6 +260,9 @@ class WorldCupDataSeeder {
         let matchdays: [(number: Int, stage: TournamentStage, deadline: String, round: Int?, unlimited: Bool, freeTransfers: Int)] = [
             (1, .groupStage, "2026-06-11 15:00", 1, true, 999),
             (2, .groupStage, "2026-06-12 15:00", 1, false, 1),
+            (3, .groupStage, "2026-06-13 15:00", 1, false, 1),
+            (4, .groupStage, "2026-06-16 15:00", 2, false, 1),
+            (5, .groupStage, "2026-06-17 15:00", 2, false, 1),
         ]
         
         for md in matchdays {
@@ -273,6 +277,7 @@ class WorldCupDataSeeder {
             context.insert(matchday)
         }
     }
+
 
     // MARK: - Players
     
@@ -349,18 +354,29 @@ class WorldCupDataSeeder {
     // MARK: - Fixtures
     
     static func seedFixtures(context: ModelContext) {
-        // Fetch matchdays to link fixtures
         let matchdayDescriptor = FetchDescriptor<Matchday>()
         guard let matchdays = try? context.fetch(matchdayDescriptor) else { return }
         
         let fixtures: [(id: Int, md: Int, home: Nation, away: Nation, kickoff: String, group: WorldCupGroup?, stage: TournamentStage?)] = [
-            // Matchday 1
+            // Matchday 1 - Group Stage Round 1
             (1, 1, .qatar, .ecuador, "2026-06-11 16:00", .a, nil),
             (2, 1, .senegal, .netherlands, "2026-06-11 19:00", .a, nil),
             
             // Matchday 2
             (3, 2, .england, .iran, "2026-06-12 13:00", .b, nil),
             (4, 2, .usa, .wales, "2026-06-12 19:00", .b, nil),
+            
+            // Matchday 3
+            (5, 3, .argentina, .saudiArabia, "2026-06-13 10:00", .c, nil),
+            (6, 3, .mexico, .poland, "2026-06-13 16:00", .c, nil),
+            
+            // Matchday 4 - Group Stage Round 2
+            (7, 4, .netherlands, .ecuador, "2026-06-16 13:00", .a, nil),
+            (8, 4, .qatar, .senegal, "2026-06-16 16:00", .a, nil),
+            
+            // Matchday 5
+            (9, 5, .wales, .iran, "2026-06-17 10:00", .b, nil),
+            (10, 5, .england, .usa, "2026-06-17 19:00", .b, nil),
         ]
         
         for fixture in fixtures {
@@ -376,7 +392,6 @@ class WorldCupDataSeeder {
                 city: nil
             )
             
-            // Link fixture to its matchday
             if let matchday = matchdays.first(where: { $0.number == fixture.md }) {
                 newFixture.matchday = matchday
             }

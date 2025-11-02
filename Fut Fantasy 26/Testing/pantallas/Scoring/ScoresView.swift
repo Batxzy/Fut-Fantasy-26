@@ -20,7 +20,7 @@ struct ScoresView: View {
     }
     
     var dates: [Date] {
-        matchdays.map { $0.deadline }
+        matchdays.map { $0.deadline }.sorted()
     }
     
     var body: some View {

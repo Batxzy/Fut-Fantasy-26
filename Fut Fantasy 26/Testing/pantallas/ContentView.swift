@@ -38,12 +38,9 @@ struct ContentView: View {
             }
             
             // Fixtures tab
-            FixturesListView(
-                fixtureRepository: fixtureRepository,
-                matchdayRepository: matchdayRepository
-            )
+           ScoresView()
             .tabItem {
-                Label("Fixtures", systemImage: "calendar")
+                Label("Scores", systemImage: "calendar")
             }
             .tag(1)
             
