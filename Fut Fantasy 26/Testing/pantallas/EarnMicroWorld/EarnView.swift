@@ -28,7 +28,7 @@ struct EarnView: View {
                     if let squad = squad {
                         Earnheader(squad: squad)
                     }
-                    // Question Cards
+
                     VStack(spacing: 18) {
                         // Card 1 - Blue Ocean
                         EarnCard(
@@ -39,7 +39,6 @@ struct EarnView: View {
                             foregroundIcon: AnyView(IconQuestionmark())
                         )
                         
-                        // Card 2 - Purple
                         EarnCard(
                             title:"Predictions",
                             question: "Who will win the next match?",
@@ -54,14 +53,11 @@ struct EarnView: View {
                             ),
                             foregroundIconScale: 0.8,
                             foregroundIconRenderingMode: .masked
-                            
                         )
                         
-                        // Card 3 - Green
                         EarnCard(
-                            
                             title:"RECREATE THE POSE",
-                            question: "Recreate Mbappé’s crossed-arms pose",
+                            question: "Recreate Mbappé's crossed-arms pose",
                             points: 1000,
                             backgroundColor: .wpRedBright,
                             accentColor: .wpGreenLime,
@@ -74,7 +70,6 @@ struct EarnView: View {
                             foregroundIconRenderingMode: .masked
                         )
                         
-                        // Card 4 - Red/Orange
                         EarnCard(
                             title:"location",
                             question: "Go paste some stickers on the Estadio Arkon",
