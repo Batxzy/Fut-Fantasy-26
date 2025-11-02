@@ -101,8 +101,21 @@ final class Question {
     // MARK: - Answer Validation
     
     func isCorrectAnswer(_ answer: String) -> Bool {
-        let normalizedCorrect = correctAnswer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let normalizedAnswer = answer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedCorrect = normalizeString(correctAnswer)
+        let normalizedAnswer = normalizeString(answer)
         return normalizedCorrect == normalizedAnswer
+    }
+    
+    private func normalizeString(_ string: String) -> String {
+        // Trim whitespace and convert to lowercase
+        var normalized = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        // Remove diacritics (accents) for more flexible matching
+        normalized = normalized.folding(options: .diacriticInsensitive, locale: .current)
+        
+        // Remove extra spaces
+        normalized = normalized.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        
+        return normalized
     }
 }

@@ -100,7 +100,7 @@ class QuestionSeeder {
             
             // Day 7
             Question(
-                text: "How many teams participate in the World Cup finals?",
+                text: "How many teams participated in the 2022 World Cup?",
                 correctAnswer: "32",
                 basePoints: 1000,
                 category: .general,

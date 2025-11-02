@@ -160,8 +160,9 @@ final class QuestionViewModel {
     private func updateTimer() {
         if timeRemaining > 0 {
             timeRemaining -= 1
-        } else {
-            // Time's up - reload the question
+        } else if timeRemaining == 0 {
+            // Time's up - reload the question once
+            timeRemaining = -1 // Prevent multiple reloads
             Task {
                 await loadTodaysQuestion()
             }

@@ -183,6 +183,12 @@ final class GameManager {
     
     // MARK: - Timer Calculations
     
+    // MARK: - Constants
+    
+    private static let secondsPerDay: TimeInterval = 86400
+    
+    // MARK: - Timer Calculations
+    
     func getTimeUntilNextReset() -> TimeInterval {
         let calendar = Calendar.current
         let now = Date()
@@ -193,13 +199,13 @@ final class GameManager {
         components.second = 0
         
         guard let nextReset = calendar.date(from: components) else {
-            return 86400 // Default to 24 hours
+            return Self.secondsPerDay
         }
         
         // If next reset is in the past, add a day
         if nextReset <= now {
             guard let tomorrowReset = calendar.date(byAdding: .day, value: 1, to: nextReset) else {
-                return 86400
+                return Self.secondsPerDay
             }
             return tomorrowReset.timeIntervalSince(now)
         }
