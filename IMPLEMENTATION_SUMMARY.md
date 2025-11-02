@@ -22,7 +22,7 @@ Successfully implemented a complete "Question of the Day" system that integrates
    - Prevents multiple reloads with guard logic
 
 3. **Squad Budget Integration**
-   - New `earnedCoins` property added to Squad model
+   - New `initialBudget` property added to Squad model
    - Points automatically added to budget on correct answers
    - Integrated through existing SquadRepository pattern
    - Updates reflected in `currentBudget` computed property
@@ -97,7 +97,7 @@ Successfully implemented a complete "Question of the Day" system that integrates
 ## Files Modified (5 total)
 
 1. `Testing/Core/SwiftDataManager.swift` - Added models to schema
-2. `Testing/ModelTest2.swift` - Added earnedCoins to Squad
+2. `Testing/ModelTest2.swift` - Added initialBudget to Squad
 3. `Testing/pantallas/EarnMicroWorld/EarnCard.swift` - State support
 4. `Testing/pantallas/EarnMicroWorld/EarnView.swift` - ViewModel integration
 5. `Testing/FantasyFootballApp.swift` - Schema and seeding
@@ -201,7 +201,7 @@ The system is designed to be extended:
 If deploying to users with existing data:
 
 1. **Schema Migration**: SwiftData handles automatic migration
-2. **Backward Compatibility**: earnedCoins defaults to 0.0
+2. **Backward Compatibility**: initialBudget defaults to 0.0
 3. **No Breaking Changes**: All existing functionality preserved
 4. **Data Seeding**: Only runs if no questions exist
 

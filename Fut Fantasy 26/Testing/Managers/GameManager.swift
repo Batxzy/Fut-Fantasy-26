@@ -160,7 +160,7 @@ final class GameManager {
     // MARK: - Squad Budget Integration
     
     func awardPointsToSquad(squadId: UUID, points: Int) async throws {
-        print("🎮 [GameManager] Awarding \(points) points to squad \(squadId)")
+        print("🎮 [GameManager] Awarding \(points) points to squad budget \(squadId)")
         
         // Fetch the squad
         let predicate = #Predicate<Squad> { $0.id == squadId }
@@ -172,9 +172,9 @@ final class GameManager {
             throw RepositoryError.notFound
         }
         
-        // Update earnedCoins
-        squad.earnedCoins += Double(points)
-        print("   ✅ Added \(points) to earnedCoins. New total: \(squad.earnedCoins)")
+        // Add points directly to initialBudget (which is the squad's money/coins)
+        squad.initialBudget += Double(points)
+        print("   ✅ Added \(points) to budget. New budget: \(squad.initialBudget)")
         
         // Save through repository
         try await squadRepository.updateSquad(squad)

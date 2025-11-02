@@ -73,7 +73,7 @@ Data Layer (SwiftData Models)
   - **Question State Management**: Determines if question is available, answered, or locked
   - **24-Hour Timer Logic**: Configurable reset time (default midnight UTC)
   - **Answer Processing**: Validates answers and awards points
-  - **Squad Integration**: Updates squad's earnedCoins through SquadRepository
+  - **Squad Integration**: Updates squad's initialBudget through SquadRepository
   - **Timer Utilities**: Calculates time remaining until next reset
 
 #### QuestionState Enum
@@ -150,19 +150,21 @@ enum QuestionState {
 
 ## Integration Points
 
-### Squad Model Enhancement
-The Squad model was enhanced to support earned coins:
+### Squad Model Integration
+The Squad budget system works directly with questions:
 
 ```swift
 @Model
 final class Squad {
-    var earnedCoins: Double  // NEW: Tracks coins from questions/challenges
+    var initialBudget: Double  // Squad's money (includes question winnings)
     
     var currentBudget: Double {
-        initialBudget + earnedCoins - squadValue  // UPDATED: Includes earned coins
+        initialBudget - squadValue  // Available budget after player costs
     }
 }
 ```
+
+When questions are answered correctly, points are added directly to `initialBudget`, increasing the squad's available money for buying players.
 
 ### SwiftData Schema Updates
 Both SwiftDataManager and FantasyFootballApp were updated:
@@ -208,7 +210,7 @@ QuestionRepository.recordAnswer()
     ↓
 (if correct) GameManager.awardPointsToSquad()
     ↓
-Squad.earnedCoins updated
+Squad.initialBudget updated
     ↓
 SquadRepository.updateSquad()
     ↓
@@ -319,7 +321,7 @@ The system is designed to be extended:
 
 ### Modified Files (5)
 1. `Testing/Core/SwiftDataManager.swift` - Added models to schema
-2. `Testing/ModelTest2.swift` - Added earnedCoins to Squad
+2. `Testing/ModelTest2.swift` - Added initialBudget to Squad
 3. `Testing/pantallas/EarnMicroWorld/EarnCard.swift` - Added state support
 4. `Testing/pantallas/EarnMicroWorld/EarnView.swift` - Integrated ViewModel
 5. `Testing/FantasyFootballApp.swift` - Added models and seeding
