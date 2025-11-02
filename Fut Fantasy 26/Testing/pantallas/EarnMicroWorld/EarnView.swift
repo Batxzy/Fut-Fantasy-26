@@ -11,6 +11,9 @@ import SwiftData
 struct EarnView: View {
     
     @Query private var squads: [Squad]
+    @Environment(\.modelContext) private var modelContext
+    @State private var questionViewModel: QuestionViewModel?
+    @State private var showQuestionSheet = false
     
     var squad: Squad? {
         squads.first
@@ -30,14 +33,20 @@ struct EarnView: View {
                     }
 
                     VStack(spacing: 18) {
-                        // Card 1 - Blue Ocean
-                        EarnCard(
-                            question: "How many World Cups have been held in Mexico?",
-                            points: 1000,
-                            backgroundColor: .wpBlueOcean,
-                            accentColor: .wpMint,
-                            foregroundIcon: AnyView(IconQuestionmark())
-                        )
+                        // Card 1 - Question of the Day
+                        if let viewModel = questionViewModel {
+                            questionOfTheDayCard(viewModel: viewModel)
+                        } else {
+                            // Placeholder while loading
+                            EarnCard(
+                                question: "Loading question...",
+                                points: 0,
+                                isEnabled: false,
+                                backgroundColor: .wpBlueOcean,
+                                accentColor: .wpMint,
+                                foregroundIcon: AnyView(IconQuestionmark())
+                            )
+                        }
                         
                         EarnCard(
                             title:"Predictions",
@@ -92,6 +101,67 @@ struct EarnView: View {
                 }
             }
         }
+        .task {
+            if let squad = squad, questionViewModel == nil {
+                questionViewModel = QuestionViewModel.create(
+                    modelContext: modelContext,
+                    squadId: squad.id
+                )
+                await questionViewModel?.onAppear()
+            }
+        }
+        .onDisappear {
+            questionViewModel?.onDisappear()
+        }
+        .sheet(isPresented: $showQuestionSheet) {
+            if let viewModel = questionViewModel, let question = viewModel.currentQuestion {
+                VStack {
+                    if viewModel.showResult, let result = viewModel.lastResult {
+                        QuestionResultView(
+                            isCorrect: result.isCorrect,
+                            pointsEarned: result.pointsEarned,
+                            onDismiss: {
+                                showQuestionSheet = false
+                                viewModel.dismissResult()
+                            }
+                        )
+                    } else {
+                        QuestionAnswerView(
+                            question: question,
+                            userAnswer: $questionViewModel!.userAnswer,
+                            onSubmit: {
+                                Task {
+                                    await viewModel.submitAnswer()
+                                }
+                            },
+                            isLoading: viewModel.isLoading
+                        )
+                    }
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
+    }
+    
+    // MARK: - Question of the Day Card
+    
+    @ViewBuilder
+    private func questionOfTheDayCard(viewModel: QuestionViewModel) -> some View {
+        EarnCard(
+            question: viewModel.currentQuestion?.text ?? "Check back tomorrow!",
+            points: viewModel.currentQuestion?.totalPoints ?? 0,
+            action: {
+                if viewModel.isQuestionAvailable {
+                    showQuestionSheet = true
+                }
+            },
+            isEnabled: viewModel.isQuestionAvailable,
+            countdownText: viewModel.isQuestionLocked ? viewModel.formattedTimeRemaining : nil,
+            isAnswered: viewModel.isQuestionAnswered,
+            backgroundColor: .wpBlueOcean,
+            accentColor: .wpMint,
+            foregroundIcon: AnyView(IconQuestionmark())
+        )
     }
 }
 

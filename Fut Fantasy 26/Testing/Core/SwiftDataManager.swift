@@ -23,7 +23,9 @@ class SwiftDataManager {
             MatchdayPerformance.self,
             MatchdaySquad.self,
             Transfer.self,
-            Fixture.self
+            Fixture.self,
+            Question.self,
+            UserQuestionProgress.self
         ])
     }()
     

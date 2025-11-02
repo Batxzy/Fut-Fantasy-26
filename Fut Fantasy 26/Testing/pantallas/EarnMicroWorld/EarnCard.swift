@@ -14,6 +14,11 @@ struct EarnCard: View {
     let points: Int
     let action: () -> Void
     
+    // State
+    let isEnabled: Bool
+    let countdownText: String?
+    let isAnswered: Bool
+    
     // Colors
     let backgroundColor: Color
     let accentColor: Color
@@ -39,6 +44,9 @@ struct EarnCard: View {
         question: String,
         points: Int,
         action: @escaping () -> Void = { print("Card tapped") },
+        isEnabled: Bool = true,
+        countdownText: String? = nil,
+        isAnswered: Bool = false,
         backgroundColor: Color = .wpBlueOcean,
         accentColor: Color = .wpMint,
         
@@ -58,6 +66,9 @@ struct EarnCard: View {
         self.question = question
         self.points = points
         self.action = action
+        self.isEnabled = isEnabled
+        self.countdownText = countdownText
+        self.isAnswered = isAnswered
         self.backgroundColor = backgroundColor
         self.accentColor = accentColor
         self.backgroundIconColor = backgroundIconColor
@@ -112,12 +123,40 @@ struct EarnCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     
                     VStack() {
-                        EarnButton(
-                            points: points,
-                            backgroundColor: earnButtonBackgroundColor ?? accentColor,
-                            textColor: earnButtonTextColor ?? backgroundColor,
-                            iconColors: earnButtonIconColors ?? (accentColor, backgroundColor)
-                        )
+                        if let countdown = countdownText {
+                            // Show countdown timer
+                            Text(countdown)
+                                .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                                .foregroundColor(accentColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(backgroundColor.opacity(0.3))
+                                )
+                        } else if isAnswered {
+                            // Show completed state
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 13))
+                                Text("Completed")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundColor(accentColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(backgroundColor.opacity(0.3))
+                            )
+                        } else {
+                            EarnButton(
+                                points: points,
+                                backgroundColor: earnButtonBackgroundColor ?? accentColor,
+                                textColor: earnButtonTextColor ?? backgroundColor,
+                                iconColors: earnButtonIconColors ?? (accentColor, backgroundColor)
+                            )
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 }
@@ -127,8 +166,11 @@ struct EarnCard: View {
         .frame(width: 344, height: 144, alignment: .center)
         .background(backgroundColor)
         .cornerRadius(16)
+        .opacity(isEnabled ? 1.0 : 0.6)
         .onTapGesture {
-            action()
+            if isEnabled {
+                action()
+            }
         }
     }
     

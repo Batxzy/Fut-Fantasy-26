@@ -346,7 +346,7 @@ final class Squad {
     var ownerName: String
     
     // Budget
-    var initialBudget: Double // £100m
+    var initialBudget: Double // £100m (includes earnings from questions/challenges)
     
     // Transfer Management
     var freeTransfersRemaining: Int
