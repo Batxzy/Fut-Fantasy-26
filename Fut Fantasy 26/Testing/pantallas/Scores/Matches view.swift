@@ -13,6 +13,10 @@ struct MatchesView: View {
     let dates: [Date]
     let fixtures: [Fixture]
     
+    var sortedFixtures: [Fixture] {
+        fixtures.sorted { $0.id < $1.id }
+    }
+    
     var groupedFixtures: [(Date, [Fixture])] {
         let grouped = Dictionary(grouping: fixtures) { fixture in
             Calendar.current.startOfDay(for: fixture.kickoffTime)
@@ -36,7 +40,8 @@ struct MatchesView: View {
                         ForEach(groupedFixtures, id: \.0) { date, dayFixtures in
                             MatchesPerDayCard(
                                 date: date,
-                                fixtures: dayFixtures
+                                fixtures: dayFixtures,
+                                allFixtures: sortedFixtures
                             )
                             .id(date)
                             .padding(.horizontal, 28)
@@ -55,6 +60,7 @@ struct MatchesView: View {
         }
     }
 }
+
 
 struct DateCapsuleSelector: View {
     let dates: [Date]
@@ -107,9 +113,15 @@ struct DateCapsule: View {
 //MARK: - Match card
 struct MatchCard: View {
     let fixture: Fixture
+    let colorIndex: Int
+    
+    let colorVariation: [Color] = [.wpPurpleLilac, .wpMint, .wpGreenLime, .wpRedBright, .wpGreenMalachite, .wpPurpleOrchid]
+    
+    var gradientColor: Color {
+        colorVariation[colorIndex % colorVariation.count]
+    }
     
     var body: some View {
-        
         HStack {
             VStack(alignment: .center, spacing: 8) {
                 AsyncImage(url: URL(string: fixture.homeFlagURL)) { image in
@@ -163,7 +175,7 @@ struct MatchCard: View {
         .padding(.horizontal, 12)
         .padding(.vertical,28)
         .frame(width: 330, height: 120)
-        .background(.clear)
+        .background(gradientColor.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
             RoundedRectangle(cornerRadius: 20)
@@ -171,23 +183,22 @@ struct MatchCard: View {
                     LinearGradient(
                         colors: [
                             Color(red: 0.33, green: 0.33, blue: 0.33),
-                            Color(red: 0.4, green: 0.9, blue: 0.8)
+                            gradientColor
                         ],
                         startPoint: UnitPoint(x: 0.55, y: 0.84),
                         endPoint: UnitPoint(x: 0.5, y: -0.05)
                     ),
-                    lineWidth: 2
+                    lineWidth: 1
                 )
         )
     }
 }
 
 //MARK: -MatchesPerDayCard
-
-
 struct MatchesPerDayCard: View {
     let date: Date
     let fixtures: [Fixture]
+    let allFixtures: [Fixture]
     
     var formattedDate: String {
         date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())
@@ -196,7 +207,7 @@ struct MatchesPerDayCard: View {
     var tournamentInfo: String {
         if let firstFixture = fixtures.first {
             if let group = firstFixture.group {
-                return "Group \(group.rawValue.uppercased())"
+                return group.rawValue.uppercased()
             } else if let stage = firstFixture.knockoutStage {
                 switch stage {
                 case .roundOf16:
@@ -229,15 +240,16 @@ struct MatchesPerDayCard: View {
                     .foregroundColor(.white).opacity(0.8)
             }
                     
-            VStack(spacing: 12) {
+            VStack(spacing: 20) {
                 ForEach(fixtures, id: \.id) { fixture in
-                    MatchCard(fixture: fixture)
+                    if let globalIndex = allFixtures.firstIndex(where: { $0.id == fixture.id }) {
+                        MatchCard(fixture: fixture, colorIndex: globalIndex)
+                    }
                 }
             }
         }
     }
 }
-
 //MARK: - Preview Matches view
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
