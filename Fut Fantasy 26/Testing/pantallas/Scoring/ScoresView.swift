@@ -6,38 +6,65 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ScoresView: View {
     @State private var selectedTab: Tab = .matches
+    
+    @Query private var matchdays: [Matchday]
+    @Query private var fixtures: [Fixture]
     
     enum Tab: String, CaseIterable {
         case matches = "Matches"
         case standings = "Standings"
     }
     
+    var dates: [Date] {
+        matchdays.map { $0.deadline }
+    }
+    
     var body: some View {
-        VStack {
+        ZStack {
+            Color(.mainBg)
+                .ignoresSafeArea()
             
-            Picker("View", selection: $selectedTab) {
-                ForEach(Tab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
+            VStack(spacing: 0) {
+                VStack(spacing: 0) {
+                    Picker("View", selection: $selectedTab) {
+                        ForEach(Tab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .frame(height: 60)
+                
+                switch selectedTab {
+                case .matches:
+                    MatchesView(dates: dates, fixtures: fixtures)
+                case .standings:
+                    StandingsView()
                 }
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            
-            switch selectedTab {
-            case .matches:
-               Text("hello")
-            case .standings:
-                StandingsView()
-            }
         }
-        .frame(alignment: .top)
     }
 }
 
 
 #Preview {
-    ScoresView()
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Matchday.self, Fixture.self, TeamStandings.self,
+        configurations: config
+    )
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedMatchdays(context: context)
+    WorldCupDataSeeder.seedFixtures(context: context)
+    WorldCupDataSeeder.seedStandings(context: context)
+    
+    return ScoresView()
+        .modelContainer(container)
 }

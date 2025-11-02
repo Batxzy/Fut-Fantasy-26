@@ -1062,7 +1062,7 @@ final class Fixture {
     
     var displayScore: String {
         if let home = homeScore, let away = awayScore {
-            var score = "\(home) - \(away)"
+            var score = "\(home):\(away)"
             if hadPenaltyShootout, let winner = penaltyWinner {
                 score += " (\(winner.rawValue) won on pens)"
             } else if hadExtraTime {

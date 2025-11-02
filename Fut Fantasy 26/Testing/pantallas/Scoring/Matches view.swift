@@ -20,9 +20,6 @@ struct MatchesView: View {
     }
     
     var body: some View {
-        ZStack{
-            Color(.mainBg)
-                .ignoresSafeArea()
             
             VStack(spacing: 16) {
                 DateCapsuleSelector(
@@ -31,16 +28,20 @@ struct MatchesView: View {
                 )
                 
                 ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(filteredFixtures, id: \.id) { fixture in
-                            MatchCard(fixture: fixture)
-                        }
+                    if !filteredFixtures.isEmpty {
+                        MatchesPerDayCard(
+                            date: selectedDate,
+                            fixtures: filteredFixtures
+                        )
+                        .padding(.horizontal, 28)
+                    } else {
+                        Text("No matches on this date")
+                            .foregroundColor(.gray)
+                            .padding(.top, 40)
                     }
-                    .padding(.horizontal, 16)
                 }
             }
-        }
-       
+        
     }
 }
 
@@ -62,7 +63,7 @@ struct DateCapsuleSelector: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 28)
         }
     }
 }
@@ -92,25 +93,7 @@ struct DateCapsule: View {
     }
 }
 
-#Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Matchday.self, Fixture.self,
-        configurations: config
-    )
-    
-    let context = container.mainContext
-    WorldCupDataSeeder.seedMatchdays(context: context)
-    WorldCupDataSeeder.seedFixtures(context: context)
-    
-    let matchdays = try! context.fetch(FetchDescriptor<Matchday>())
-    let fixtures = try! context.fetch(FetchDescriptor<Fixture>())
-    let dates = matchdays.map { $0.deadline }
-    
-    return MatchesView(dates: dates, fixtures: fixtures)
-        .modelContainer(container)
-}
-
+//MARK: - Match card
 struct MatchCard: View {
     let fixture: Fixture
     
@@ -135,6 +118,7 @@ struct MatchCard: View {
                     )
                     .foregroundColor(.white)
             }
+            .frame(width: 100)
             
             Spacer()
             
@@ -146,7 +130,7 @@ struct MatchCard: View {
             Spacer()
             
             VStack(alignment: .center, spacing: 8) {
-                AsyncImage(url: URL(string: fixture.homeFlagURL)) { image in
+                AsyncImage(url: URL(string: fixture.awayFlagURL)) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -156,15 +140,16 @@ struct MatchCard: View {
                 .frame(width: 30, height: 30)
                 .clipShape(Circle())
                 
-                Text(fixture.homeNation.rawValue)
+                Text(fixture.awayNation.rawValue)
                     .font(
                         Font.system(size: 16)
                             .weight(.bold)
                     )
                     .foregroundColor(.white)
             }
+            .frame(width:100)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 12)
         .padding(.vertical,28)
         .frame(width: 330, height: 120)
         .background(.clear)
@@ -185,6 +170,84 @@ struct MatchCard: View {
         )
     }
 }
+
+//MARK: -MatchesPerDayCard
+
+
+struct MatchesPerDayCard: View {
+    let date: Date
+    let fixtures: [Fixture]
+    
+    var formattedDate: String {
+        date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())
+    }
+    
+    var tournamentInfo: String {
+        if let firstFixture = fixtures.first {
+            if let group = firstFixture.group {
+                return "Group \(group.rawValue.uppercased())"
+            } else if let stage = firstFixture.knockoutStage {
+                switch stage {
+                case .roundOf16:
+                    return "Round of 16"
+                case .quarterFinals:
+                    return "Quarter Finals"
+                case .semiFinals:
+                    return "Semi Finals"
+                case .thirdPlace:
+                    return "Third Place"
+                case .final:
+                    return "Final"
+                default:
+                    return "Group Stage"
+                }
+            }
+        }
+        return "Group Stage"
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(formattedDate)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white).opacity(0.8)
+                
+                Text(tournamentInfo)
+                    .font(.system(size: 10 , weight: .light))
+                    .foregroundColor(.white).opacity(0.8)
+            }
+                    
+            VStack(spacing: 12) {
+                ForEach(fixtures, id: \.id) { fixture in
+                    MatchCard(fixture: fixture)
+                }
+            }
+        }
+    }
+}
+
+//MARK: - Preview Matches view
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Matchday.self, Fixture.self,
+        configurations: config
+    )
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedMatchdays(context: context)
+    WorldCupDataSeeder.seedFixtures(context: context)
+    
+    let matchdays = try! context.fetch(FetchDescriptor<Matchday>())
+    let fixtures = try! context.fetch(FetchDescriptor<Fixture>())
+    let dates = matchdays.map { $0.deadline }
+    
+    return MatchesView(dates: dates, fixtures: fixtures)
+        .modelContainer(container)
+}
+
+
 
 // MARK: - Standalone Preview for Design Focus
 #Preview("Match Card Design") {
