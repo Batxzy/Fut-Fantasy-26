@@ -10,28 +10,26 @@ import SwiftData
 
 struct EarnView: View {
     
-    @Query private var squads: [Squad]
+    @Query(FetchDescriptor<Squad>()) private var squads: [Squad]
+    
     @Environment(\.modelContext) private var modelContext
+    
     @State private var questionViewModel: QuestionViewModel?
     @State private var showQuestionSheet = false
     
     var squad: Squad? {
         squads.first
     }
-    
     var body: some View {
         ZStack {
             Color(.mainBg)
                 .ignoresSafeArea()
-            
             ScrollView {
                 VStack(spacing: 28) {
                     // Header
-                  
                     if let squad = squad {
                         Earnheader(squad: squad)
                     }
-
                     VStack(spacing: 18) {
                         // Card 1 - Question of the Day
                         if let viewModel = questionViewModel {
@@ -47,7 +45,6 @@ struct EarnView: View {
                                 foregroundIcon: AnyView(IconQuestionmark())
                             )
                         }
-                        
                         EarnCard(
                             title:"Predictions",
                             question: "Who will win the next match?",
@@ -63,7 +60,6 @@ struct EarnView: View {
                             foregroundIconScale: 0.8,
                             foregroundIconRenderingMode: .masked
                         )
-                        
                         EarnCard(
                             title:"RECREATE THE POSE",
                             question: "Recreate Mbappé's crossed-arms pose",
@@ -78,7 +74,6 @@ struct EarnView: View {
                             foregroundIconScale: 1.5,
                             foregroundIconRenderingMode: .masked
                         )
-                        
                         EarnCard(
                             title:"location",
                             question: "Go paste some stickers on the Estadio Arkon",
@@ -90,7 +85,6 @@ struct EarnView: View {
                                 Image("PinPoint")
                                     .resizable()
                                     .scaledToFit()
-                                
                             ),
                             foregroundIconScale: 0.76,
                             foregroundIconRenderingMode: .masked
@@ -128,7 +122,10 @@ struct EarnView: View {
                     } else {
                         QuestionAnswerView(
                             question: question,
-                            userAnswer: $questionViewModel!.userAnswer,
+                            userAnswer: Binding(
+                                get: { viewModel.userAnswer },
+                                set: { viewModel.userAnswer = $0 }
+                            ),
                             onSubmit: {
                                 Task {
                                     await viewModel.submitAnswer()
@@ -142,9 +139,7 @@ struct EarnView: View {
             }
         }
     }
-    
     // MARK: - Question of the Day Card
-    
     @ViewBuilder
     private func questionOfTheDayCard(viewModel: QuestionViewModel) -> some View {
         EarnCard(
@@ -164,7 +159,6 @@ struct EarnView: View {
         )
     }
 }
-
 private func Earnheader(squad: Squad) -> some View {
     HStack {
         VStack(alignment: .leading, spacing: 4) {
@@ -176,21 +170,16 @@ private func Earnheader(squad: Squad) -> some View {
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(.white)
                 .fontWidth(.condensed)
-            
         }
-        
         Spacer()
-        
         VStack(alignment: .trailing, spacing: 4) {
             Text("Budget")
                 .font(.system(size: 18, weight: .regular))
                 .foregroundStyle(.white)
-            
             HStack(spacing: 3) {
                 Image(systemName: "star.circle.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(Color.white)
-                
                 Text(squad.displayBudgetNoDecimals)
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(.white)
@@ -201,20 +190,12 @@ private func Earnheader(squad: Squad) -> some View {
     .padding(.top,12)
 }
 
-
-
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container: ModelContainer
-    
-    do {
-        container = try ModelContainer(
-            for: Player.self, Squad.self,
-            configurations: config
-        )
-    } catch {
-        fatalError("Failed to create preview container")
-    }
+    let container = try! ModelContainer(
+        for: Player.self, Squad.self,
+        configurations: config
+    )
     
     let context = container.mainContext
     WorldCupDataSeeder.seedDataIfNeeded(context: context)

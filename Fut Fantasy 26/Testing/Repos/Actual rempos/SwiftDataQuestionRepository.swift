@@ -119,12 +119,10 @@ final class SwiftDataQuestionRepository: QuestionRepository {
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? Date()
         
         let predicate = #Predicate<Question> { question in
-            if let availableDate = question.availableDate {
-                return question.isActive && 
-                       availableDate >= startOfDay &&
-                       availableDate < endOfDay
-            }
-            return false
+            question.isActive &&
+            question.availableDate != nil &&
+            question.availableDate! >= startOfDay &&
+            question.availableDate! < endOfDay
         }
         
         var descriptor = FetchDescriptor<Question>(predicate: predicate)
@@ -139,6 +137,7 @@ final class SwiftDataQuestionRepository: QuestionRepository {
             throw RepositoryError.fetchFailed(underlyingError: error)
         }
     }
+    
     
     // MARK: - User Progress Management
     
