@@ -6,18 +6,28 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct EarnView: View {
+    
+    @Query private var squads: [Squad]
+    
+    var squad: Squad? {
+        squads.first
+    }
+    
     var body: some View {
         ZStack {
             Color(.mainBg)
                 .ignoresSafeArea()
             
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 28) {
                     // Header
-                    Earnheader(squad: <#T##Squad#>)
-                    
+                  
+                    if let squad = squad {
+                        Earnheader(squad: squad)
+                    }
                     // Question Cards
                     VStack(spacing: 18) {
                         // Card 1 - Blue Ocean
@@ -51,8 +61,8 @@ struct EarnView: View {
                         EarnCard(
                             
                             title:"RECREATE THE POSE",
-                            question: "Who scored the fastest goal in World Cup history?",
-                            points: 750,
+                            question: "Recreate Mbappé’s crossed-arms pose",
+                            points: 1000,
                             backgroundColor: .wpRedBright,
                             accentColor: .wpGreenLime,
                             foregroundIcon: AnyView(
@@ -67,7 +77,7 @@ struct EarnView: View {
                         // Card 4 - Red/Orange
                         EarnCard(
                             title:"location",
-                            question: "What year was the first World Cup held?",
+                            question: "Go paste some stickers on the Estadio Arkon",
                             points: 1500,
                             backgroundColor: .wpGreenMalachite,
                             accentColor: .wpBlueOcean,
@@ -93,12 +103,15 @@ struct EarnView: View {
 private func Earnheader(squad: Squad) -> some View {
     HStack {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Players")
+            Text("Earn more Coins")
+                .font(.system(size: 28, weight: .regular))
+                .fontWidth(.condensed)
+                .foregroundStyle(.white)
+            Text("Complete challenges!")
                 .font(.system(size: 16, weight: .regular))
                 .foregroundStyle(.white)
-            Text("\(squad.players?.count ?? 0)/15")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
+                .fontWidth(.condensed)
+            
         }
         
         Spacer()
@@ -119,13 +132,41 @@ private func Earnheader(squad: Squad) -> some View {
             }
         }
     }
-    .padding(.horizontal, 24)
-    .padding(.bottom, 2)
+    .padding(.horizontal, 26)
     .padding(.top,12)
 }
 
 
 
 #Preview {
-    EarnView()
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container: ModelContainer
+    
+    do {
+        container = try ModelContainer(
+            for: Player.self, Squad.self,
+            configurations: config
+        )
+    } catch {
+        fatalError("Failed to create preview container")
+    }
+    
+    let context = container.mainContext
+    WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    
+    let squad = Squad(teamName: "Preview Team", ownerName: "Preview")
+    context.insert(squad)
+    
+    let fetchDescriptor = FetchDescriptor<Player>(
+        sortBy: [SortDescriptor(\.totalPoints, order: .reverse)]
+    )
+    
+    if let allPlayers = try? context.fetch(fetchDescriptor) {
+        squad.players = Array(allPlayers.prefix(15))
+    }
+    
+    try? context.save()
+    
+    return EarnView()
+        .modelContainer(container)
 }
