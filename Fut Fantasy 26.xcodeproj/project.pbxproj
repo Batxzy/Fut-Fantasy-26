@@ -6,12 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		8C79324E2EB87BD3005532D0 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 8C79324D2EB87BD3005532D0 /* SwiftUIIntrospect */; };
-		8C7932502EB87BD3005532D0 /* SwiftUIIntrospect-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 8C79324F2EB87BD3005532D0 /* SwiftUIIntrospect-Dynamic */; };
-		8C7932522EB87BD3005532D0 /* SwiftUIIntrospect-Static in Frameworks */ = {isa = PBXBuildFile; productRef = 8C7932512EB87BD3005532D0 /* SwiftUIIntrospect-Static */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		8C51B0792E9B7D4000045268 /* Fut Fantasy 26.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Fut Fantasy 26.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -29,9 +23,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8C79324E2EB87BD3005532D0 /* SwiftUIIntrospect in Frameworks */,
-				8C7932502EB87BD3005532D0 /* SwiftUIIntrospect-Dynamic in Frameworks */,
-				8C7932522EB87BD3005532D0 /* SwiftUIIntrospect-Static in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,9 +65,6 @@
 			);
 			name = "Fut Fantasy 26";
 			packageProductDependencies = (
-				8C79324D2EB87BD3005532D0 /* SwiftUIIntrospect */,
-				8C79324F2EB87BD3005532D0 /* SwiftUIIntrospect-Dynamic */,
-				8C7932512EB87BD3005532D0 /* SwiftUIIntrospect-Static */,
 			);
 			productName = "Fut Fantasy 26";
 			productReference = 8C51B0792E9B7D4000045268 /* Fut Fantasy 26.app */;
@@ -107,7 +95,6 @@
 			mainGroup = 8C51B0702E9B7D4000045268;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				8C79324C2EB87BD3005532D0 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8C51B07A2E9B7D4000045268 /* Products */;
@@ -347,35 +334,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		8C79324C2EB87BD3005532D0 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/siteline/swiftui-introspect";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 26.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		8C79324D2EB87BD3005532D0 /* SwiftUIIntrospect */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 8C79324C2EB87BD3005532D0 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
-			productName = SwiftUIIntrospect;
-		};
-		8C79324F2EB87BD3005532D0 /* SwiftUIIntrospect-Dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 8C79324C2EB87BD3005532D0 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
-			productName = "SwiftUIIntrospect-Dynamic";
-		};
-		8C7932512EB87BD3005532D0 /* SwiftUIIntrospect-Static */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 8C79324C2EB87BD3005532D0 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
-			productName = "SwiftUIIntrospect-Static";
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8C51B0712E9B7D4000045268 /* Project object */;
 }
