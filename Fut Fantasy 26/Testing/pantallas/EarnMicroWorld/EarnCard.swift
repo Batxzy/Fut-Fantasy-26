@@ -12,7 +12,6 @@ struct EarnCard: View {
     let title: String
     let question: String
     let points: Int
-    let action: () -> Void
     
     // State
     let isEnabled: Bool
@@ -43,7 +42,6 @@ struct EarnCard: View {
         title: String = "Question of the day",
         question: String,
         points: Int,
-        action: @escaping () -> Void = { print("Card tapped") },
         isEnabled: Bool = true,
         countdownText: String? = nil,
         isAnswered: Bool = false,
@@ -65,7 +63,6 @@ struct EarnCard: View {
         self.title = title
         self.question = question
         self.points = points
-        self.action = action
         self.isEnabled = isEnabled
         self.countdownText = countdownText
         self.isAnswered = isAnswered
@@ -135,7 +132,6 @@ struct EarnCard: View {
                                         .fill(backgroundColor.opacity(0.3))
                                 )
                         } else if isAnswered {
-                            // Show completed state
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 13))
@@ -167,11 +163,6 @@ struct EarnCard: View {
         .background(backgroundColor)
         .cornerRadius(16)
         .opacity(isEnabled ? 1.0 : 0.6)
-        .onTapGesture {
-            if isEnabled {
-                action()
-            }
-        }
     }
     
     struct EarnButton: View {
@@ -226,7 +217,6 @@ struct EarnCard: View {
         title: "Daily Challenge",
         question: "Name the top scorer of the tournament?",
         points: 2000,
-        action: { print("Challenge accepted!") },
         backgroundColor: .wpRedBright,
         accentColor: .white,
         backgroundIconColor: .wpMint,

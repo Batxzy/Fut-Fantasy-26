@@ -34,7 +34,7 @@ struct SquadView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.mainBg)
+                Color(.bgBlue)
                     .ignoresSafeArea()
                 
                 if let squad = squad {
@@ -124,13 +124,13 @@ struct SquadView: View {
                     VStack(spacing: 0) {
                         LinearGradient(
                             stops: [
-                                Gradient.Stop(color:.mainBg, location: 0.00),
-                                Gradient.Stop(color: .mainBg.opacity(0), location: 1.00),
+                                Gradient.Stop(color:.bgBlue, location: 0.00),
+                                Gradient.Stop(color: .bgBlue.opacity(0), location: 1.00),
                             ],
                             startPoint: UnitPoint(x: 0.5, y: 0),
                             endPoint: UnitPoint(x: 0.5, y: 1)
                         )
-                        .frame(height: 100)
+                        .frame(height: 190)
                         
                         Spacer()
                     }

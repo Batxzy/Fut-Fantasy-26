@@ -15,149 +15,124 @@ struct EarnView: View {
     @Environment(\.modelContext) private var modelContext
     
     @State private var questionViewModel: QuestionViewModel?
-    @State private var showQuestionSheet = false
+  
     
     var squad: Squad? {
         squads.first
     }
     var body: some View {
-        ZStack {
-            Color(.mainBg)
-                .ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: 28) {
-                    // Header
-                    if let squad = squad {
-                        Earnheader(squad: squad)
-                    }
-                    VStack(spacing: 18) {
-                        // Card 1 - Question of the Day
-                        if let viewModel = questionViewModel {
-                            questionOfTheDayCard(viewModel: viewModel)
-                        } else {
-                            // Placeholder while loading
+        
+        NavigationStack {
+            ZStack {
+                Color(.mainBg)
+                    .ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 28) {
+                      
+                        if let squad = squad {
+                            Earnheader(squad: squad)
+                        }
+                        VStack(spacing: 18) {
+                           
+                            if let viewModel = questionViewModel {
+                                NavigationLink(destination: QuestionDetailview(viewModel: viewModel)) {
+                                    questionOfTheDayCard(viewModel: viewModel)
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(!viewModel.isQuestionAvailable)
+                                
+                            } else {
+                               
+                                EarnCard(
+                                    question: "Loading question...",
+                                    points: 0,
+                                    isEnabled: false,
+                                    backgroundColor: .wpBlueOcean,
+                                    accentColor: .wpMint,
+                                    foregroundIcon: AnyView(IconQuestionmark())
+                                )
+                            }
                             EarnCard(
-                                question: "Loading question...",
-                                points: 0,
-                                isEnabled: false,
-                                backgroundColor: .wpBlueOcean,
-                                accentColor: .wpMint,
-                                foregroundIcon: AnyView(IconQuestionmark())
+                                title:"Predictions",
+                                question: "Who will win the next match?",
+                                points: 8000,
+                                backgroundColor: .wpPurpleDeep,
+                                accentColor: .wpGreenLime,
+                                backgroundIconColor: .wpPurpleLilac,
+                                foregroundIcon:   AnyView(
+                                    Image("Throphy")
+                                        .resizable()
+                                        .scaledToFit()
+                                ),
+                                foregroundIconScale: 0.8,
+                                foregroundIconRenderingMode: .masked
+                            )
+                            EarnCard(
+                                title:"RECREATE THE POSE",
+                                question: "Recreate Mbappé's crossed-arms pose",
+                                points: 1000,
+                                backgroundColor: .wpRedBright,
+                                accentColor: .wpGreenLime,
+                                foregroundIcon: AnyView(
+                                    Image("LaCabra")
+                                        .resizable()
+                                        .scaledToFit()
+                                ),
+                                foregroundIconScale: 1.5,
+                                foregroundIconRenderingMode: .masked
+                            )
+                            EarnCard(
+                                title:"location",
+                                question: "Go paste some stickers on the Estadio Arkon",
+                                points: 1500,
+                                backgroundColor: .wpGreenMalachite,
+                                accentColor: .wpBlueOcean,
+                                backgroundIconColor: .wpGreenYellow,
+                                foregroundIcon: AnyView(
+                                    Image("PinPoint")
+                                        .resizable()
+                                        .scaledToFit()
+                                ),
+                                foregroundIconScale: 0.76,
+                                foregroundIconRenderingMode: .masked
                             )
                         }
-                        EarnCard(
-                            title:"Predictions",
-                            question: "Who will win the next match?",
-                            points: 8000,
-                            backgroundColor: .wpPurpleDeep,
-                            accentColor: .wpGreenLime,
-                            backgroundIconColor: .wpPurpleLilac,
-                            foregroundIcon:   AnyView(
-                                Image("Throphy")
-                                    .resizable()
-                                    .scaledToFit()
-                            ),
-                            foregroundIconScale: 0.8,
-                            foregroundIconRenderingMode: .masked
-                        )
-                        EarnCard(
-                            title:"RECREATE THE POSE",
-                            question: "Recreate Mbappé's crossed-arms pose",
-                            points: 1000,
-                            backgroundColor: .wpRedBright,
-                            accentColor: .wpGreenLime,
-                            foregroundIcon: AnyView(
-                                Image("LaCabra")
-                                    .resizable()
-                                    .scaledToFit()
-                            ),
-                            foregroundIconScale: 1.5,
-                            foregroundIconRenderingMode: .masked
-                        )
-                        EarnCard(
-                            title:"location",
-                            question: "Go paste some stickers on the Estadio Arkon",
-                            points: 1500,
-                            backgroundColor: .wpGreenMalachite,
-                            accentColor: .wpBlueOcean,
-                            backgroundIconColor: .wpGreenYellow,
-                            foregroundIcon: AnyView(
-                                Image("PinPoint")
-                                    .resizable()
-                                    .scaledToFit()
-                            ),
-                            foregroundIconScale: 0.76,
-                            foregroundIconRenderingMode: .masked
-                        )
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                }
-            }
-        }
-        .task {
-            if let squad = squad, questionViewModel == nil {
-                questionViewModel = QuestionViewModel.create(
-                    modelContext: modelContext,
-                    squadId: squad.id
-                )
-                await questionViewModel?.onAppear()
-            }
-        }
-        .onDisappear {
-            questionViewModel?.onDisappear()
-        }
-        .sheet(isPresented: $showQuestionSheet) {
-            if let viewModel = questionViewModel, let question = viewModel.currentQuestion {
-                VStack {
-                    if viewModel.showResult, let result = viewModel.lastResult {
-                        QuestionResultView(
-                            isCorrect: result.isCorrect,
-                            pointsEarned: result.pointsEarned,
-                            onDismiss: {
-                                showQuestionSheet = false
-                                viewModel.dismissResult()
-                            }
-                        )
-                    } else {
-                        QuestionAnswerView(
-                            question: question,
-                            userAnswer: Binding(
-                                get: { viewModel.userAnswer },
-                                set: { viewModel.userAnswer = $0 }
-                            ),
-                            onSubmit: {
-                                Task {
-                                    await viewModel.submitAnswer()
-                                }
-                            },
-                            isLoading: viewModel.isLoading
-                        )
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 24)
                     }
                 }
-                .presentationDetents([.medium, .large])
+            }
+            .onAppear {
+                Task {
+                    if let squad = squad, questionViewModel == nil {
+                        questionViewModel = QuestionViewModel.create(
+                            modelContext: modelContext,
+                            squadId: squad.id
+                        )
+                    }
+                    await questionViewModel?.onAppear()
+                }
+            }
+            .onDisappear {
+                questionViewModel?.onDisappear()
             }
         }
     }
     // MARK: - Question of the Day Card
-    @ViewBuilder
+   
+    
     private func questionOfTheDayCard(viewModel: QuestionViewModel) -> some View {
-        EarnCard(
-            question: viewModel.currentQuestion?.text ?? "Check back tomorrow!",
-            points: viewModel.currentQuestion?.totalPoints ?? 0,
-            action: {
-                if viewModel.isQuestionAvailable {
-                    showQuestionSheet = true
-                }
-            },
-            isEnabled: viewModel.isQuestionAvailable,
-            countdownText: viewModel.isQuestionLocked ? viewModel.formattedTimeRemaining : nil,
-            isAnswered: viewModel.isQuestionAnswered,
-            backgroundColor: .wpBlueOcean,
-            accentColor: .wpMint,
-            foregroundIcon: AnyView(IconQuestionmark())
-        )
-    }
+            EarnCard(
+                question: viewModel.currentQuestion?.text ?? "Check back tomorrow!",
+                points: viewModel.currentQuestion?.totalPoints ?? 0,
+                isEnabled: viewModel.isQuestionAvailable,
+                countdownText: (viewModel.isQuestionLocked || viewModel.isQuestionAnswered) ? viewModel.formattedTimeRemaining : nil,
+                isAnswered: viewModel.isQuestionAnswered,
+                backgroundColor: .wpBlueOcean,
+                accentColor: .wpMint,
+                foregroundIcon: AnyView(IconQuestionmark())
+            )
+        }
 }
 private func Earnheader(squad: Squad) -> some View {
     HStack {
@@ -193,12 +168,13 @@ private func Earnheader(squad: Squad) -> some View {
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Player.self, Squad.self,
+        for: Player.self, Squad.self, Question.self, UserQuestionProgress.self, // Added Question models
         configurations: config
     )
     
     let context = container.mainContext
     WorldCupDataSeeder.seedDataIfNeeded(context: context)
+    QuestionSeeder.seedQuestionsIfNeeded(context: context) // Seed questions
     
     let squad = Squad(teamName: "Preview Team", ownerName: "Preview")
     context.insert(squad)

@@ -36,7 +36,6 @@ final class QuestionViewModel {
         self.squadId = squadId
     }
     
-    // Convenience initializer for direct repository initialization
     static func create(
         modelContext: ModelContext,
         squadId: UUID,
@@ -59,7 +58,10 @@ final class QuestionViewModel {
     // MARK: - Lifecycle
     
     func onAppear() async {
-        await loadTodaysQuestion()
+        if currentQuestion == nil {
+            await loadTodaysQuestion()
+        }
+        // Always start the timer
         startTimer()
     }
     
@@ -79,9 +81,10 @@ final class QuestionViewModel {
                 currentQuestion = result.question
                 questionState = result.state
                 
-                // Set initial time remaining for locked state
                 if case .locked(let time) = result.state {
                     timeRemaining = time
+                } else if result.state.isAnswered {
+                    timeRemaining = gameManager.getTimeUntilNextReset()
                 }
                 
                 print("✅ [QuestionVM] Question loaded: \(result.question.text)")
@@ -126,8 +129,11 @@ final class QuestionViewModel {
             lastResult = result
             showResult = true
             
+           
+            questionState = .answered
+            timeRemaining = gameManager.getTimeUntilNextReset()
+            
             if result.isCorrect {
-                questionState = .answered
                 print("✅ [QuestionVM] Correct answer! Earned \(result.pointsEarned) points")
             } else {
                 print("❌ [QuestionVM] Incorrect answer")
@@ -143,13 +149,16 @@ final class QuestionViewModel {
     // MARK: - Timer Management
     
     private func startTimer() {
-        stopTimer() // Clear any existing timer
+        stopTimer()
         
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        let newTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.updateTimer()
             }
         }
+        
+        RunLoop.current.add(newTimer, forMode: .common)
+        self.timer = newTimer
     }
     
     private func stopTimer() {
