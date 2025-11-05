@@ -14,7 +14,6 @@ struct PredictionsCard: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTeam: String = ""
     
-    // Find existing prediction for this fixture
     var existingPrediction: Prediction? {
         predictions.first { $0.fixtureId == fixture.id }
     }
