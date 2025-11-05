@@ -139,26 +139,21 @@ final class Player: Hashable {
         nation.rawValue
     }
     
-    // Points per price (value metric)
     var pointsPerPrice: Double {
         price > 0 ? Double(totalPoints) / price : 0.0
     }
     
-    // Points per matchday (form metric)
     var pointsPerMatchday: Double {
         guard let performances = matchdayPerformances, !performances.isEmpty else { return 0.0 }
         return Double(totalPoints) / Double(performances.count)
     }
     
-    // Selected by percentage (calculated from global squads)
     var selectedByPercent: Double {
-        // This will be calculated by counting how many squads have this player
-        // You'd query this when needed, not store it
-        return 0.0 // Placeholder - calculate when displaying
+        return 0.0
     }
 }
 
-// MARK: - Nation Enum (UNCHANGED)
+// MARK: - Nation Enum
 
 enum Nation: String, Codable, CaseIterable {
     // Group A
@@ -264,7 +259,7 @@ enum Nation: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - WorldCupGroup Enum (UNCHANGED)
+// MARK: - WorldCupGroup Enum
 
 enum WorldCupGroup: String, Codable, CaseIterable {
     case a = "Group A"
@@ -281,7 +276,7 @@ enum WorldCupGroup: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Player Position Enum (UNCHANGED)
+// MARK: - Player Position Enum
 
 enum PlayerPosition: String, Codable, CaseIterable {
     case goalkeeper = "GK"
@@ -337,7 +332,7 @@ enum PlayerPosition: String, Codable, CaseIterable {
     }
 }
 
-// MARK: - Squad Model (Manager's Team) - **UPDATED WITH 2D STRUCTURE**
+// MARK: - Squad Model (Manager's Team)
 
 @Model
 final class Squad {
@@ -1079,6 +1074,23 @@ final class Fixture {
     
     var awayFlagURL: String {
         awayNation.flagURL
+    }
+}
+
+
+// MARK: - PREDICTION
+@Model
+final class Prediction {
+    var id: UUID
+    var fixtureId: Int
+    var selectedResult: String
+    var submittedAt: Date
+    
+    init(fixtureId: Int, selectedResult: String) {
+        self.id = UUID()
+        self.fixtureId = fixtureId
+        self.selectedResult = selectedResult
+        self.submittedAt = Date()
     }
 }
 

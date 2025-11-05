@@ -52,7 +52,7 @@ struct EarnView: View {
                                     foregroundIcon: AnyView(IconQuestionmark())
                                 )
                             }
-                            NavigationLink(destination: AvailableMatchesView()) {
+                            NavigationLink(destination: MatchPredictionView()) {
                                   EarnCard(
                                       title:"Predictions",
                                       question: "Who will win the next match?",

@@ -24,8 +24,10 @@ class SwiftDataManager {
             MatchdaySquad.self,
             Transfer.self,
             Fixture.self,
+            TeamStandings.self, // <-- ADDED THIS MISSING LINE
             Question.self,
-            UserQuestionProgress.self
+            UserQuestionProgress.self,
+            Prediction.self
         ])
     }()
     

@@ -9,7 +9,7 @@
 import SwiftUI
 import SwiftData
 
-struct AvailableMatchesView: View {
+struct MatchPredictionView: View {
     @Query(FetchDescriptor<Squad>()) private var squads: [Squad]
     @Query(FetchDescriptor<Fixture>()) private var fixtures: [Fixture]
     
@@ -26,8 +26,7 @@ struct AvailableMatchesView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 Color(.mainBg)
                     .ignoresSafeArea()
                 
@@ -51,7 +50,7 @@ struct AvailableMatchesView: View {
                     }
                 }
             }
-        }
+        
     }
     
     // Helper function to get stage display name
@@ -137,6 +136,6 @@ private func AvailableMatchesHeader(squad: Squad, date: Date, stage: String) -> 
     
     try? context.save()
     
-    return AvailableMatchesView()
+    return MatchPredictionView()
         .modelContainer(container)
 }
