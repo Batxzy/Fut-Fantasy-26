@@ -41,7 +41,6 @@ struct ProfileView: View {
                             LinearGradient(
                                 stops: [
                                     Gradient.Stop(color: .mainBg.opacity(0), location: 0.00),
-                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.6),
                                     Gradient.Stop(color: .mainBg, location: 1.00),
                                 ],
                                 startPoint: UnitPoint(x: 0.5, y: 0),
@@ -78,17 +77,17 @@ struct ProfileView: View {
                 if let squad = currentSquad {
                     HStack(spacing: 3) {
                         Image(systemName: "star.circle.fill")
-                            .font(.system(size: 22))
+                            .font(.system(size: 20))
                             .foregroundStyle(Color.white)
                         
                         Text(squad.displayBudgetNoDecimals)
-                            .font(.system(size: 26, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
             }
             .padding(.horizontal, 21)
-            .offset(y: -80)
+            .offset(y: 20)
             
             // Profile picture
             Image("Ellipse 23")
@@ -184,7 +183,21 @@ struct ProfileView: View {
 }
 
 #Preview {
-    ProfileView()
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Squad.self, Player.self,
+        configurations: config
+    )
+    
+    let context = container.mainContext
+    
+    let squad = Squad(teamName: "Preview Team", ownerName: "Preview")
+    context.insert(squad)
+    
+    try? context.save()
+    
+    return ProfileView()
+        .modelContainer(container)
 }
 
 

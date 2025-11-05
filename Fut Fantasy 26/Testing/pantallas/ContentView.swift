@@ -50,7 +50,7 @@ struct ContentView: View {
                 .tag(2)
             
             // Profile tab
-            Text("Profile View Coming Soon")
+            ProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.circle.fill")
                 }
