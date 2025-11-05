@@ -52,21 +52,24 @@ struct EarnView: View {
                                     foregroundIcon: AnyView(IconQuestionmark())
                                 )
                             }
-                            EarnCard(
-                                title:"Predictions",
-                                question: "Who will win the next match?",
-                                points: 8000,
-                                backgroundColor: .wpPurpleDeep,
-                                accentColor: .wpGreenLime,
-                                backgroundIconColor: .wpPurpleLilac,
-                                foregroundIcon:   AnyView(
-                                    Image("Throphy")
-                                        .resizable()
-                                        .scaledToFit()
-                                ),
-                                foregroundIconScale: 0.8,
-                                foregroundIconRenderingMode: .masked
-                            )
+                            NavigationLink(destination: AvailableMatchesView()) {
+                                  EarnCard(
+                                      title:"Predictions",
+                                      question: "Who will win the next match?",
+                                      points: 8000,
+                                      backgroundColor: .wpPurpleDeep,
+                                      accentColor: .wpGreenLime,
+                                      backgroundIconColor: .wpPurpleLilac,
+                                      foregroundIcon:   AnyView(
+                                          Image("Throphy")
+                                              .resizable()
+                                              .scaledToFit()
+                                      ),
+                                      foregroundIconScale: 0.8,
+                                      foregroundIconRenderingMode: .masked
+                                  )
+                              }
+                              .buttonStyle(.plain)
                             EarnCard(
                                 title:"RECREATE THE POSE",
                                 question: "Recreate Mbappé's crossed-arms pose",
@@ -135,7 +138,7 @@ struct EarnView: View {
         }
 }
 private func Earnheader(squad: Squad) -> some View {
-    HStack {
+    HStack(alignment: .top) {
         VStack(alignment: .leading, spacing: 4) {
             Text("Earn more Coins")
                 .font(.system(size: 28, weight: .regular))
@@ -147,10 +150,7 @@ private func Earnheader(squad: Squad) -> some View {
                 .fontWidth(.condensed)
         }
         Spacer()
-        VStack(alignment: .trailing, spacing: 4) {
-            Text("Budget")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundStyle(.white)
+            
             HStack(spacing: 3) {
                 Image(systemName: "star.circle.fill")
                     .font(.system(size: 20))
@@ -159,7 +159,7 @@ private func Earnheader(squad: Squad) -> some View {
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(.white)
             }
-        }
+        
     }
     .padding(.horizontal, 26)
     .padding(.top,12)
