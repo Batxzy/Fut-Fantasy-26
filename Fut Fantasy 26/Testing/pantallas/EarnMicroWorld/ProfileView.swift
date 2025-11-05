@@ -6,119 +6,187 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ProfileView: View {
+    @Query(FetchDescriptor<Squad>()) private var squads: [Squad]
+    
+    var currentSquad: Squad? {
+        squads.first
+    }
     
     var body: some View {
-        ScrollView(){
-            VStack(spacing: 48){
-                
-                
-                VStack(spacing:5){
-                    VStack(spacing:0){
+        ZStack {
+            Color(.mainBg)
+                .ignoresSafeArea()
+            
+            ScrollView {
+                ZStack(alignment: .top) {
+                    // Parallax background
+                    GeometryReader { geometry in
+                        let minY = geometry.frame(in: .global).minY
+                        let scale = max(1.0, 1.0 + (minY / 500))
                         
-                        HStack{
-                            Spacer()
-                            HStack(spacing: 3) {
-                                Image(systemName: "star.circle.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(Color.white)
-                                
-                                Text("2M")
-                                    .font(.system(size: 26, weight: .semibold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        
-                        VStack(spacing: 16){
-                            Image("Ellipse 23")
-                                .frame(width: 125, height: 125)
-                                .background(Color(red: 0.85, green: 0.9, blue: 0.35))
-                                .clipShape(Circle())
-                            
-                            VStack{
-                                Text("Deebie Thestta")
-                                Text("rising Star")
-                            }
-                            
-                        }
-                        
+                        Image("Vector")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width)
+                            .scaleEffect(scale)
+                            .offset(y: -minY - 1)
                     }
-                    .padding(.horizontal,21)
+                    .frame(height: 180)
                     
-                    VStack(spacing:14){
-                        
-                        HStack{
-                            Text("badges")
+                    GeometryReader { geometry in
+                        VStack(spacing: 0) {
+                            LinearGradient(
+                                stops: [
+                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.00),
+                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.6),
+                                    Gradient.Stop(color: .mainBg, location: 1.00),
+                                ],
+                                startPoint: UnitPoint(x: 0.5, y: 0),
+                                endPoint: UnitPoint(x: 0.5, y: 1)
+                            )
+                            .frame(height: 180)
                             
-                            Spacer()
-                            
-                            Text("see all")
+                            Color.mainBg
                         }
-                        
-                        HStack(spacing: 8){
-                            ForEach(1...3, id: \.self){ i in
-                                Image("Ellipse 24")
-                                    .resizable()
-                                    .frame(width: 116, height: 155)
-                                    .background(.wpAqua)
-                                    .cornerRadius(4)
-                                
-                            }
-                        }
-                        
                     }
-                    .padding(.horizontal,21)
+                    .allowsHitTesting(false)
+                    
+                    // Content
+                    VStack(spacing: 32) {
+                        Color.clear.frame(height: 40)
+                        
+                        profileHeader
+                        
+                        badgesSection
+                        
+                        achievementsSection
+                    }
+                    .padding(.horizontal, 21)
                 }
-                
-                
-                VStack(alignment: .leading, spacing:14){
-                    
-                    
-                    Text("Achievements")
-                    
-                    
-                    VStack(spacing: 14){
-                        AchievementBadge(
-                            icon: "party.popper.fill",
-                            title: "Celebration expert",
-                            description: "Complete 20 celebration pose challenges",
-                            progress: 0.7,
-                            backgroundColor: .wpPurpleDeep,
-                            accentColor: .wpGreenYellow
-                        )
+            }
+            .edgesIgnoringSafeArea(.top)
+        }
+    }
+    
+    private var profileHeader: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Spacer()
+                if let squad = currentSquad {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Color.white)
                         
-                        AchievementBadge(
-                            icon: "questionmark.square.fill",
-                            title: "Quiz Master",
-                            description: "Answer 50 trivia questions correctly",
-                            progress: 0.7,
-                            backgroundColor: .wpMagenta,
-                            accentColor: .wpGreenLime
-                        )
-                        
-                        AchievementBadge(
-                            icon: "medal.fill",
-                            title: "Quiz Master",
-                            description: "Answer 50 trivia questions correctly",
-                            progress: 0.7,
-                            backgroundColor: .wpBlueOcean,
-                            accentColor: .wpMint
-                        )
+                        Text(squad.displayBudgetNoDecimals)
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
-                    
                 }
-                .padding(.horizontal,21)
+            }
+            .padding(.horizontal, 21)
+            .offset(y: -80)
+            
+            // Profile picture
+            Image("Ellipse 23")
+                .resizable()
+                .frame(width: 125, height: 125)
+                .background(Color(red: 0.85, green: 0.9, blue: 0.35))
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.2), lineWidth: 3)
+                )
+            
+            // User info
+            VStack(spacing: 4) {
+                Text("Deebie Thestta")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
                 
+                Text("Rising Star")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.7))
             }
         }
-        
+    }
+    
+    private var badgesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Badges")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                
+                Spacer()
+                
+                Button("See all") {
+                        print("aun no hago nada")
+                }
+                .font(.system(size: 14))
+                .foregroundStyle(.wpMint)
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(1...5, id: \.self) { i in
+                        Image("Ellipse 24")
+                            .resizable()
+                            .frame(width: 116, height: 155)
+                            .background(.wpAqua.opacity(0.2))
+                            .cornerRadius(12)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var achievementsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Achievements")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+            
+            VStack(spacing: 14) {
+                AchievementBadge(
+                    icon: "party.popper.fill",
+                    title: "Celebration expert",
+                    description: "Complete 20 celebration pose challenges",
+                    progress: 0.7,
+                    backgroundColor: .wpPurpleDeep,
+                    accentColor: .wpGreenYellow
+                )
+                
+                AchievementBadge(
+                    icon: "questionmark.square.fill",
+                    title: "Quiz Master",
+                    description: "Answer 50 trivia questions correctly",
+                    progress: 0.34,
+                    backgroundColor: .wpMagenta,
+                    accentColor: .wpGreenLime
+                )
+                
+                AchievementBadge(
+                    icon: "medal.fill",
+                    title: "Point Champion",
+                    description: "Earn 10,000 points in a season",
+                    progress: 0.88,
+                    backgroundColor: .wpBlueOcean,
+                    accentColor: .wpMint
+                )
+            }
+        }
+        .padding(.bottom, 32)
     }
 }
 
 #Preview {
     ProfileView()
 }
+
 
 #Preview{
     AchievementBadge(
