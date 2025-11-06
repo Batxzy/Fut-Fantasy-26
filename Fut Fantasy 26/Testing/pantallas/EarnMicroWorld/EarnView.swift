@@ -106,6 +106,21 @@ struct EarnView: View {
                         }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
+                        
+                        /*
+                        Button {
+                            Task {
+                                await questionViewModel?.resetProgressForDemo()
+                            }
+                        } label: {
+                            Text("Demo Reset")
+                                .font(.caption2)
+                                .padding(5)
+                                .background(Color.red)
+                                .foregroundColor(.white)
+                                .cornerRadius(5)
+                        }
+                         */
                     }
                 }
             }

@@ -64,6 +64,42 @@ final class GameManager {
     
     // MARK: - Question State Management
     
+    func debugQuestionDates() async throws {
+           print("🔍 Starting debug...")
+           
+           let questions = try await questionRepository.getAllQuestions()
+           
+           let now = Date()
+           let calendar = Calendar.current
+           let startOfToday = calendar.startOfDay(for: now)
+           
+           guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfToday) else {
+               print("❌ Could not calculate end of day")
+               return
+           }
+           
+           print("🔍 Debug Info:")
+           print("  Current time: \(now)")
+           print("  Start of today (local): \(startOfToday)")
+           print("  End of today (local): \(endOfDay)")
+           print("  Timezone: \(calendar.timeZone.identifier)")
+           print("  Questions in DB: \(questions.count)")
+           print("")
+           
+           for q in questions {
+               if let date = q.availableDate {
+                   let diff = startOfToday.timeIntervalSince(date)
+                   let isInRange = date >= startOfToday && date < endOfDay
+                   print("  📋 Question: \(q.text.prefix(40))...")
+                   print("     availableDate: \(date)")
+                   print("     hours from start of today: \(diff / 3600)")
+                   print("     isActive: \(q.isActive)")
+                   print("     ✅ Would match query: \(isInRange)")
+                   print("")
+               }
+           }
+       }
+    
     func getQuestionState(for question: Question) async throws -> QuestionState {
         print("🎮 [GameManager] Checking state for question: \(question.id)")
         
@@ -224,6 +260,10 @@ final class GameManager {
             return String(format: "%02d:%02d", minutes, seconds)
         }
     }
+    
+    func resetAllQuestionProgress() async throws {
+            try await questionRepository.deleteAllUsersProgress()
+        }
     
     // MARK: - Statistics
     

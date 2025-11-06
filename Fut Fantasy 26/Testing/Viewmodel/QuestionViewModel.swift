@@ -71,8 +71,30 @@ final class QuestionViewModel {
     
     // MARK: - Data Loading
     
+    
+    
+    func resetProgressForDemo() async {
+            print("📱 [QuestionVM] Resetting all question progress for demo")
+            isLoading = true
+            errorMessage = nil
+            do {
+                try await gameManager.resetAllQuestionProgress()
+                resetAnswer() // This is an existing function in your ViewModel
+                showResult = false
+                lastResult = nil
+                await loadTodaysQuestion() // Reloads the question
+            } catch {
+                errorMessage = error.localizedDescription
+                print("❌ [QuestionVM] Failed to reset progress: \(error)")
+            }
+            isLoading = false
+        }
+    
     func loadTodaysQuestion() async {
         print("📱 [QuestionVM] Loading today's question")
+        
+        try? await gameManager.debugQuestionDates()
+        
         isLoading = true
         errorMessage = nil
         

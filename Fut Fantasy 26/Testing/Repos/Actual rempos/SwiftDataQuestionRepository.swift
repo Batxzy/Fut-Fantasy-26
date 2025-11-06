@@ -18,6 +18,18 @@ final class SwiftDataQuestionRepository: QuestionRepository {
     
     // MARK: - Question Management
     
+    func deleteAllUsersProgress() async throws {
+            print("❓ [QuestionRepo] Deleting all user question progress for demo reset.")
+            do {
+                try modelContext.delete(model: UserQuestionProgress.self, where: nil)
+                try modelContext.save()
+                print("✅ [QuestionRepo] All user progress deleted.")
+            } catch {
+                print("❌ [QuestionRepo] Failed to delete all user progress: \(error)")
+                throw RepositoryError.deleteFailed(underlyingError: error)
+            }
+        }
+    
     func createQuestion(_ question: Question) async throws {
         print("❓ [QuestionRepo] Creating new question: \(question.text)")
         
@@ -116,8 +128,13 @@ final class SwiftDataQuestionRepository: QuestionRepository {
         
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? Date()
+
+        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else {
+            print("❌ [QuestionRepo] Could not calculate end of day.")
+            throw RepositoryError.fetchFailed()
+        }
         
+
         let predicate = #Predicate<Question> { question in
             if let availableDate = question.availableDate {
                 return question.isActive &&
@@ -152,15 +169,12 @@ final class SwiftDataQuestionRepository: QuestionRepository {
     ) async throws {
         print("❓ [QuestionRepo] Recording answer for question: \(questionId)")
         
-        // Check if progress already exists
         if let existingProgress = try await getUserProgress(for: questionId) {
-            // Update existing progress
             existingProgress.lastAnswerDate = Date()
             existingProgress.isCorrect = isCorrect
             existingProgress.pointsEarned = isCorrect ? pointsEarned : 0
             existingProgress.userAnswer = userAnswer
         } else {
-            // Create new progress
             let progress = UserQuestionProgress(
                 questionId: questionId,
                 lastAnswerDate: Date(),

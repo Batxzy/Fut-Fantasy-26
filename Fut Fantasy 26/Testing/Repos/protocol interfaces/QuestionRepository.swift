@@ -9,6 +9,7 @@ import Foundation
 
 protocol QuestionRepository {
     // Question Management
+    func deleteAllUsersProgress() async throws
     func createQuestion(_ question: Question) async throws
     func updateQuestion(_ question: Question) async throws
     func deleteQuestion(_ question: Question) async throws

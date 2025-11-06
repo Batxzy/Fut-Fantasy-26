@@ -25,6 +25,7 @@ class SwiftDataManager {
             Transfer.self,
             Fixture.self,
             TeamStandings.self,
+            Question.self,
             UserQuestionProgress.self,
             Prediction.self
         ])
