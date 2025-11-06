@@ -172,13 +172,13 @@ private func Earnheader(squad: Squad) -> some View {
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Player.self, Squad.self, Question.self, UserQuestionProgress.self, // Added Question models
+        for: Player.self, Squad.self, Question.self, UserQuestionProgress.self,
         configurations: config
     )
     
     let context = container.mainContext
     WorldCupDataSeeder.seedDataIfNeeded(context: context)
-    QuestionSeeder.seedQuestionsIfNeeded(context: context) // Seed questions
+    QuestionSeeder.seedQuestionsIfNeeded(context: context)
     
     let squad = Squad(teamName: "Preview Team", ownerName: "Preview")
     context.insert(squad)

@@ -70,6 +70,6 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     
     func isWithinGeofence(locationId: String) -> Bool {
         guard let distance = distancesToLocations[locationId] else { return false }
-        return distance <= 50.0 // 50 meter geofence
+        return distance <= 200 
     }
 }

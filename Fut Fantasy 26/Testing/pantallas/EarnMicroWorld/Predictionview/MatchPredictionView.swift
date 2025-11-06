@@ -17,7 +17,6 @@ struct MatchPredictionView: View {
         squads.first
     }
     
-    // Get upcoming fixtures
     var upcomingFixtures: [Fixture] {
         fixtures.filter { $0.kickoffTime > Date() }
             .sorted { $0.kickoffTime < $1.kickoffTime }

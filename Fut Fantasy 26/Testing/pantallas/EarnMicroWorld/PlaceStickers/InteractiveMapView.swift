@@ -13,7 +13,8 @@ struct InteractiveMapView: View {
     let manager = CLLocationManager()
     @State private var selectedLocation: CuratedLocation?
     @State private var cameraPosition: MapCameraPosition = .automatic
-    @State private var sheetID = UUID()  // Add this
+    @State private var sheetID = UUID()
+    @State private var showARView = false
     
     var body: some View {
         NavigationStack {
@@ -29,11 +30,8 @@ struct InteractiveMapView: View {
                                     .fill(Color.wpMint)
                             )
                             .onTapGesture {
-                                selectedLocation = nil
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                    sheetID = UUID()
-                                    selectedLocation = location
-                                }
+                                sheetID = UUID()
+                                selectedLocation = location
                             }
                     }
                     .tag(location.id)
@@ -53,9 +51,15 @@ struct InteractiveMapView: View {
                 LocationDetailSheet(
                     location: location,
                     distance: locationManager.distancesToLocations[location.id] ?? 0,
-                    isWithinGeofence: locationManager.isWithinGeofence(locationId: location.id)
+                    isWithinGeofence: locationManager.isWithinGeofence(locationId: location.id),
+                    showARView: $showARView
                 )
-                .id(sheetID) 
+                .id(sheetID)
+            }
+            .fullScreenCover(isPresented: $showARView) {
+                NavigationStack {
+                    EarnView()
+                }
             }
             .onAppear() {
                 locationManager.startTracking()
@@ -64,6 +68,7 @@ struct InteractiveMapView: View {
         }
     }
 }
+
 
 
 
