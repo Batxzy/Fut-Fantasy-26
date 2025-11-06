@@ -16,57 +16,58 @@ struct ProfileView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color(.mainBg)
-                .ignoresSafeArea()
-            
-            ScrollView {
-                ZStack(alignment: .top) {
-                    // Parallax background
-                    GeometryReader { geometry in
-                        let minY = geometry.frame(in: .global).minY
-                        let scale = max(1.0, 1.0 + (minY / 500))
-                        
-                        Image("Vector")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width)
-                            .scaleEffect(scale)
-                            .offset(y: -minY - 1)
-                    }
-                    .frame(height: 180)
-                    
-                    GeometryReader { geometry in
-                        VStack(spacing: 0) {
-                            LinearGradient(
-                                stops: [
-                                    Gradient.Stop(color: .mainBg.opacity(0), location: 0.00),
-                                    Gradient.Stop(color: .mainBg, location: 1.00),
-                                ],
-                                startPoint: UnitPoint(x: 0.5, y: 0),
-                                endPoint: UnitPoint(x: 0.5, y: 1)
-                            )
-                            .frame(height: 180)
+        NavigationStack {
+            ZStack {
+                Color(.mainBg)
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    ZStack(alignment: .top) {
+                        GeometryReader { geometry in
+                            let minY = geometry.frame(in: .global).minY
+                            let scale = max(1.0, 1.0 + (minY / 500))
                             
-                            Color.mainBg
+                            Image("Vector")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width)
+                                .scaleEffect(scale)
+                                .offset(y: -minY - 1)
                         }
+                        .frame(height: 180)
+                        
+                        GeometryReader { geometry in
+                            VStack(spacing: 0) {
+                                LinearGradient(
+                                    stops: [
+                                        Gradient.Stop(color: .mainBg.opacity(0), location: 0.00),
+                                        Gradient.Stop(color: .mainBg, location: 1.00),
+                                    ],
+                                    startPoint: UnitPoint(x: 0.5, y: 0),
+                                    endPoint: UnitPoint(x: 0.5, y: 1)
+                                )
+                                .frame(height: 180)
+                                
+                                Color.mainBg
+                            }
+                        }
+                        .allowsHitTesting(false)
+                        
+                        // Content
+                        VStack(spacing: 32) {
+                            Color.clear.frame(height: 40)
+                            
+                            profileHeader
+                            
+                            badgesSection
+                            
+                            achievementsSection
+                        }
+                        .padding(.horizontal, 21)
                     }
-                    .allowsHitTesting(false)
-                    
-                    // Content
-                    VStack(spacing: 32) {
-                        Color.clear.frame(height: 40)
-                        
-                        profileHeader
-                        
-                        badgesSection
-                        
-                        achievementsSection
-                    }
-                    .padding(.horizontal, 21)
                 }
+                .edgesIgnoringSafeArea(.top)
             }
-            .edgesIgnoringSafeArea(.top)
         }
     }
     
@@ -114,7 +115,10 @@ struct ProfileView: View {
     }
     
     private var badgesSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        // A list of your badge images
+        let badgeImages = ["Throphy", "LaCabra", "PinPoint", "VectorArtQuestion"]
+        
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Badges")
                     .font(.system(size: 20, weight: .semibold))
@@ -122,21 +126,26 @@ struct ProfileView: View {
                 
                 Spacer()
                 
-                Button("See all") {
-                        print("aun no hago nada")
+                // Changed to NavigationLink
+                NavigationLink(destination: BadgeGalleryView()) {
+                    Text("See all")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.wpMint)
                 }
-                .font(.system(size: 14))
-                .foregroundStyle(.wpMint)
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(1...5, id: \.self) { i in
-                        Image("Ellipse 24")
+                    // Looping over the actual images
+                    ForEach(badgeImages, id: \.self) { imageName in
+                        Image(imageName)
                             .resizable()
+                            .padding()
+                            .scaledToFit()
                             .frame(width: 116, height: 155)
                             .background(.wpAqua.opacity(0.2))
                             .cornerRadius(12)
+                            .clipped()
                     }
                 }
             }
