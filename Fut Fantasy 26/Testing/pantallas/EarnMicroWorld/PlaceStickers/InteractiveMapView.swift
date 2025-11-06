@@ -12,7 +12,7 @@ struct InteractiveMapView: View {
     @State private var locationManager = LocationManager()
     let manager = CLLocationManager()
     @State private var selectedLocation: CuratedLocation?
-    @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)  // Changed
     @State private var sheetID = UUID()
     @State private var showARView = false
     
@@ -22,7 +22,7 @@ struct InteractiveMapView: View {
                 ForEach(locationManager.locations) { location in
                     Annotation(location.name, coordinate: location.coordinate) {
                         Image(systemName: "soccerball")
-                            .font(.callout)
+                            .font(.system(size: 24))
                             .foregroundStyle(.black, .white)
                             .padding(5)
                             .background(
@@ -32,16 +32,31 @@ struct InteractiveMapView: View {
                             .onTapGesture {
                                 sheetID = UUID()
                                 selectedLocation = location
+                                
+                                withAnimation(.easeInOut(duration: 1.0)) {
+                                    cameraPosition = .camera(
+                                        MapCamera(
+                                            centerCoordinate: location.coordinate,
+                                            distance: 1000,
+                                            heading: 0,
+                                            pitch: 45
+                                        )
+                                    )
+                                }
                             }
                     }
                     .tag(location.id)
+                    
+                    MapCircle(center: location.coordinate, radius: 200)
+                        .foregroundStyle(Color.wpMint.opacity(0.15))
+                        .stroke(Color.wpMint, lineWidth: 4)
                 }
                 
                 if locationManager.userLocation != nil {
                     UserAnnotation()
                 }
             }
-            .mapStyle(.standard(elevation: .realistic, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+            .mapStyle(.standard(elevation: .realistic, emphasis: .automatic, pointsOfInterest: .excludingAll, showsTraffic: false))
             .toolbar(.hidden, for: .tabBar)
             .task {
                 await locationManager.loadPlaces()
