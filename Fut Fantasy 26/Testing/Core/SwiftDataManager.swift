@@ -9,7 +9,6 @@
 import SwiftUI
 import SwiftData
 
-// Central manager for SwiftData configuration
 class SwiftDataManager {
     static let shared = SwiftDataManager()
     
@@ -27,7 +26,8 @@ class SwiftDataManager {
             TeamStandings.self,
             Question.self,
             UserQuestionProgress.self,
-            Prediction.self
+            Prediction.self,
+            Collectible.self
         ])
     }()
     
@@ -47,7 +47,6 @@ class SwiftDataManager {
         }
     }()
     
-    // Preview container for SwiftUI previews and testing
     lazy var previewContainer: ModelContainer = {
         let configuration = ModelConfiguration(
             schema: schema,

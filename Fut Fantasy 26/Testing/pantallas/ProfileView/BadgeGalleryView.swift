@@ -7,35 +7,37 @@
 
 import SwiftUI
 import SwiftData
+import PhotosUI // <-- ADD THIS for Photo Picker
 
 struct BadgeGalleryView: View {
     
-    // --- New Layout Logic ---
+    @Environment(CollectibleManager.self) private var collectibleManager
+    @Query private var squads: [Squad]
     
-    // 1. Define the number of columns
+    // 1. Fetch collectibles for the current squad
+    @Query(sort: \Collectible.createdAt, order: .reverse) private var collectibles: [Collectible]
+    
+    // 2. Filter collectibles based on the selected tab
+    @State private var selectedTab: CollectibleType = .sticker
+    
+    // 3. Columns for the grid
     private let columnCount = 3
     
-    // 2. Your list of badge images, repeated for effect
-    private let allBadgeImages = Array(
-        repeating: ["Throphy", "LaCabra", "PinPoint", "VectorArtQuestion"],
-        count: 5
-    ).flatMap { $0 }
-    
-    // 3. Computed property to split images into 3 columns
-    private var columns: [[String]] {
-        var cols: [[String]] = Array(repeating: [], count: columnCount)
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedImage: UIImage?
+    @State private var showStickerEditor = false
+   
+    private var columns: [[Collectible]] {
+        let filteredCollectibles = collectibles.filter { $0.type == selectedTab }
         
-        // Distribute images one by one into each column
-        for (index, imageName) in allBadgeImages.enumerated() {
+        var cols: [[Collectible]] = Array(repeating: [], count: columnCount)
+        
+        for (index, collectible) in filteredCollectibles.enumerated() {
             let columnIndex = index % columnCount
-            cols[columnIndex].append(imageName)
+            cols[columnIndex].append(collectible)
         }
         return cols
     }
-    
-    // --- State for Tabs ---
-    @State private var selectedTab = "STICKERS"
-    private let tabs = ["STICKERS", "MY STUFF"]
     
     var body: some View {
         ZStack {
@@ -44,37 +46,47 @@ struct BadgeGalleryView: View {
             
             VStack(spacing: 0) {
                 
-                // "STICKERS" / "MY STUFF" tabs
+                // "STICKERS" / "BADGES" tabs
                 HStack(spacing: 20) {
-                    ForEach(tabs, id: \.self) { tab in
-                        Button(action: { selectedTab = tab }) {
-                            Text(tab)
-                                .font(.system(size: 20, weight: .heavy))
-                                .foregroundStyle(selectedTab == tab ? .white : .white.opacity(0.4))
-                        }
+                    Button(action: { selectedTab = .sticker }) {
+                        Text("STICKERS")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundStyle(selectedTab == .sticker ? .white : .white.opacity(0.4))
                     }
+                    
+                    Button(action: { selectedTab = .badge }) {
+                        Text("BADGES")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundStyle(selectedTab == .badge ? .white : .white.opacity(0.4))
+                    }
+                    
                     Spacer()
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 16)
-                .padding(.bottom, 16) // Added padding since search bar is gone
+                .padding(.bottom, 16)
                 
-                // 4. Main ScrollView for the entire layout
+                
                 ScrollView {
-                    // 5. HStack holds the 3 vertical columns
                     HStack(alignment: .top, spacing: 12) {
                         
-                        // 6. Loop to create each column
+                        // Loop to create each column
                         ForEach(columns.indices, id: \.self) { columnIndex in
-                            // 7. LazyVStack creates a single column
                             LazyVStack(spacing: 12) {
-                                // 8. Loop over the images for *this column only*
-                                ForEach(columns[columnIndex], id: \.self) { imageName in
-                                    Image(imageName)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit) // .fit allows varying heights
-                                        .frame(maxWidth: .infinity)
-                                        .clipped()
+                                ForEach(columns[columnIndex]) { collectible in
+                                    if let image = collectible.displayImage {
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(maxWidth: .infinity)
+                                            .clipped()
+                                    } else {
+                                        Rectangle()
+                                            .fill(.gray.opacity(0.2))
+                                            .aspectRatio(1, contentMode: .fit)
+                                            .overlay(Text("Error").foregroundStyle(.red))
+                                            .cornerRadius(8)
+                                    }
                                 }
                             }
                         }
@@ -84,12 +96,61 @@ struct BadgeGalleryView: View {
                 }
             }
         }
-        // Per your request, no .navigationTitle or .toolbar is added
+        
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                PhotosPicker(
+                    selection: $selectedPhotoItem,
+                    matching: .images,
+                    photoLibrary: .shared()
+                ) {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    selectedImage = image
+                    showStickerEditor = true
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showStickerEditor) {
+            if let selectedImage {
+                StickerEditorView(sourceImage: selectedImage)
+            }
+        }
+        .onAppear {
+            if let squad = squads.first {
+                do {
+                    try collectibleManager.seedInitialBadges(for: squad)
+                } catch {
+                    print("❌ Failed to seed badges: \(error)")
+                }
+            }
+        }
     }
 }
 
 #Preview {
-    NavigationStack {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Squad.self, Collectible.self,
+        configurations: config
+    )
+    let context = container.mainContext
+    let manager = CollectibleManager(modelContext: context)
+    let squad = Squad(teamName: "Preview Squad")
+    context.insert(squad)
+    
+    try? manager.seedInitialBadges(for: squad)
+    
+    return NavigationStack {
         BadgeGalleryView()
     }
+    .modelContainer(container)
+    .environment(manager)
+    .environment(EffectsPipeline())
 }

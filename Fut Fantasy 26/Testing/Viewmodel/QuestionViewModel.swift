@@ -51,7 +51,7 @@ final class QuestionViewModel {
             squadRepository: squadRepo,
             modelContext: modelContext,
             resetHour: resetHour
-        )
+        ) 
         return QuestionViewModel(gameManager: gameManager, squadId: squadId)
     }
     

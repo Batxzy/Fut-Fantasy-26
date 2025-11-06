@@ -374,6 +374,9 @@ final class Squad {
     @Relationship(deleteRule: .cascade, inverse: \MatchdaySquad.squad)
     var matchdaySquads: [MatchdaySquad]? // Snapshots per matchday
     
+    @Relationship(deleteRule: .cascade, inverse: \Collectible.squad)
+        var collectibles: [Collectible]? = []
+    
     init(
         teamName: String,
         ownerName: String = "Manager",

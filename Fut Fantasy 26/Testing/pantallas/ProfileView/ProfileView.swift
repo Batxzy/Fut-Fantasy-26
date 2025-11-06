@@ -91,7 +91,7 @@ struct ProfileView: View {
             .offset(y: 20)
             
             // Profile picture
-            Image("Ellipse 23")
+            Image("LaCabra")
                 .resizable()
                 .frame(width: 125, height: 125)
                 .background(Color(red: 0.85, green: 0.9, blue: 0.35))
