@@ -38,6 +38,16 @@ final class Collectible {
         self.createdAt = createdAt
     }
     
+        @Transient
+        var uiImage: UIImage? {
+            if type == .sticker, let data = stickerData {
+                return UIImage(data: data)
+            } else if type == .badge, let name = imageName {
+                return UIImage(named: name)
+            }
+            return nil
+        }
+
     @Transient
     var displayImage: Image? {
         if type == .sticker, let data = stickerData, let uiImage = UIImage(data: data) {

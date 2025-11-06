@@ -57,23 +57,48 @@ class EffectsPipeline {
         isProcessing = true
         defer { isProcessing = false }
         
+        // ✅ NORMALIZE INPUT SIZE
+        let normalizedImage = normalizeImageSize(inputImage, maxDimension: 1500)
+        
         do {
             let request = GeneratePersonSegmentationRequest()
             request.qualityLevel = .accurate
-            let observation = try await request.perform(on: CIImage(image: inputImage)!)
+            let observation = try await request.perform(on: CIImage(image: normalizedImage)!)
             
             guard let maskCGImage = try? observation.cgImage else {
-                outputImage = inputImage; return
+                outputImage = normalizedImage; return
             }
             
-            if let processedImage = await applyEffectWithMask(originalImage: inputImage, maskCGImage: maskCGImage, effect: currentEffect) {
+            if let processedImage = await applyEffectWithMask(
+                originalImage: normalizedImage,  // ← use normalized
+                maskCGImage: maskCGImage,
+                effect: currentEffect
+            ) {
                 outputImage = UIImage(cgImage: processedImage)
             }
         } catch {
-            print("Error processing image: \(error)"); outputImage = inputImage
+            print("Error processing image: \(error)"); outputImage = normalizedImage
         }
     }
 
+    // ✅ ADD THIS FUNCTION
+    private func normalizeImageSize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let maxOriginal = max(size.width, size.height)
+        
+        // If already smaller than target, return as-is
+        guard maxOriginal > maxDimension else { return image }
+        
+        let scale = maxDimension / maxOriginal
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+    
+    
     // MARK: - Funciones que se comunican con Vision y cositas
 
     private func generatePersonSegmentation(image: UIImage) async throws -> PixelBufferObservation? {
@@ -589,82 +614,257 @@ class EffectsPipeline {
         let canvasSize: CGFloat = 2000
         let canvasExtent = CGRect(x: 0, y: 0, width: canvasSize, height: canvasSize)
         
-        let targetSize = canvasSize * 0.9
-        let scale = min(targetSize / extent.width, targetSize / extent.height)
+        // Check aspect ratio
+        let aspectRatio = extent.width / extent.height
+        let isHorizontal = aspectRatio > 1.3  // horizontal if width is 20% more than height
         
-        let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        
-        let scaledExtent = scaledOriginal.extent
-        
-        let offsetX = (canvasSize - scaledExtent.width) / 2
-        let offsetY = (canvasSize - scaledExtent.height) / 2
-        
-        let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
-        let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
-        
-        let blackBackground = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: canvasExtent)
-        let expandedMask = centeredMask.composited(over: blackBackground)
-        
-        guard let outlineImage = generateJFAOutline(from: expandedMask, color: outlineColor) else { return nil }
-        
-        let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
-        let maskFilter = CIFilter.blendWithMask()
-        maskFilter.inputImage = centeredOriginal
-        maskFilter.backgroundImage = transparentBackground
-        maskFilter.maskImage = centeredMask
-        
-        guard let maskedPersonImage = maskFilter.outputImage else { return nil }
-        
-        let compositeFilter = CIFilter.sourceOverCompositing()
-        compositeFilter.inputImage = maskedPersonImage
-        compositeFilter.backgroundImage = outlineImage
-        
-        guard let finalImage = compositeFilter.outputImage else { return nil }
-        return context.createCGImage(finalImage, from: canvasExtent)
+        if isHorizontal {
+            // NEW WAY: Two-pass with content bounds detection
+            let initialScale = min(canvasSize / extent.width, canvasSize / extent.height) * 0.8
+            
+            let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: initialScale, y: initialScale))
+            let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: initialScale, y: initialScale))
+            
+            let scaledExtent = scaledOriginal.extent
+            let offsetX = (canvasSize - scaledExtent.width) / 2
+            let offsetY = (canvasSize - scaledExtent.height) / 2
+            
+            let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            
+            let blackBackground = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: canvasExtent)
+            let expandedMask = centeredMask.composited(over: blackBackground)
+            
+            guard let outlineImage = generateJFAOutline(from: expandedMask, color: outlineColor) else { return nil }
+            
+            let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
+            let maskFilter = CIFilter.blendWithMask()
+            maskFilter.inputImage = centeredOriginal
+            maskFilter.backgroundImage = transparentBackground
+            maskFilter.maskImage = centeredMask
+            
+            guard let maskedPersonImage = maskFilter.outputImage else { return nil }
+            
+            let compositeFilter = CIFilter.sourceOverCompositing()
+            compositeFilter.inputImage = maskedPersonImage
+            compositeFilter.backgroundImage = outlineImage
+            
+            guard let initialComposite = compositeFilter.outputImage else { return nil }
+            
+            // PASS 2: Calculate bounds and rescale
+            guard let compositeCG = context.createCGImage(initialComposite, from: canvasExtent) else { return nil }
+            let contentBounds = calculateContentBounds(compositeCG, extraPadding: 40) ?? canvasExtent
+            
+            let targetFill: CGFloat = 0.95
+            let fillScale = min((canvasSize * targetFill) / contentBounds.width, (canvasSize * targetFill) / contentBounds.height)
+            
+            let finalScaled = initialComposite.transformed(by: CGAffineTransform(scaleX: fillScale, y: fillScale))
+            let scaledContentMinX = contentBounds.minX * fillScale
+            let scaledContentMinY = contentBounds.minY * fillScale
+            let scaledContentWidth = contentBounds.width * fillScale
+            let scaledContentHeight = contentBounds.height * fillScale
+            
+            let finalOffsetX = (canvasSize - scaledContentWidth) / 2 - scaledContentMinX
+            let finalOffsetY = (canvasSize - scaledContentHeight) / 2 - scaledContentMinY
+            
+            let finalImage = finalScaled.transformed(by: CGAffineTransform(translationX: finalOffsetX, y: finalOffsetY))
+            return context.createCGImage(finalImage, from: canvasExtent)
+            
+        } else {
+            // OLD WAY: Simple single-pass scaling (for vertical/square images)
+            let targetSize = canvasSize * 0.9
+            let scale = min(targetSize / extent.width, targetSize / extent.height)
+            
+            let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            
+            let scaledExtent = scaledOriginal.extent
+            let offsetX = (canvasSize - scaledExtent.width) / 2
+            let offsetY = (canvasSize - scaledExtent.height) / 2
+            
+            let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            
+            let blackBackground = CIImage(color: CIColor(red: 0, green: 0, blue: 0, alpha: 1)).cropped(to: canvasExtent)
+            let expandedMask = centeredMask.composited(over: blackBackground)
+            
+            guard let outlineImage = generateJFAOutline(from: expandedMask, color: outlineColor) else { return nil }
+            
+            let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
+            let maskFilter = CIFilter.blendWithMask()
+            maskFilter.inputImage = centeredOriginal
+            maskFilter.backgroundImage = transparentBackground
+            maskFilter.maskImage = centeredMask
+            
+            guard let maskedPersonImage = maskFilter.outputImage else { return nil }
+            
+            let compositeFilter = CIFilter.sourceOverCompositing()
+            compositeFilter.inputImage = maskedPersonImage
+            compositeFilter.backgroundImage = outlineImage
+            
+            guard let finalImage = compositeFilter.outputImage else { return nil }
+            return context.createCGImage(finalImage, from: canvasExtent)
+        }
     }
-    
+
     private func applyContoursEffect(original: CIImage, originalImage: UIImage, mask: CIImage, extent: CGRect, context: CIContext) async -> CGImage? {
         let canvasSize: CGFloat = 2000
         let canvasExtent = CGRect(x: 0, y: 0, width: canvasSize, height: canvasSize)
         
-        // Leave margin for outline - scale to 90% of canvas
-        let targetSize = canvasSize * 0.9
-        let scale = min(targetSize / extent.width, targetSize / extent.height)
+        // Check aspect ratio
+        let aspectRatio = extent.width / extent.height
+        let isHorizontal = aspectRatio > 1.3
         
-        let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        if isHorizontal {
+            // NEW WAY: Two-pass with content bounds
+            let initialScale = min(canvasSize / extent.width, canvasSize / extent.height) * 0.8
+            
+            let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: initialScale, y: initialScale))
+            let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: initialScale, y: initialScale))
+            
+            let scaledExtent = scaledOriginal.extent
+            let offsetX = (canvasSize - scaledExtent.width) / 2
+            let offsetY = (canvasSize - scaledExtent.height) / 2
+            
+            let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            
+            guard let cleanedMaskCGImage = context.createCGImage(centeredMask, from: canvasExtent),
+                  let path = try? await detectContours(from: cleanedMaskCGImage),
+                  let outlineImage = pathToCIImage(path, in: canvasExtent, strokeWidth: outlineThickness, color: UIColor(outlineColor)) else {
+                return nil
+            }
+            
+            let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
+            let maskFilter = CIFilter.blendWithMask()
+            maskFilter.inputImage = centeredOriginal
+            maskFilter.backgroundImage = transparentBackground
+            maskFilter.maskImage = centeredMask
+            
+            guard let maskedPersonImage = maskFilter.outputImage else { return nil }
+            
+            let compositeFilter = CIFilter.sourceOverCompositing()
+            compositeFilter.inputImage = maskedPersonImage
+            compositeFilter.backgroundImage = outlineImage
+            
+            guard let initialComposite = compositeFilter.outputImage else { return nil }
+            
+            // PASS 2
+            guard let compositeCG = context.createCGImage(initialComposite, from: canvasExtent) else { return nil }
+            let outlinePadding: CGFloat = outlineThickness / 2 + 50
+            let contentBounds = calculateContentBounds(compositeCG, extraPadding: outlinePadding) ?? canvasExtent
+            
+            let targetFill: CGFloat = 0.95
+            let fillScale = min((canvasSize * targetFill) / contentBounds.width, (canvasSize * targetFill) / contentBounds.height)
+            
+            let finalScaled = initialComposite.transformed(by: CGAffineTransform(scaleX: fillScale, y: fillScale))
+            let scaledContentMinX = contentBounds.minX * fillScale
+            let scaledContentMinY = contentBounds.minY * fillScale
+            let scaledContentWidth = contentBounds.width * fillScale
+            let scaledContentHeight = contentBounds.height * fillScale
+            
+            let finalOffsetX = (canvasSize - scaledContentWidth) / 2 - scaledContentMinX
+            let finalOffsetY = (canvasSize - scaledContentHeight) / 2 - scaledContentMinY
+            
+            let finalImage = finalScaled.transformed(by: CGAffineTransform(translationX: finalOffsetX, y: finalOffsetY))
+            return context.createCGImage(finalImage, from: canvasExtent)
+            
+        } else {
+            // OLD WAY: Simple single-pass (for vertical/square)
+            let targetSize = canvasSize * 0.9
+            let scale = min(targetSize / extent.width, targetSize / extent.height)
+            
+            let scaledOriginal = original.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let scaledMask = mask.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            
+            let scaledExtent = scaledOriginal.extent
+            let offsetX = (canvasSize - scaledExtent.width) / 2
+            let offsetY = (canvasSize - scaledExtent.height) / 2
+            
+            let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+            
+            guard let cleanedMaskCGImage = context.createCGImage(centeredMask, from: canvasExtent),
+                  let path = try? await detectContours(from: cleanedMaskCGImage),
+                  let outlineImage = pathToCIImage(path, in: canvasExtent, strokeWidth: outlineThickness, color: UIColor(outlineColor)) else {
+                return nil
+            }
+            
+            let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
+            let maskFilter = CIFilter.blendWithMask()
+            maskFilter.inputImage = centeredOriginal
+            maskFilter.backgroundImage = transparentBackground
+            maskFilter.maskImage = centeredMask
+            
+            guard let maskedPersonImage = maskFilter.outputImage else { return nil }
+            
+            let compositeFilter = CIFilter.sourceOverCompositing()
+            compositeFilter.inputImage = maskedPersonImage
+            compositeFilter.backgroundImage = outlineImage
+            
+            guard let finalImage = compositeFilter.outputImage else { return nil }
+            return context.createCGImage(finalImage, from: canvasExtent)
+        }
+    }
+
+    private func calculateContentBounds(_ cgImage: CGImage, extraPadding: CGFloat = 70) -> CGRect? {
+        let width = cgImage.width
+        let height = cgImage.height
         
-        let scaledExtent = scaledOriginal.extent
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
         
-        // Center on canvas
-        let offsetX = (canvasSize - scaledExtent.width) / 2
-        let offsetY = (canvasSize - scaledExtent.height) / 2
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
         
-        let centeredOriginal = scaledOriginal.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
-        let centeredMask = scaledMask.transformed(by: CGAffineTransform(translationX: offsetX, y: offsetY))
+        guard let data = context.data else { return nil }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
         
-        // Detect contours from the centered mask
-        guard let cleanedMaskCGImage = context.createCGImage(centeredMask, from: canvasExtent),
-              let path = try? await detectContours(from: cleanedMaskCGImage),
-              let outlineImage = pathToCIImage(path, in: canvasExtent, strokeWidth: outlineThickness, color: UIColor(outlineColor)) else {
-            return nil
+        var minX = width, maxX = 0, minY = height, maxY = 0
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = (y * width + x) * 4
+                let alpha = buffer[index + 3]
+                
+                if alpha > 2 {
+                    minX = min(minX, x)
+                    maxX = max(maxX, x)
+                    minY = min(minY, y)
+                    maxY = max(maxY, y)
+                }
+            }
         }
         
-        let transparentBackground = CIImage.empty().cropped(to: canvasExtent)
-        let maskFilter = CIFilter.blendWithMask()
-        maskFilter.inputImage = centeredOriginal
-        maskFilter.backgroundImage = transparentBackground
-        maskFilter.maskImage = centeredMask
+        guard maxX > minX && maxY > minY else { return nil }
         
-        guard let maskedPersonImage = maskFilter.outputImage else { return nil }
+        let contentWidth = maxX - minX
+        let contentHeight = maxY - minY
         
-        let compositeFilter = CIFilter.sourceOverCompositing()
-        compositeFilter.inputImage = maskedPersonImage
-        compositeFilter.backgroundImage = outlineImage
+        let paddingPercentage: CGFloat = 0.05
+        let horizontalPadding = Int(CGFloat(contentWidth) * paddingPercentage)
+        let verticalPadding = Int(CGFloat(contentHeight) * paddingPercentage)
         
-        guard let finalImage = compositeFilter.outputImage else { return nil }
-        return context.createCGImage(finalImage, from: canvasExtent)
+        let isVertical = height > width
+        let finalVerticalPadding = isVertical ? Int(CGFloat(verticalPadding) * 1.5) : verticalPadding
+        
+        let paddedMinX = max(0, minX - horizontalPadding)
+        let paddedMinY = max(0, minY - finalVerticalPadding)
+        let paddedMaxX = min(width - 1, maxX + horizontalPadding)
+        let paddedMaxY = min(height - 1, maxY + finalVerticalPadding)
+        
+        return CGRect(
+            x: paddedMinX,
+            y: paddedMinY,
+            width: paddedMaxX - paddedMinX + 1,
+            height: paddedMaxY - paddedMinY + 1
+        )
     }
     
     private func applyCircleBgEffect(original: CIImage, originalImage: UIImage, mask: CIImage, extent: CGRect, context: CIContext) async -> CGImage? {

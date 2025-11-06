@@ -7,26 +7,22 @@
 
 import SwiftUI
 import SwiftData
-import PhotosUI // <-- ADD THIS for Photo Picker
+import PhotosUI
 
 struct BadgeGalleryView: View {
     
     @Environment(CollectibleManager.self) private var collectibleManager
     @Query private var squads: [Squad]
     
-    // 1. Fetch collectibles for the current squad
     @Query(sort: \Collectible.createdAt, order: .reverse) private var collectibles: [Collectible]
     
-    // 2. Filter collectibles based on the selected tab
     @State private var selectedTab: CollectibleType = .sticker
-    
-    // 3. Columns for the grid
     private let columnCount = 3
     
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
     @State private var showStickerEditor = false
-   
+    
     private var columns: [[Collectible]] {
         let filteredCollectibles = collectibles.filter { $0.type == selectedTab }
         
@@ -66,26 +62,31 @@ struct BadgeGalleryView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 16)
                 
-                
+                // Main ScrollView for the entire layout
                 ScrollView {
                     HStack(alignment: .top, spacing: 12) {
-                        
-                        // Loop to create each column
                         ForEach(columns.indices, id: \.self) { columnIndex in
                             LazyVStack(spacing: 12) {
                                 ForEach(columns[columnIndex]) { collectible in
-                                    if let image = collectible.displayImage {
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(maxWidth: .infinity)
-                                            .clipped()
-                                    } else {
-                                        Rectangle()
-                                            .fill(.gray.opacity(0.2))
-                                            .aspectRatio(1, contentMode: .fit)
-                                            .overlay(Text("Error").foregroundStyle(.red))
-                                            .cornerRadius(8)
+                                    
+                                    // Wrap the image in a NavigationLink
+                                    NavigationLink(destination: CollectibleDetailView(collectible: collectible)) {
+                                        if let image = collectible.displayImage {
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fit)
+                                                .frame(maxWidth: .infinity)
+                                                .background(.white.opacity(0.1))
+                                                .cornerRadius(8)
+                                                .clipped()
+                                        } else {
+                                            // Placeholder for missing image
+                                            Rectangle()
+                                                .fill(.gray.opacity(0.2))
+                                                .aspectRatio(1, contentMode: .fit)
+                                                .overlay(Text("Error").foregroundStyle(.red))
+                                                .cornerRadius(8)
+                                        }
                                     }
                                 }
                             }
@@ -96,7 +97,8 @@ struct BadgeGalleryView: View {
                 }
             }
         }
-        
+        .navigationTitle("Gallery")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 PhotosPicker(
