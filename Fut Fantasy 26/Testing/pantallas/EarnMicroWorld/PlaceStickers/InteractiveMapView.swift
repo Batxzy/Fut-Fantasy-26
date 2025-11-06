@@ -12,7 +12,7 @@ struct InteractiveMapView: View {
     @State private var locationManager = LocationManager()
     let manager = CLLocationManager()
     @State private var selectedLocation: CuratedLocation?
-    @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)  // Changed
+    @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var sheetID = UUID()
     @State private var showARView = false
     
@@ -27,11 +27,14 @@ struct InteractiveMapView: View {
                             .padding(5)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.wpMint)
+                                    .fill(location.mainColor)
                             )
                             .onTapGesture {
-                                sheetID = UUID()
-                                selectedLocation = location
+                                selectedLocation = nil
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                    sheetID = UUID()
+                                    selectedLocation = location
+                                }
                                 
                                 withAnimation(.easeInOut(duration: 1.0)) {
                                     cameraPosition = .camera(
@@ -46,10 +49,10 @@ struct InteractiveMapView: View {
                             }
                     }
                     .tag(location.id)
-                    
+
                     MapCircle(center: location.coordinate, radius: 200)
-                        .foregroundStyle(Color.wpMint.opacity(0.15))
-                        .stroke(Color.wpMint, lineWidth: 4)
+                        .foregroundStyle(location.mainColor.opacity(0.15))
+                        .stroke(location.mainColor, lineWidth: 4)
                 }
                 
                 if locationManager.userLocation != nil {

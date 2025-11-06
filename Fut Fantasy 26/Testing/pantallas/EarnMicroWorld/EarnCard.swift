@@ -165,32 +165,35 @@ struct EarnCard: View {
         .opacity(isEnabled ? 1.0 : 0.6)
     }
     
-    struct EarnButton: View {
-        let points: Int
-        let backgroundColor: Color
-        let textColor: Color
-        let iconColors: (Color, Color)
-        
-        var body: some View {
-            HStack(spacing: 5) {
-                Text("+\(points)")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundColor(textColor)
-                
-                Image(systemName: "star.circle.fill")
-                    .font(.system(size: 15))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(iconColors.0, iconColors.1)
-            }
-            .frame(height: 24)
-            .padding(.horizontal, 6)
-            .background(
-                Capsule()
-                    .fill(backgroundColor)
-            )
-        }
-    }
+   
 }
+
+struct EarnButton: View {
+     let points: Int
+     let backgroundColor: Color
+     let textColor: Color
+     let iconColors: (Color, Color)
+     
+     var body: some View {
+         HStack(spacing: 5) {
+             Text("+\(points)")
+                 .font(.system(size: 15, weight: .heavy, design: .rounded))
+                 .foregroundColor(textColor)
+             
+             Image(systemName: "star.circle.fill")
+                 .font(.system(size: 15))
+                 .symbolRenderingMode(.palette)
+                 .foregroundStyle(iconColors.0, iconColors.1)
+         }
+         .frame(height: 24)
+         .padding(.horizontal, 6)
+         .background(
+             Capsule()
+                 .fill(backgroundColor)
+         )
+     }
+ }
+
 
 // MARK: - Usage Examples
 

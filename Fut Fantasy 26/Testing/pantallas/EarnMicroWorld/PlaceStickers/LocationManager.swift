@@ -6,10 +6,9 @@
 //
 
 
-import Observation
 import CoreLocation
 import MapKit
-
+import SwiftUI
 
 @Observable
 class LocationManager: NSObject, CLLocationManagerDelegate {
@@ -18,7 +17,11 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     var locations: [CuratedLocation] = []
     var distancesToLocations: [String: Double] = [:]
     
-    let placeIDs = ["IBB7581ED75F54DD0", "I7D6783FDABFDF92"]
+    // Define places with their colors in one place
+    let placeConfigs: [String: (mainColor: Color, accentColor: Color)] = [
+        "IBB7581ED75F54DD0": (.wpMint, .wpBlueOcean),
+        "I7D6783FDABFDF92": (.wpRedBright, .wpGreenLime)
+    ]
     
     override init() {
         super.init()
@@ -34,19 +37,25 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     func loadPlaces() async {
         var loadedLocations: [CuratedLocation] = []
         
-        for placeID in placeIDs {
+        for (placeID, colors) in placeConfigs {
             guard let identifier = MKMapItem.Identifier(rawValue: placeID) else {
                 continue
             }
             let request = MKMapItemRequest(mapItemIdentifier: identifier)
             if let mapItem = try? await request.mapItem {
-                loadedLocations.append(CuratedLocation(id: placeID, mapItem: mapItem))
+                loadedLocations.append(
+                    CuratedLocation(
+                        id: placeID,
+                        mapItem: mapItem,
+                        mainColor: colors.mainColor,
+                        accentColor: colors.accentColor
+                    )
+                )
             }
         }
         
         locations = loadedLocations
         
-      
         if let userLocation {
             calculateDistances(from: userLocation)
         }
@@ -70,6 +79,6 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     
     func isWithinGeofence(locationId: String) -> Bool {
         guard let distance = distancesToLocations[locationId] else { return false }
-        return distance <= 200 
+        return distance <= 200
     }
 }

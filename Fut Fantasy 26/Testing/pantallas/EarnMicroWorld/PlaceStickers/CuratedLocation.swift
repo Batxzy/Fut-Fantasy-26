@@ -12,6 +12,8 @@ import MapKit
 struct CuratedLocation: Identifiable, Equatable {
     let id: String
     let mapItem: MKMapItem
+    let mainColor: Color
+    let accentColor: Color
     
     var name: String { mapItem.name ?? "Unknown Location" }
     var coordinate: CLLocationCoordinate2D { mapItem.placemark.coordinate }
@@ -20,3 +22,4 @@ struct CuratedLocation: Identifiable, Equatable {
         lhs.id == rhs.id
     }
 }
+
