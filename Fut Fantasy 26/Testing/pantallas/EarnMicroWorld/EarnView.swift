@@ -84,21 +84,25 @@ struct EarnView: View {
                                 foregroundIconScale: 1.5,
                                 foregroundIconRenderingMode: .masked
                             )
-                            EarnCard(
-                                title:"location",
-                                question: "Go paste some stickers on the Estadio Arkon",
-                                points: 1500,
-                                backgroundColor: .wpGreenMalachite,
-                                accentColor: .wpBlueOcean,
-                                backgroundIconColor: .wpGreenYellow,
-                                foregroundIcon: AnyView(
-                                    Image("PinPoint")
-                                        .resizable()
-                                        .scaledToFit()
-                                ),
-                                foregroundIconScale: 0.76,
-                                foregroundIconRenderingMode: .masked
-                            )
+                            
+                            NavigationLink(destination:InteractiveMapView()){
+                                EarnCard(
+                                    title:"location",
+                                    question: "Go paste some stickers on the Estadio Arkon",
+                                    points: 1500,
+                                    backgroundColor: .wpGreenMalachite,
+                                    accentColor: .wpBlueOcean,
+                                    backgroundIconColor: .wpGreenYellow,
+                                    foregroundIcon: AnyView(
+                                        Image("PinPoint")
+                                            .resizable()
+                                            .scaledToFit()
+                                    ),
+                                    foregroundIconScale: 0.76,
+                                    foregroundIconRenderingMode: .masked
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
