@@ -28,7 +28,7 @@ struct PoseGameView: View {
                 
             case .playing:
                 PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                    .transition(.blurReplace.combined(with: .opacity))
+                    .transition(.push(from: .bottom).combined(with: .scale))
             case .end:
                 EndView(gameViewModel: gameViewModel)
                     .transition(.scale.combined(with: .opacity))
@@ -102,23 +102,33 @@ struct PlayingView: View {
                 .blur(radius: isImageFocused ? 10 : 0)
                 
                 
+                // ✅ Dark overlay BEFORE image
+                if isImageFocused {
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
+                
                 VStack {
                     Spacer()
                     ZStack {
                         Button(action: gameViewModel.endGame) {
                             ZStack {
                                 Circle()
-                                    .fill(.white)
+                                    .stroke(.wpGreenYellow, lineWidth: 3)
                                     .frame(width: 70, height: 70)
+                                
                                 Circle()
-                                    .stroke(.black, lineWidth: 4)
-                                    .frame(width: 62, height: 62)
+                                    .fill(.wpGreenYellow)
+                                    .frame(width: 55, height: 55)
                             }
                         }
                         .opacity(isImageFocused ? 0 : 1)
                         
                         HStack {
                             Spacer()
+                            
                             
                             Image(gameViewModel.referencePoseImageName)
                                 .resizable()
@@ -127,30 +137,21 @@ struct PlayingView: View {
                                 .cornerRadius(10)
                                 .matchedGeometryEffect(id: "refImage", in: namespace)
                                 .padding(.leading, 20)
+                                .scaleEffect(isImageFocused ? 4 : 1)
+                                .offset(
+                                    x: isImageFocused ? -(geometry.size.width - 70) / 2 : 0,
+                                    y: isImageFocused ? -(geometry.size.height - 100) / 2 : 0
+                                )
+                                .zIndex(isImageFocused ? 10 : 0)
                                 .onLongPressGesture(minimumDuration: 0.1, pressing: { pressing in
                                     withAnimation(.spring(response: 0.3)) {
                                         isImageFocused = pressing
                                     }
                                 }, perform: {})
-                                .opacity(isImageFocused ? 0 : 1)
                         }
                     }
                     .padding(.bottom, 40)
                     .padding(.horizontal, 24)
-                }
-                
-               
-                if isImageFocused {
-                    Color.black.opacity(0.6)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                    
-                    Image(gameViewModel.referencePoseImageName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: geometry.size.width * 0.9)
-                        .cornerRadius(20)
-                        .transition(.scale.combined(with: .opacity))
                 }
             }
         }
