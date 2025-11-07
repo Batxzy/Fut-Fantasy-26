@@ -258,6 +258,7 @@
 				DEVELOPMENT_TEAM = 88RHA9SDT6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "te voy a robar";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Te voy a robar ajjaja";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Te voy a robar";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "te voy a robar";
@@ -293,6 +294,7 @@
 				DEVELOPMENT_TEAM = 88RHA9SDT6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "te voy a robar";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Te voy a robar ajjaja";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Te voy a robar";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "te voy a robar";

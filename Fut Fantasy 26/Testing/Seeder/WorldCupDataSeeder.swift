@@ -331,6 +331,13 @@ class WorldCupDataSeeder {
             ("J. Kimmich", "Joshua", "Kimmich", .midfielder, .germany, 6, 7.5),
             ("İ. Gündoğan", "İlkay", "Gündoğan", .midfielder, .germany, 21, 7.0),
             ("K. Havertz", "Kai", "Havertz", .forward, .germany, 7, 8.0),
+            
+            // Mexico
+            ("G. Ochoa", "Guillermo", "Ochoa", .goalkeeper, .mexico, 13, 5.0),
+            ("C. Montes", "César", "Montes", .defender, .mexico, 3, 5.0),
+            ("E. Álvarez", "Edson", "Álvarez", .midfielder, .mexico, 4, 6.5),
+            ("H. Lozano", "Hirving", "Lozano", .midfielder, .mexico, 22, 8.0),
+            ("S. Giménez", "Santiago", "Giménez", .forward, .mexico, 11, 8.5),
         ]
         
         var playerId = 1

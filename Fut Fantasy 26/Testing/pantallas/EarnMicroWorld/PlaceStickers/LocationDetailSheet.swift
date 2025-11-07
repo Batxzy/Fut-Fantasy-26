@@ -103,8 +103,8 @@ struct LocationDetailSheet: View {
             
             Spacer()
         }
-        .frame(maxHeight: .infinity, alignment: .top)
         .padding(.top,16)
+        .frame(maxHeight: .infinity, alignment: .top)
         .padding(.vertical)
         .presentationDetents([.fraction(0.3), .medium])
         .presentationDragIndicator(.visible)

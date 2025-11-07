@@ -10,9 +10,12 @@ import SwiftData
 
 struct CollectibleDetailView: View {
     let collectible: Collectible
-    
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScaleValue: CGFloat = 1.0
+        
+        @Environment(CollectibleManager.self) private var collectibleManager
+        @State private var showARMode = false
+        
+        @State private var scale: CGFloat = 1.0
+        @State private var lastScaleValue: CGFloat = 1.0
 
     var magnification: some Gesture {
         MagnificationGesture()
@@ -85,6 +88,26 @@ struct CollectibleDetailView: View {
                 .padding(.bottom, 20)
             }
         }
+        .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            // Only show "View in AR" if it's an image we can place
+                            if collectible.uiImage != nil {
+                                Button {
+                                    collectibleManager.selectedCollectibleForDetail = collectible
+                                    showARMode = true
+                                } label: {
+                                    Label("View in AR", systemImage: "arkit")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
+                .fullScreenCover(isPresented: $showARMode) {
+                    CollectibleDetailARView()
+                }
         .navigationTitle("Collectible Detail")
         .navigationBarTitleDisplayMode(.inline)
     }

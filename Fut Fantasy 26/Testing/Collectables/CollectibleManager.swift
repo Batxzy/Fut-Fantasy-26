@@ -15,6 +15,8 @@ import Observation
 class CollectibleManager {
     private let modelContext: ModelContext
     
+    var selectedCollectibleForDetail: Collectible?
+    
     private let predefinedBadges = [
         (name: "World Cup Winner", imageName: "Throphy"),
         (name: "The G.O.A.T.", imageName: "LaCabra"),

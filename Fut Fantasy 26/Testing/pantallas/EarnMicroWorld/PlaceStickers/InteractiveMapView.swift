@@ -76,7 +76,7 @@ struct InteractiveMapView: View {
             }
             .fullScreenCover(isPresented: $showARView) {
                 NavigationStack {
-                    EarnView()
+                    StickerPlacementARView()
                 }
             }
             .onAppear() {
