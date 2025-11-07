@@ -39,8 +39,7 @@ struct PoseGameView: View {
     }
 }
 
-// MARK: - 5. Game State Subviews
-
+// MARK: - StartSubView
 
 struct StartView: View {
     @Bindable var gameViewModel: GameViewModel
@@ -78,6 +77,7 @@ struct StartView: View {
     }
 }
 
+// MARK: - PlayingSubView
 
 struct PlayingView: View {
     @Bindable var gameViewModel: GameViewModel
@@ -158,6 +158,8 @@ struct PlayingView: View {
     }
 }
 
+// MARK: - EndSubView
+
 struct EndView: View {
     @Bindable var gameViewModel: GameViewModel
     @Environment(\.dismiss) private var dismiss
@@ -168,131 +170,82 @@ struct EndView: View {
     
     var body: some View {
         ZStack {
-            if let finalImage = gameViewModel.finalImage {
-                finalImage
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-            } else {
-                Color.black.ignoresSafeArea()
-            }
+            Color.mainBg.ignoresSafeArea()
             
-            Color.black.opacity(0.2).ignoresSafeArea()
-            
-            VStack {
-                Spacer()
-                
-                if isPerfect {
-                    WinCard(score: gameViewModel.finalScore)
-                } else {
-                    AlmostCard(score: gameViewModel.finalScore, restartAction: gameViewModel.restartGame)
-                }
-                
-                Spacer()
-            }
+            ContentLayer(
+                isPerfect: isPerfect,
+                score: gameViewModel.finalScore,
+                restartAction: gameViewModel.restartGame,
+                FrameImage: gameViewModel.finalImage
+            )
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Exit") {
-                    dismiss()
-                }
+                Button("Exit") { dismiss() }
             }
         }
     }
 }
 
-// MARK: - Win Card
-struct WinCard: View {
-    let score: Double
-    
-    var body: some View {
-        VStack(alignment: .center) {
-            Text("Perfect!")
-                .textCase(.uppercase)
-                .fontWidth(.compressed)
-                .font(.system(size: 28))
-                .fontDesign(.default)
-                .fontWeight(.black)
-                .kerning(0.6)
-                .foregroundStyle(.wpGreenYellow)
-            
-            Text(String(format: "%.0f%% similarity", score * 100))
-                .font(.system(size: 14))
-                .fontWidth(.condensed)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-            
-            HStack {
-                Text("+1000")
-                    .font(.system(size: 34))
-                    .fontWidth(.condensed)
-                    .fontWeight(.semibold)
-                    .kerning(0.4)
-                    .foregroundStyle(.wpGreenYellow)
-                
-                Image(systemName: "star.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(.wpGreenYellow)
-            }
-            
-            Spacer()
-            Button(action: { /* Add save logic */ }) {
-                Text("Claim")
-                    .font(.system(size: 16))
-                    .fontWeight(.medium)
-                    .foregroundStyle(.wpBlueOcean)
-                    .padding(.horizontal, 53)
-                    .padding(.vertical, 3)
-                    .background(Color.wpMint)
-                    .cornerRadius(15)
-            }
-        }
-        .padding(21)
-        .frame(width: 298, height: 175)
-        .background(.wpBlueOcean)
-        .cornerRadius(16)
-    }
-}
-
-// MARK: - Almost Card
-struct AlmostCard: View {
+// MARK: - Content Layer End
+private struct ContentLayer: View {
+    let isPerfect: Bool
     let score: Double
     let restartAction: () -> Void
+    let FrameImage : Image?
     
     var body: some View {
-        VStack(alignment: .center) {
-            Text("Almost!")
-                .textCase(.uppercase)
-                .fontWidth(.compressed)
-                .font(.system(size: 28))
-                .fontDesign(.default)
-                .fontWeight(.black)
-                .kerning(0.6)
-                .foregroundStyle(.wpGreenYellow)
-            
-            Text(String(format: "%.0f%% similarity, try again!", score * 100))
-                .font(.system(size: 14))
-                .fontWidth(.condensed)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-            
+        VStack {
             Spacer()
             
-            Button(action: restartAction) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 24))
-                    .foregroundStyle(.wpBlueOcean)
-                    .padding(20)
-                    .background(Color.wpMint)
-                    .clipShape(Circle())
+            if isPerfect {
+                
+                winContent(score: score, FrameImage: FrameImage)
+                
+            } else {
+                AlmostCard(score: score, restartAction: restartAction)
             }
+            
+            Spacer()
         }
-        .padding(21)
-        .frame(width: 298, height: 175)
-        .background(.wpBlueOcean)
-        .cornerRadius(16)
     }
+}
+
+
+struct winContent : View {
+    
+    let score : Double
+    let FrameImage : Image?
+    var body: some View {
+        
+        VStack(spacing: 24){
+            
+            if let FrameImage {
+                FrameImage
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 298)
+            } else {
+                Color.black.ignoresSafeArea()
+            }
+
+                
+
+
+            WinCard(score: score)
+        }
+        .padding(24)
+    }
+}
+
+
+
+#Preview {
+    winContent(
+        score: 0.85,
+        FrameImage: Image(systemName: "person.fill")
+    )
 }
 
 #Preview {
@@ -300,7 +253,6 @@ struct AlmostCard: View {
     
     EndView(gameViewModel: mockViewModel)
         .onAppear {
-            // Set mock data
             mockViewModel.finalScore = 0.85
             mockViewModel.finalImage = Image(systemName: "person.fill")
         }
