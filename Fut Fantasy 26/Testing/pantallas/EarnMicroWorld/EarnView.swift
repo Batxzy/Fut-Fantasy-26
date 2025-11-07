@@ -70,20 +70,24 @@ struct EarnView: View {
                                   )
                               }
                               .buttonStyle(.plain)
-                            EarnCard(
-                                title:"RECREATE THE POSE",
-                                question: "Recreate Mbappé's crossed-arms pose",
-                                points: 1000,
-                                backgroundColor: .wpRedBright,
-                                accentColor: .wpGreenLime,
-                                foregroundIcon: AnyView(
-                                    Image("LaCabra")
-                                        .resizable()
-                                        .scaledToFit()
-                                ),
-                                foregroundIconScale: 1.5,
-                                foregroundIconRenderingMode: .masked
-                            )
+                            
+                            NavigationLink(destination: PoseGameView()) {
+                                EarnCard(
+                                    title:"RECREATE THE POSE",
+                                    question: "Recreate Mbappé's crossed-arms pose",
+                                    points: 1000,
+                                    backgroundColor: .wpRedBright,
+                                    accentColor: .wpGreenLime,
+                                    foregroundIcon: AnyView(
+                                        Image("LaCabra")
+                                            .resizable()
+                                            .scaledToFit()
+                                    ),
+                                    foregroundIconScale: 1.5,
+                                    foregroundIconRenderingMode: .masked
+                                )
+                            }
+                            .buttonStyle(.plain)
                             
                             NavigationLink(destination:InteractiveMapView()){
                                 EarnCard(
