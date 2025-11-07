@@ -160,7 +160,6 @@ struct PlayingView: View {
 
 struct EndView: View {
     @Bindable var gameViewModel: GameViewModel
-    
     @Environment(\.dismiss) private var dismiss
     
     var isPerfect: Bool {
@@ -183,50 +182,13 @@ struct EndView: View {
             VStack {
                 Spacer()
                 
-                VStack(spacing: 16) {
-                    if isPerfect {
-                        Text("PERFECT!")
-                            .font(.largeTitle).bold()
-                        Text(String(format: "%.0f%% similarity", gameViewModel.finalScore * 100))
-                            .font(.title2)
-                        Text("+1000 ⭐️")
-                            .font(.title).bold()
-                            .foregroundStyle(.yellow)
-                        
-                        Button(action: { /* Add save logic */ }) {
-                            Text("Claim")
-                                .font(.title2).bold()
-                                .foregroundStyle(.black)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.white)
-                                .cornerRadius(15)
-                        }
-                        
-                    } else {
-                        Text("ALMOST!")
-                            .font(.largeTitle).bold()
-                        Text(String(format: "%.0f%% similarity, try again!", gameViewModel.finalScore * 100))
-                            .font(.title3)
-                            .padding(.bottom, 10)
-                        
-                        Button(action: gameViewModel.restartGame) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.largeTitle)
-                                .foregroundStyle(.white)
-                                .padding(20)
-                                .background(Color.white.opacity(0.3))
-                                .clipShape(Circle())
-                        }
-                    }
+                if isPerfect {
+                    WinCard(score: gameViewModel.finalScore)
+                } else {
+                    AlmostCard(score: gameViewModel.finalScore, restartAction: gameViewModel.restartGame)
                 }
-                .foregroundStyle(.white)
-                .padding(30)
-                .frame(maxWidth: .infinity)
-                .toolbar(.hidden, for: .tabBar)
-                .background(Color.blue.opacity(0.9))
-                .cornerRadius(30)
-                .padding(20)
+                
+                Spacer()
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -240,17 +202,12 @@ struct EndView: View {
     }
 }
 
-
-
-// MARK: - 7. Preview
-#Preview {
-    winCard()
-}
-
-
-struct winCard: View {
+// MARK: - Win Card
+struct WinCard: View {
+    let score: Double
+    
     var body: some View {
-        VStack(alignment: .center){
+        VStack(alignment: .center) {
             Text("Perfect!")
                 .textCase(.uppercase)
                 .fontWidth(.compressed)
@@ -260,13 +217,13 @@ struct winCard: View {
                 .kerning(0.6)
                 .foregroundStyle(.wpGreenYellow)
             
-            Text("81% similarity")
+            Text(String(format: "%.0f%% similarity", score * 100))
                 .font(.system(size: 14))
                 .fontWidth(.condensed)
                 .fontWeight(.semibold)
                 .foregroundStyle(.white)
             
-            HStack{
+            HStack {
                 Text("+1000")
                     .font(.system(size: 34))
                     .fontWidth(.condensed)
@@ -285,8 +242,8 @@ struct winCard: View {
                     .font(.system(size: 16))
                     .fontWeight(.medium)
                     .foregroundStyle(.wpBlueOcean)
-                    .padding(.horizontal,53)
-                    .padding(.vertical,3)
+                    .padding(.horizontal, 53)
+                    .padding(.vertical, 3)
                     .background(Color.wpMint)
                     .cornerRadius(15)
             }
@@ -296,4 +253,55 @@ struct winCard: View {
         .background(.wpBlueOcean)
         .cornerRadius(16)
     }
+}
+
+// MARK: - Almost Card
+struct AlmostCard: View {
+    let score: Double
+    let restartAction: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .center) {
+            Text("Almost!")
+                .textCase(.uppercase)
+                .fontWidth(.compressed)
+                .font(.system(size: 28))
+                .fontDesign(.default)
+                .fontWeight(.black)
+                .kerning(0.6)
+                .foregroundStyle(.wpGreenYellow)
+            
+            Text(String(format: "%.0f%% similarity, try again!", score * 100))
+                .font(.system(size: 14))
+                .fontWidth(.condensed)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+            
+            Spacer()
+            
+            Button(action: restartAction) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.wpBlueOcean)
+                    .padding(20)
+                    .background(Color.wpMint)
+                    .clipShape(Circle())
+            }
+        }
+        .padding(21)
+        .frame(width: 298, height: 175)
+        .background(.wpBlueOcean)
+        .cornerRadius(16)
+    }
+}
+
+#Preview {
+    @Previewable @State var mockViewModel = GameViewModel()
+    
+    EndView(gameViewModel: mockViewModel)
+        .onAppear {
+            // Set mock data
+            mockViewModel.finalScore = 0.85
+            mockViewModel.finalImage = Image(systemName: "person.fill")
+        }
 }

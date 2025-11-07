@@ -91,7 +91,7 @@ class GameViewModel {
         
         guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
         
-        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .right)
+        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
         
         return Image(uiImage: uiImage)
     }
