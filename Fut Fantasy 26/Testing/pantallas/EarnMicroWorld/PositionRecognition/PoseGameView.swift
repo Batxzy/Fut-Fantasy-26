@@ -244,5 +244,56 @@ struct EndView: View {
 
 // MARK: - 7. Preview
 #Preview {
-    PoseGameView()
+    winCard()
+}
+
+
+struct winCard: View {
+    var body: some View {
+        VStack(alignment: .center){
+            Text("Perfect!")
+                .textCase(.uppercase)
+                .fontWidth(.compressed)
+                .font(.system(size: 28))
+                .fontDesign(.default)
+                .fontWeight(.black)
+                .kerning(0.6)
+                .foregroundStyle(.wpGreenYellow)
+            
+            Text("81% similarity")
+                .font(.system(size: 14))
+                .fontWidth(.condensed)
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+            
+            HStack{
+                Text("+1000")
+                    .font(.system(size: 34))
+                    .fontWidth(.condensed)
+                    .fontWeight(.semibold)
+                    .kerning(0.4)
+                    .foregroundStyle(.wpGreenYellow)
+                
+                Image(systemName: "star.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.wpGreenYellow)
+            }
+            
+            Spacer()
+            Button(action: { /* Add save logic */ }) {
+                Text("Claim")
+                    .font(.system(size: 16))
+                    .fontWeight(.medium)
+                    .foregroundStyle(.wpBlueOcean)
+                    .padding(.horizontal,53)
+                    .padding(.vertical,3)
+                    .background(Color.wpMint)
+                    .cornerRadius(15)
+            }
+        }
+        .padding(21)
+        .frame(width: 298, height: 175)
+        .background(.wpBlueOcean)
+        .cornerRadius(16)
+    }
 }
