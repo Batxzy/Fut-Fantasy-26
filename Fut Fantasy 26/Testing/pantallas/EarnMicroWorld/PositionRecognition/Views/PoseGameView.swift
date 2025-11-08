@@ -5,7 +5,6 @@
 //  Created by Jose julian Lopez on 07/11/25.
 //
 
-
 import SwiftUI
 import Vision
 import AVFoundation
@@ -14,13 +13,14 @@ import CoreML
 
 
 struct PoseGameView: View {
+    // Use the FUSED GameViewModel
     @State private var gameViewModel = GameViewModel()
     
     @Namespace private var gameNamespace
     
     var body: some View {
         ZStack {
-            Color.mainBg.ignoresSafeArea()
+            Color.black.ignoresSafeArea() // Use a clear background color
             
             switch gameViewModel.gameState {
             case .start:
@@ -30,7 +30,7 @@ struct PoseGameView: View {
                 PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
                     .transition(.push(from: .bottom).combined(with: .scale))
             case .end:
-                EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
+                EndView(gameViewModel: gameViewModel)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -51,6 +51,7 @@ struct StartView: View {
                 .font(.title).bold()
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal)
             
             
             Image(gameViewModel.referencePoseImageName)
@@ -70,7 +71,7 @@ struct StartView: View {
                     .foregroundStyle(.black)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 80)
-                    .background(Color.wpGreenYellow)
+                    .background(Color.green) // Placeholder color
                     .cornerRadius(30)
             }
         }
@@ -88,25 +89,25 @@ struct PlayingView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                CameraPreviewView_1(
+                // FUSED: This new CameraPreviewView uses UIKit's AVCaptureVideoPreviewLayer
+                // and correctly binds to the videoOrientation.
+                CameraPreviewView(
                     session: gameViewModel.cameraViewModel.session,
-                    // MODIFIED: Pass the new CGFloat property
-                    rotationAngle: gameViewModel.cameraViewModel.previewRotationAngle
+                    // --- FIX: Use the correct parameter and property name ---
+                    videoRotationAngle: $gameViewModel.cameraViewModel.videoRotationAngle
                 )
                 .ignoresSafeArea()
                 .blur(radius: isImageFocused ? 10 : 0)
                 
-                let videoAspectRatio = 1080.0 / 1920.0
-                
-                PoseOverlayView_1(
-                    bodyParts: gameViewModel.poseViewModel.detectedBodyParts,
-                    connections: gameViewModel.poseViewModel.bodyConnections
+                // FUSED: This new PoseOverlayView uses the drawing logic
+                // from your "Old" files (gradients, landmark style).
+                PoseOverlayView(
+                    pose: gameViewModel.poseViewModel.detectedPose
                 )
-                .aspectRatio(videoAspectRatio, contentMode: .fill)
-                .ignoresSafeArea()
                 .blur(radius: isImageFocused ? 10 : 0)
                 
                 
+                // ✅ Dark overlay BEFORE image (No change)
                 if isImageFocused {
                     Color.black.opacity(0.6)
                         .ignoresSafeArea()
@@ -115,16 +116,48 @@ struct PlayingView: View {
                 }
                 
                 VStack {
+                    // FUSED: This button now calls the robust toggleCameraSelection()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            gameViewModel.cameraViewModel.toggleCameraSelection()
+                        }) {
+                            Image(systemName: "arrow.triangle.2.circlepath.camera")
+                                .font(.system(size: 24))
+                                .foregroundStyle(.black)
+                                .padding(12)
+                                .background(Color.white.opacity(0.7))
+                                .clipShape(Circle())
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.top, 20)
+                    }
+                    .opacity(isImageFocused ? 0 : 1)
+                    
                     Spacer()
+                    
+                    // FUSED: This text now reads from the new ActionPrediction model
+                    Text(gameViewModel.poseViewModel.prediction.confidenceString ?? gameViewModel.poseViewModel.prediction.label)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundStyle(gameViewModel.poseViewModel.prediction.isModelLabel ? .green : .white)
+                        .padding(10)
+                        .background(Color.black.opacity(0.5))
+                        .cornerRadius(10)
+                        .opacity(isImageFocused ? 0 : 1)
+                        .animation(.easeInOut, value: gameViewModel.poseViewModel.prediction.label)
+                    
+                    
                     ZStack {
+                        // FUSED: This button now calls the fused endGame()
                         Button(action: gameViewModel.endGame) {
                             ZStack {
                                 Circle()
-                                    .stroke(.wpGreenYellow, lineWidth: 3)
+                                    .stroke(Color.green, lineWidth: 3) // Placeholder
                                     .frame(width: 70, height: 70)
                                 
                                 Circle()
-                                    .fill(.wpGreenYellow)
+                                    .fill(Color.green) // Placeholder
                                     .frame(width: 55, height: 55)
                             }
                         }
@@ -133,7 +166,7 @@ struct PlayingView: View {
                         HStack {
                             Spacer()
                             
-                            
+                            // No change to this UI logic
                             Image(gameViewModel.referencePoseImageName)
                                 .resizable()
                                 .scaledToFit()
@@ -157,51 +190,48 @@ struct PlayingView: View {
                     .padding(.bottom, 40)
                     .padding(.horizontal, 24)
                 }
-                .ignoresSafeArea()
             }
-        }
-        // REMOVED: .onAppear { ...startOrientationUpdates() }
-        // This is now handled automatically by setupCamera()
-        .onDisappear {
-            gameViewModel.cameraViewModel.stopSession()
+            .onAppear {
+                // FUSED: This now calls the robust orientation update
+                gameViewModel.cameraViewModel.updateDeviceOrientation()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+                // FUSED: This now calls the robust orientation update
+                gameViewModel.cameraViewModel.updateDeviceOrientation()
+            }
         }
     }
 }
 
-// MARK: - WinContent
-struct WinContent: View {
-    let score: Double
-    let FrameUIImage: UIImage?
-    let referencePoseImageName: String
-    var namespace: Namespace.ID
+// MARK: - EndSubView
+
+struct EndView: View {
+    @Bindable var gameViewModel: GameViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    // FUSED: Reads score from the fused view model
+    var isPerfect: Bool {
+        gameViewModel.finalScore >= 0.8
+    }
     
     var body: some View {
-        VStack(spacing: 24) {
-            if let uiImage = FrameUIImage {
-                ZStack(alignment: .bottomTrailing) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 298)
-                        .cornerRadius(20)
-                    
-                    Image(referencePoseImageName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 120)
-                        .cornerRadius(10)
-                        .padding(8)
-                        .matchedGeometryEffect(id: "refImage", in: namespace)
-                }
-            } else {
-                Color.black
-                    .frame(width: 298, height: 400)
-                    .cornerRadius(20)
-            }
+        ZStack {
+            Color.black.ignoresSafeArea() // Placeholder
             
-            WinCard(score: score)
+            ContentLayer(
+                isPerfect: isPerfect,
+                score: gameViewModel.finalScore,
+                restartAction: gameViewModel.restartGame,
+                FrameImage: gameViewModel.finalImage
+            )
         }
-        .padding(24)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Exit") { dismiss() }
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 
@@ -209,23 +239,19 @@ struct WinContent: View {
 private struct ContentLayer: View {
     let isPerfect: Bool
     let score: Double
-    let restartAction: () async -> Void
-    let FrameUIImage: UIImage?
-    let referencePoseImageName: String
-    var namespace: Namespace.ID
+    let restartAction: () -> Void
+    let FrameImage : Image?
     
     var body: some View {
         VStack {
             Spacer()
             
             if isPerfect {
-                WinContent(
-                    score: score,
-                    FrameUIImage: FrameUIImage,
-                    referencePoseImageName: referencePoseImageName,
-                    namespace: namespace
-                )
+                
+                winContent(score: score, FrameImage: FrameImage)
+                
             } else {
+                // Uses the Card from Cards.swift
                 AlmostCard(score: score, restartAction: restartAction)
             }
             
@@ -234,195 +260,28 @@ private struct ContentLayer: View {
     }
 }
 
-// MARK: - EndSubView
-struct EndView: View {
-    @Bindable var gameViewModel: GameViewModel
-    @Environment(\.dismiss) private var dismiss
-    var namespace: Namespace.ID
-    
-    @Environment(\.displayScale) private var displayScale
 
-    @State private var showShareSheet = false
-    @State private var showExportProgress = false
+struct winContent : View {
     
-    // Local state to "snapshot" the score and prevent 0% flash
-    @State private var scoreToDisplay: Double = 0.0
-    @State private var uiImageToDisplay: UIImage? = nil
-    @State private var referenceImageToDisplay: String = ""
-    
-    var isPerfect: Bool {
-        scoreToDisplay >= 0.8
-    }
-    
+    let score : Double
+    let FrameImage : Image?
     var body: some View {
-        ZStack {
-            Color.mainBg.ignoresSafeArea()
+        
+        VStack(spacing: 24){
             
-            ContentLayer(
-                isPerfect: isPerfect,
-                score: scoreToDisplay,
-                restartAction: gameViewModel.restartGame,
-                FrameUIImage: uiImageToDisplay,
-                referencePoseImageName: referenceImageToDisplay,
-                namespace: namespace
-            )
-            
-            if showExportProgress {
-                ExportProgressView(
-                    isShowing: $showExportProgress,
-                    progress: gameViewModel.exportProgress,
-                    isComplete: gameViewModel.isExportComplete
-                )
-                .transition(.opacity)
-            }
-        }
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Exit") {
-                    gameViewModel.resetToStart()
-                    dismiss()
-                }
+            if let FrameImage {
+                FrameImage
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 298)
+                    .cornerRadius(16) // Added corner radius
+            } else {
+                Color.secondary.frame(width: 298, height: 298 * (4/3)) // Placeholder
             }
             
-            if isPerfect {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        Task {
-                            showExportProgress = true
-                            await gameViewModel.prepareShareImage(scale: displayScale)
-                            showExportProgress = false
-                            showShareSheet = true
-                        }
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.white)
-                    }
-                }
-            }
+            // Uses the Card from Cards.swift
+            WinCard(score: score)
         }
-        .sheet(isPresented: $showShareSheet) {
-            if let imageURL = gameViewModel.shareImageURL {
-                ActivityViewController(imageURL: imageURL)
-            }
-        }
-        .onAppear {
-            self.scoreToDisplay = gameViewModel.finalScore
-            self.uiImageToDisplay = gameViewModel.finalUIImage
-            self.referenceImageToDisplay = gameViewModel.referencePoseImageName
-        }
+        .padding(24)
     }
-}
-
-// MARK: - Activity View Controller (Share Sheet)
-struct ActivityViewController: UIViewControllerRepresentable {
-    var imageURL: URL
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: [imageURL], applicationActivities: nil)
-        return controller
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-// MARK: - Placeholder Export Progress View
-struct ExportProgressView: View {
-    @Binding var isShowing: Bool
-    var progress: Double
-    var isComplete: Bool
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.7)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                if isComplete {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.green)
-                    Text("Ready!")
-                        .font(.title2).bold()
-                        .foregroundStyle(.white)
-                } else {
-                    ProgressView(value: progress)
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(2)
-                    Text("Preparing Image...")
-                        .font(.title2).bold()
-                        .foregroundStyle(.white)
-                        .padding(.top, 20)
-                }
-            }
-            .padding(40)
-            .background(Color.black.opacity(0.8))
-            .cornerRadius(20)
-        }
-    }
-}
-
-// MARK: - Previews
-#Preview("PoseGameView") {
-    PoseGameView()
-}
-
-#Preview("StartView") {
-    @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
-    
-    StartView(gameViewModel: mockViewModel, namespace: namespace)
-}
-
-#Preview("WinContent") {
-    @Previewable @Namespace var namespace
-    
-    WinContent(
-        score: 0.85,
-        FrameUIImage: nil,
-        referencePoseImageName: "defaultPose",
-        namespace: namespace
-    )
-}
-
-#Preview("EndView - Perfect Score") {
-    @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
-    
-    EndView(gameViewModel: mockViewModel, namespace: namespace)
-        .onAppear {
-            mockViewModel.finalScore = 0.85
-            mockViewModel.finalUIImage = nil
-        }
-}
-
-#Preview("EndView - Almost") {
-    @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
-    
-    EndView(gameViewModel: mockViewModel, namespace: namespace)
-        .onAppear {
-            mockViewModel.finalScore = 0.65
-            mockViewModel.finalUIImage = nil
-        }
-}
-
-#Preview("ExportProgressView - Loading") {
-    @Previewable @State var isShowing = true
-    
-    ExportProgressView(
-        isShowing: $isShowing,
-        progress: 0.6,
-        isComplete: false
-    )
-}
-
-#Preview("ExportProgressView - Complete") {
-    @Previewable @State var isShowing = true
-    
-    ExportProgressView(
-        isShowing: $isShowing,
-        progress: 1.0,
-        isComplete: true
-    )
 }

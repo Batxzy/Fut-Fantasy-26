@@ -4,6 +4,7 @@
 //
 //  Created by Jose julian Lopez on 07/11/25.
 //
+
 import SwiftUI
 import Vision
 import AVFoundation
@@ -19,204 +20,133 @@ enum GameState {
 
 @Observable
 class GameViewModel {
-    var cameraViewModel = CameraViewModel_1()
-    var poseViewModel = PoseEstimationViewModel_1()
+    // FUSED: Use the new robust ViewModels
+    var cameraViewModel = CameraViewModel()
+    var poseViewModel = PoseEstimationViewModel()
     
     var gameState: GameState = .start
     
-    var finalUIImage: UIImage?
+    var finalImage: Image?
     var finalScore: Double = 0.0
     
-    var referencePoseImageName: String = "Messi Celebration Pointing Up"
-    
-    var exportProgress: Double = 0.0
-    var isExportComplete: Bool = false
-    var shareImageURL: URL?
+    var referencePoseImageName: String = "Messi Celebration Pointing Up" // No change
     
     init() {
+        // FUSED: Wire up the camera output to the pose processor
         cameraViewModel.delegate = poseViewModel
     }
     
+    @MainActor
     func startGame() async {
         print("Starting game...")
         
         do {
+            // 1. Load the ML Model
             try await poseViewModel.loadModelAsync()
             
-            await cameraViewModel.checkPermission()
+            // 2. Reset scores
+            poseViewModel.resetPrediction()
             
-            await MainActor.run {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    gameState = .playing
-                }
+            // 3. Start the camera session
+            // This now handles permissions internally
+            await cameraViewModel.startSession()
+            
+            // 4. Update UI state
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                gameState = .playing
             }
             
         } catch {
-            print("❌ FAILED TO START GAME: Could not load Core ML model.")
+            // Handle the error, e.g., show an alert to the user
+            print("❌ FAILED TO START GAME: \(error.localizedDescription)")
         }
     }
     
+    @MainActor
     func endGame() {
         print("Ending game...")
+        
+        // 1. Stop the camera
         cameraViewModel.stopSession()
         
-        self.finalScore = poseViewModel.messiConfidence
-        
-        if let buffer = poseViewModel.lastSampleBuffer {
-            self.finalUIImage = uiImageFromSampleBuffer(buffer)
+        // 2. Get the final score from the pose view model
+        // We check if it's a model label before assigning
+        if poseViewModel.prediction.isModelLabel {
+            self.finalScore = poseViewModel.prediction.confidence
+        } else {
+            self.finalScore = 0.0 // Or handle as "No Pose", etc.
         }
         
+        // 3. Get the last captured image
+        if let buffer = poseViewModel.lastSampleBuffer {
+            self.finalImage = imageFromSampleBuffer(buffer)
+        }
+        
+        // 4. Update UI state
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             gameState = .end
         }
     }
     
-    func restartGame() async {
-        print("Restarting game...")
-        
-        self.finalUIImage = nil
-        self.finalScore = 0.0
-        self.shareImageURL = nil
-        self.exportProgress = 0.0
-        self.isExportComplete = false
-        
-        poseViewModel.reset()
-        
-        do {
-            try await poseViewModel.loadModelAsync()
-            
-            await cameraViewModel.checkPermission()
-            
-            await MainActor.run {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    gameState = .playing
-                }
-            }
-        } catch {
-            print("❌ FAILED TO RESTART GAME. Going to StartView.")
-            await MainActor.run {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    gameState = .start
-                }
-            }
-        }
-    }
-    
-    func resetToStart() {
-        print("Resetting game to start...")
-        
-        cameraViewModel.stopSession()
-
-        self.finalUIImage = nil
-        self.finalScore = 0.0
-        self.shareImageURL = nil
-        self.exportProgress = 0.0
-        self.isExportComplete = false
-        
-        poseViewModel.reset()
-        
-        DispatchQueue.main.async {
-            self.gameState = .start
-        }
-    }
-    
     @MainActor
-    func prepareShareImage(scale: CGFloat) async {
-        self.exportProgress = 0.0
-        self.isExportComplete = false
-        self.shareImageURL = nil
+    func restartGame() {
+        print("Restarting game...")
+        self.finalImage = nil
+        self.finalScore = 0.0
         
-        await MainActor.run { self.exportProgress = 0.2 }
+        // Reset the pose processor's prediction
+        poseViewModel.resetPrediction()
         
-        let viewToRender = ShareImageView(
-            frameUIImage: self.finalUIImage,
-            referencePoseImageName: self.referencePoseImageName
-        )
-        
-        let renderer = ImageRenderer(content: viewToRender)
-        
-        // Use the context-aware scale
-        renderer.scale = scale
-        
-        guard let uiImage = renderer.uiImage else {
-            print("❌ Failed to render share image")
-            return
-        }
-        
-        await MainActor.run { self.exportProgress = 0.6 }
-        
-        // Use lossless PNG data for high quality
-        guard let data = uiImage.pngData() else {
-            print("❌ Failed to get PNG data from rendered image")
-            return
-        }
-        
-        let tempURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("png")
-        
-        do {
-            try data.write(to: tempURL)
-            self.shareImageURL = tempURL
-            await MainActor.run { self.exportProgress = 1.0 }
-            try await Task.sleep(nanoseconds: 300_000_000)
-            await MainActor.run { self.isExportComplete = true }
-            try await Task.sleep(nanoseconds: 500_000_000)
-        } catch {
-            print("❌ Failed to write image data to temp URL: \(error)")
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            gameState = .start
         }
     }
     
-    private func uiImageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
+    // This helper function remains the same
+    private func imageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> Image? {
+        // --- FIX 2: Corrected truncated line ---
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
         
         let ciImage = CIImage(cvPixelBuffer: imageBuffer)
-        let context = CIContext()
         
+        // --- DEPRECATION FIX ---
+        // Correctly handle image rotation from camera's rotation angle
+        let rotationAngle = cameraViewModel.videoRotationAngle
+        let uiOrientation: UIImage.Orientation
+        
+        switch rotationAngle {
+        case 90.0:
+            uiOrientation = .right
+        case 270.0:
+            uiOrientation = .left
+        case 0.0:
+            uiOrientation = .up
+        case 180.0:
+            uiOrientation = .down
+        default:
+            uiOrientation = .right // Default to portrait
+        }
+
+        let context = CIContext()
         guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
         
-        // Use scale 1.0 for full resolution
-        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
+        // Apply the correct orientation
+        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: uiOrientation)
         
-        return uiImage
-    }
-    
-    
-    // This is the private view used for rendering the shareable image
-    private struct ShareImageView: View {
-        let frameUIImage: UIImage?
-        let referencePoseImageName: String
-        @Namespace private var shareNamespace
-        
-        var body: some View {
-            ZStack {
-                Color.mainBg.ignoresSafeArea()
-                
-                VStack {
-                    if let uiImage = frameUIImage {
-                        ZStack(alignment: .bottomTrailing) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 298)
-                                .cornerRadius(20)
-                            
-                            Image(referencePoseImageName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 120)
-                                .cornerRadius(10)
-                                .padding(8)
-                                .matchedGeometryEffect(id: "refImage", in: shareNamespace)
-                        }
-                    } else {
-                        Color.black
-                            .frame(width: 298, height: 400)
-                            .cornerRadius(20)
-                    }
-                }
-                .padding(24)
-            }
+        // FUSED: Handle mirroring for front camera
+        if cameraViewModel.isUsingFrontCamera {
+            // Flip the image horizontally
+            UIGraphicsBeginImageContextWithOptions(uiImage.size, false, uiImage.scale)
+            let context = UIGraphicsGetCurrentContext()!
+            context.translateBy(x: uiImage.size.width, y: 0)
+            context.scaleBy(x: -1.0, y: 1.0)
+            uiImage.draw(in: CGRect(origin: .zero, size: uiImage.size))
+            let flippedImage = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            
+            return Image(uiImage: flippedImage ?? uiImage)
         }
+        
+        return Image(uiImage: uiImage)
     }
 }
