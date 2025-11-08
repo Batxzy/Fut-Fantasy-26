@@ -4,6 +4,7 @@
 //
 //  Created by Jose julian Lopez on 07/11/25.
 //
+
 import AVFoundation
 import SwiftUI
 
@@ -16,6 +17,18 @@ class CameraViewModel_1 {
     weak var delegate: AVCaptureVideoDataOutputSampleBufferDelegate?
     
     private var isConfigured = false
+    
+    // --- New properties for iOS 17+ orientation ---
+    private var videoDevice: AVCaptureDevice?
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservation: NSKeyValueObservation?
+    
+    /// The correct rotation angle for the PREVIEW layer.
+    var previewRotationAngle: CGFloat = 0.0
+    // ---
+    
+    
+    // REMOVED: All old UIDevice orientation logic (start/stop/update)
     
     func checkPermission() async {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -51,6 +64,8 @@ class CameraViewModel_1 {
                     return
                 }
                 
+                self.videoDevice = videoDevice // Store the device
+                
                 if self.session.canAddInput(videoInput) { self.session.addInput(videoInput) }
                 
                 self.videoDataOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
@@ -59,9 +74,22 @@ class CameraViewModel_1 {
                 
                 if self.session.canAddOutput(self.videoDataOutput) { self.session.addOutput(self.videoDataOutput) }
                 
-                if let connection = self.videoDataOutput.connection(with: .video) {
-                    connection.videoRotationAngle = 90.0
+                // --- Start iOS 17+ rotation handling ---
+                self.rotationCoordinator = AVCaptureDevice.RotationCoordinator(device: videoDevice, previewLayer: nil)
+                
+                // Set the initial preview rotation
+                DispatchQueue.main.async {
+                    self.previewRotationAngle = self.rotationCoordinator?.videoRotationAngleForHorizonLevelPreview ?? 0.0
                 }
+                
+                // Observe changes to the PREVIEW angle
+                self.rotationObservation = self.rotationCoordinator?.observe(\.videoRotationAngleForHorizonLevelPreview, options: .new) { [weak self] _, change in
+                    guard let newAngle = change.newValue else { return }
+                    DispatchQueue.main.async {
+                        self?.previewRotationAngle = newAngle
+                    }
+                }
+                // --- End rotation handling ---
                 
                 self.session.commitConfiguration()
                 self.isConfigured = true
@@ -73,6 +101,12 @@ class CameraViewModel_1 {
     }
     
     func stopSession() {
+        // --- Stop KVO observation ---
+        rotationObservation?.invalidate()
+        rotationObservation = nil
+        rotationCoordinator = nil
+        videoDevice = nil
+        
         sessionQueue.async {
             if self.session.isRunning {
                 self.session.stopRunning()

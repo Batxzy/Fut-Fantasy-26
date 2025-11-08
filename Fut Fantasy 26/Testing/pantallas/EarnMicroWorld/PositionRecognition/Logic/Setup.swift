@@ -1,18 +1,25 @@
 
+//
+//  Setup.swift
+//  Fut Fantasy 26
+//
+//  Created by Jose julian Lopez on 07/11/25.
+//
+
 import SwiftUI
 import Vision
 import AVFoundation
 import Observation
 import CoreML
 
-// MARK: - 1. Re-usable Models (From your files)
+// MARK: - 1. Re-usable Models
 struct BodyConnection_1: Identifiable {
     let id = UUID()
     let from: HumanBodyPoseObservation.JointName
     let to: HumanBodyPoseObservation.JointName
 }
 
-// MARK: - 2. View Models (Updated)
+// MARK: - 2. Pose Estimation View Model
 
 @Observable
 class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -36,6 +43,7 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
         setupBodyConnections()
     }
     
+    /// Resets the pose window and confidence scores.
     func reset() {
             self.detectedBodyParts = [:]
             self.poseWindow = []
@@ -50,7 +58,7 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
             print("✅ Model loaded successfully")
         } catch {
             print("❌ Error loading Core ML model: \(error.localizedDescription)")
-            throw error // Re-throw the error so GameViewModel knows it failed
+            throw error
         }
     }
     
@@ -58,8 +66,12 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
         
         self.lastSampleBuffer = sampleBuffer
         
+        // Get the orientation from the connection's rotation angle
+        let orientation = connection.videoRotationAngle.toCGImagePropertyOrientation()
+        
         Task {
-            if let detectedPoints = await processFrame(sampleBuffer) {
+            // Pass the correct orientation to processFrame
+            if let detectedPoints = await processFrame(sampleBuffer, orientation: orientation) {
                 DispatchQueue.main.async {
                     self.detectedBodyParts = detectedPoints
                 }
@@ -71,12 +83,14 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
         }
     }
     
-    func processFrame(_ sampleBuffer: CMSampleBuffer) async -> [HumanBodyPoseObservation.JointName: CGPoint]? {
+    func processFrame(_ sampleBuffer: CMSampleBuffer, orientation: CGImagePropertyOrientation) async -> [HumanBodyPoseObservation.JointName: CGPoint]? {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
         
         let request = DetectHumanBodyPoseRequest()
         do {
-            let results = try await request.perform(on: imageBuffer, orientation: .up)
+            // Use the passed-in orientation
+            let results = try await request.perform(on: imageBuffer, orientation: orientation)
+            
             if let observation = results.first {
 
                 guard let keypoints = createKeypointsArray(from: observation) else {
@@ -180,6 +194,7 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
             let jointsInGroup = observation.allJoints(in: groupName)
             for (jointName, joint) in jointsInGroup {
                 if joint.confidence > 0.5 {
+                    // Coordinates from Vision are normalized [0,1] and flipped
                     let point = joint.location.verticallyFlipped().cgPoint
                     detectedPoints[jointName] = point
                 }
@@ -189,4 +204,21 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
     }
 }
 
-
+// MARK: - 3. Extensions
+extension CGFloat {
+    /// Maps a videoRotationAngle (0, 90, 180, 270) to a CGImagePropertyOrientation.
+    func toCGImagePropertyOrientation() -> CGImagePropertyOrientation {
+        switch self {
+        case 0:
+            return .up
+        case 90:
+            return .right
+        case 180:
+            return .down
+        case 270:
+            return .left
+        default:
+            return .up
+        }
+    }
+}

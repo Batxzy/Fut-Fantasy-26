@@ -4,13 +4,6 @@
 //
 //  Created by Jose julian Lopez on 07/11/25.
 //
-
-//
-//  GameViewModel.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 07/11/25.
-//
 import SwiftUI
 import Vision
 import AVFoundation
@@ -50,7 +43,6 @@ class GameViewModel {
         do {
             try await poseViewModel.loadModelAsync()
             
-            
             await cameraViewModel.checkPermission()
             
             await MainActor.run {
@@ -66,7 +58,7 @@ class GameViewModel {
     
     func endGame() {
         print("Ending game...")
-        cameraViewModel.stopSession() // This correctly stops the camera
+        cameraViewModel.stopSession()
         
         self.finalScore = poseViewModel.messiConfidence
         
@@ -88,7 +80,7 @@ class GameViewModel {
         self.exportProgress = 0.0
         self.isExportComplete = false
         
-        poseViewModel.reset() // <-- Call the new reset function
+        poseViewModel.reset()
         
         do {
             try await poseViewModel.loadModelAsync()
@@ -121,7 +113,6 @@ class GameViewModel {
         self.exportProgress = 0.0
         self.isExportComplete = false
         
-      
         poseViewModel.reset()
         
         DispatchQueue.main.async {
@@ -130,98 +121,102 @@ class GameViewModel {
     }
     
     @MainActor
-        func prepareShareImage(scale: CGFloat) async {
-            self.exportProgress = 0.0
-            self.isExportComplete = false
-            self.shareImageURL = nil
-            
-            await MainActor.run { self.exportProgress = 0.2 }
-            
-            let viewToRender = ShareImageView(
-                frameUIImage: self.finalUIImage,
-                referencePoseImageName: self.referencePoseImageName
-            )
-            
-            let renderer = ImageRenderer(content: viewToRender)
-            
-            renderer.scale = scale
-            
-            guard let uiImage = renderer.uiImage else {
-                print("❌ Failed to render share image")
-                return
-            }
-            
-            await MainActor.run { self.exportProgress = 0.6 }
-            
-            guard let data = uiImage.pngData() else {
-                print("❌ Failed to get PNG data from rendered image")
-                return
-            }
-            
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension("png")
-            
-            do {
-                try data.write(to: tempURL)
-                self.shareImageURL = tempURL
-                await MainActor.run { self.exportProgress = 1.0 }
-                try await Task.sleep(nanoseconds: 300_000_000)
-                await MainActor.run { self.isExportComplete = true }
-                try await Task.sleep(nanoseconds: 500_000_000)
-            } catch {
-                print("❌ Failed to write image data to temp URL: \(error)")
-            }
+    func prepareShareImage(scale: CGFloat) async {
+        self.exportProgress = 0.0
+        self.isExportComplete = false
+        self.shareImageURL = nil
+        
+        await MainActor.run { self.exportProgress = 0.2 }
+        
+        let viewToRender = ShareImageView(
+            frameUIImage: self.finalUIImage,
+            referencePoseImageName: self.referencePoseImageName
+        )
+        
+        let renderer = ImageRenderer(content: viewToRender)
+        
+        // Use the context-aware scale
+        renderer.scale = scale
+        
+        guard let uiImage = renderer.uiImage else {
+            print("❌ Failed to render share image")
+            return
         }
         
-        private func uiImageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
-            guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
-            
-            let ciImage = CIImage(cvPixelBuffer: imageBuffer)
-            let context = CIContext()
-            
-            guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
-            
-            let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
-            
-            return uiImage
+        await MainActor.run { self.exportProgress = 0.6 }
+        
+        // Use lossless PNG data for high quality
+        guard let data = uiImage.pngData() else {
+            print("❌ Failed to get PNG data from rendered image")
+            return
         }
         
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("png")
         
-        private struct ShareImageView: View {
-            let frameUIImage: UIImage?
-            let referencePoseImageName: String
-            @Namespace private var shareNamespace
-            
-            var body: some View {
-                ZStack {
-                    Color.mainBg.ignoresSafeArea()
-                    
-                    VStack {
-                        if let uiImage = frameUIImage {
-                            ZStack(alignment: .bottomTrailing) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 298)
-                                    .cornerRadius(20)
-                                
-                                Image(referencePoseImageName)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(height: 120)
-                                    .cornerRadius(10)
-                                    .padding(8)
-                                    .matchedGeometryEffect(id: "refImage", in: shareNamespace)
-                            }
-                        } else {
-                            Color.black
-                                .frame(width: 298, height: 400)
+        do {
+            try data.write(to: tempURL)
+            self.shareImageURL = tempURL
+            await MainActor.run { self.exportProgress = 1.0 }
+            try await Task.sleep(nanoseconds: 300_000_000)
+            await MainActor.run { self.isExportComplete = true }
+            try await Task.sleep(nanoseconds: 500_000_000)
+        } catch {
+            print("❌ Failed to write image data to temp URL: \(error)")
+        }
+    }
+    
+    private func uiImageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
+        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
+        
+        let ciImage = CIImage(cvPixelBuffer: imageBuffer)
+        let context = CIContext()
+        
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+        
+        // Use scale 1.0 for full resolution
+        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
+        
+        return uiImage
+    }
+    
+    
+    // This is the private view used for rendering the shareable image
+    private struct ShareImageView: View {
+        let frameUIImage: UIImage?
+        let referencePoseImageName: String
+        @Namespace private var shareNamespace
+        
+        var body: some View {
+            ZStack {
+                Color.mainBg.ignoresSafeArea()
+                
+                VStack {
+                    if let uiImage = frameUIImage {
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 298)
                                 .cornerRadius(20)
+                            
+                            Image(referencePoseImageName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 120)
+                                .cornerRadius(10)
+                                .padding(8)
+                                .matchedGeometryEffect(id: "refImage", in: shareNamespace)
                         }
+                    } else {
+                        Color.black
+                            .frame(width: 298, height: 400)
+                            .cornerRadius(20)
                     }
-                    .padding(24)
                 }
+                .padding(24)
             }
         }
     }
+}
