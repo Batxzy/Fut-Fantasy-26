@@ -90,20 +90,15 @@ struct PlayingView: View {
             ZStack {
                 CameraPreviewView_1(
                     session: gameViewModel.cameraViewModel.session,
-                    // MODIFIED: Pass the new CGFloat property
-                    rotationAngle: gameViewModel.cameraViewModel.previewRotationAngle
+                    rotation: 90.0
                 )
                 .ignoresSafeArea()
                 .blur(radius: isImageFocused ? 10 : 0)
-                
-                let videoAspectRatio = 1080.0 / 1920.0
                 
                 PoseOverlayView_1(
                     bodyParts: gameViewModel.poseViewModel.detectedBodyParts,
                     connections: gameViewModel.poseViewModel.bodyConnections
                 )
-                .aspectRatio(videoAspectRatio, contentMode: .fill)
-                .ignoresSafeArea()
                 .blur(radius: isImageFocused ? 10 : 0)
                 
                 
@@ -157,13 +152,7 @@ struct PlayingView: View {
                     .padding(.bottom, 40)
                     .padding(.horizontal, 24)
                 }
-                .ignoresSafeArea()
             }
-        }
-        // REMOVED: .onAppear { ...startOrientationUpdates() }
-        // This is now handled automatically by setupCamera()
-        .onDisappear {
-            gameViewModel.cameraViewModel.stopSession()
         }
     }
 }
@@ -240,12 +229,12 @@ struct EndView: View {
     @Environment(\.dismiss) private var dismiss
     var namespace: Namespace.ID
     
-    @Environment(\.displayScale) private var displayScale
+    // --- ADD THIS LINE ---
+    @Environment(\.displayScale) private var displayScale // Get scale from the view's context
 
     @State private var showShareSheet = false
     @State private var showExportProgress = false
     
-    // Local state to "snapshot" the score and prevent 0% flash
     @State private var scoreToDisplay: Double = 0.0
     @State private var uiImageToDisplay: UIImage? = nil
     @State private var referenceImageToDisplay: String = ""
@@ -314,6 +303,7 @@ struct EndView: View {
     }
 }
 
+
 // MARK: - Activity View Controller (Share Sheet)
 struct ActivityViewController: UIViewControllerRepresentable {
     var imageURL: URL
@@ -362,7 +352,6 @@ struct ExportProgressView: View {
     }
 }
 
-// MARK: - Previews
 #Preview("PoseGameView") {
     PoseGameView()
 }
