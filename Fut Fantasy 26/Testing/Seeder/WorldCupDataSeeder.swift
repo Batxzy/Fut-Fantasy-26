@@ -279,71 +279,91 @@ class WorldCupDataSeeder {
     }
 
 
+   
+    
     // MARK: - Players
     
-    static func seedPlayers(context: ModelContext) {
-        let playerData: [(name: String, firstName: String, lastName: String, pos: PlayerPosition, nation: Nation, shirt: Int, price: Double)] = [
-            // Argentina
-            ("E. Martínez", "Emiliano", "Martínez", .goalkeeper, .argentina, 23, 5.5),
-            ("C. Romero", "Cristian", "Romero", .defender, .argentina, 13, 5.0),
-            ("N. Otamendi", "Nicolás", "Otamendi", .defender, .argentina, 19, 4.5),
-            ("L. Martínez", "Lisandro", "Martínez", .defender, .argentina, 25, 5.0),
-            ("R. De Paul", "Rodrigo", "De Paul", .midfielder, .argentina, 7, 6.0),
-            ("E. Fernández", "Enzo", "Fernández", .midfielder, .argentina, 24, 6.5),
-            ("A. Mac Allister", "Alexis", "Mac Allister", .midfielder, .argentina, 20, 6.5),
-            ("Á. Di María", "Ángel", "Di María", .midfielder, .argentina, 11, 7.5),
-            ("L. Messi", "Lionel", "Messi", .forward, .argentina, 10, 11.5),
-            ("J. Álvarez", "Julián", "Álvarez", .forward, .argentina, 9, 8.5),
-            ("L. Martínez", "Lautaro", "Martínez", .forward, .argentina, 22, 8.0),
-            // Brazil
-            ("Alisson", "Alisson", "Becker", .goalkeeper, .brazil, 1, 5.5),
-            ("Marquinhos", "Marcos", "Aoás Corrêa", .defender, .brazil, 4, 5.5),
-            ("Éder Militão", "Éder", "Militão", .defender, .brazil, 3, 5.0),
-            ("Danilo", "Danilo", "Luiz", .defender, .brazil, 2, 4.5),
-            ("Casemiro", "Carlos", "Casemiro", .midfielder, .brazil, 5, 6.5),
-            ("Lucas Paquetá", "Lucas", "Paquetá", .midfielder, .brazil, 8, 6.0),
-            ("Bruno Guimarães", "Bruno", "Guimarães", .midfielder, .brazil, 18, 6.0),
-            ("Raphinha", "Raphael", "Dias Belloli", .midfielder, .brazil, 11, 7.0),
-            ("Vinícius Jr.", "Vinícius", "Júnior", .forward, .brazil, 7, 10.5),
-            ("Neymar Jr.", "Neymar", "da Silva Santos", .forward, .brazil, 10, 11.0),
-            ("Richarlison", "Richarlison", "de Andrade", .forward, .brazil, 9, 8.0),
-            // England
-            ("J. Pickford", "Jordan", "Pickford", .goalkeeper, .england, 1, 5.0),
-            ("K. Walker", "Kyle", "Walker", .defender, .england, 2, 5.5),
-            ("J. Stones", "John", "Stones", .defender, .england, 5, 5.5),
-            ("H. Maguire", "Harry", "Maguire", .defender, .england, 6, 4.5),
-            ("D. Rice", "Declan", "Rice", .midfielder, .england, 4, 6.5),
-            ("J. Bellingham", "Jude", "Bellingham", .midfielder, .england, 22, 8.5),
-            ("P. Foden", "Phil", "Foden", .midfielder, .england, 11, 8.0),
-            ("B. Saka", "Bukayo", "Saka", .midfielder, .england, 7, 8.0),
-            ("H. Kane", "Harry", "Kane", .forward, .england, 9, 11.0),
-            ("R. Sterling", "Raheem", "Sterling", .forward, .england, 10, 7.5),
-            ("M. Rashford", "Marcus", "Rashford", .forward, .england, 19, 7.5),
-            // France
-            ("M. Maignan", "Mike", "Maignan", .goalkeeper, .france, 16, 5.0),
-            ("T. Hernández", "Theo", "Hernández", .defender, .france, 22, 5.5),
-            ("A. Tchouaméni", "Aurélien", "Tchouaméni", .midfielder, .france, 8, 7.0),
-            ("A. Griezmann", "Antoine", "Griezmann", .midfielder, .france, 7, 9.0),
-            ("K. Mbappé", "Kylian", "Mbappé", .forward, .france, 10, 12.0),
-            // Germany
-            ("M. Neuer", "Manuel", "Neuer", .goalkeeper, .germany, 1, 5.0),
-            ("A. Rüdiger", "Antonio", "Rüdiger", .defender, .germany, 2, 5.0),
-            ("J. Kimmich", "Joshua", "Kimmich", .midfielder, .germany, 6, 7.5),
-            ("İ. Gündoğan", "İlkay", "Gündoğan", .midfielder, .germany, 21, 7.0),
-            ("K. Havertz", "Kai", "Havertz", .forward, .germany, 7, 8.0),
+    static nonisolated func getPlayerData() -> [(
+        id: Int,
+        name: String,
+        firstName: String,
+        lastName: String,
+        pos: PlayerPosition,
+        nation: Nation,
+        shirt: Int,
+        price: Double
+    )] {
+        return [
+            // Argentina (IDs 75-84)
+            (75, "E. Martínez", "Emiliano", "Martínez", .goalkeeper, .argentina, 23, 5.5),
+            (76, "C. Romero", "Cristian", "Romero", .defender, .argentina, 13, 5.0),
+            (77, "N. Otamendi", "Nicolás", "Otamendi", .defender, .argentina, 19, 4.5),
+            (78, "L. Martínez", "Lisandro", "Martínez", .defender, .argentina, 25, 5.0),
+            (79, "R. De Paul", "Rodrigo", "De Paul", .midfielder, .argentina, 7, 6.0),
+            (80, "E. Fernández", "Enzo", "Fernández", .midfielder, .argentina, 24, 6.5),
+            (81, "A. Mac Allister", "Alexis", "Mac Allister", .midfielder, .argentina, 20, 6.5),
+            (82, "Á. Di María", "Ángel", "Di María", .midfielder, .argentina, 11, 7.5),
+            (83, "J. Álvarez", "Julián", "Álvarez", .forward, .argentina, 9, 8.5),
+            (84, "L. Martínez", "Lautaro", "Martínez", .forward, .argentina, 22, 8.0),
             
-            // Mexico
-            ("G. Ochoa", "Guillermo", "Ochoa", .goalkeeper, .mexico, 13, 5.0),
-            ("C. Montes", "César", "Montes", .defender, .mexico, 3, 5.0),
-            ("E. Álvarez", "Edson", "Álvarez", .midfielder, .mexico, 4, 6.5),
-            ("H. Lozano", "Hirving", "Lozano", .midfielder, .mexico, 22, 8.0),
-            ("S. Giménez", "Santiago", "Giménez", .forward, .mexico, 11, 8.5),
+            // Brazil (IDs 85-95)
+            (85, "Alisson", "Alisson", "Becker", .goalkeeper, .brazil, 1, 5.5),
+            (86, "Marquinhos", "Marcos", "Aoás Corrêa", .defender, .brazil, 4, 5.5),
+            (87, "Éder Militão", "Éder", "Militão", .defender, .brazil, 3, 5.0),
+            (88, "Danilo", "Danilo", "Luiz", .defender, .brazil, 2, 4.5),
+            (89, "Casemiro", "Carlos", "Casemiro", .midfielder, .brazil, 5, 6.5),
+            (90, "Lucas Paquetá", "Lucas", "Paquetá", .midfielder, .brazil, 8, 6.0),
+            (91, "Bruno Guimarães", "Bruno", "Guimarães", .midfielder, .brazil, 18, 6.0),
+            (92, "Raphinha", "Raphael", "Dias Belloli", .midfielder, .brazil, 11, 7.0),
+            (93, "Vinícius Jr.", "Vinícius", "Júnior", .forward, .brazil, 7, 10.5),
+            (94, "Neymar Jr.", "Neymar", "da Silva Santos", .forward, .brazil, 10, 11.0),
+            (95, "Richarlison", "Richarlison", "de Andrade", .forward, .brazil, 9, 8.0),
+            
+            // England (IDs 96-106)
+            (96, "J. Pickford", "Jordan", "Pickford", .goalkeeper, .england, 1, 5.0),
+            (97, "K. Walker", "Kyle", "Walker", .defender, .england, 2, 5.5),
+            (98, "J. Stones", "John", "Stones", .defender, .england, 5, 5.5),
+            (99, "H. Maguire", "Harry", "Maguire", .defender, .england, 6, 4.5),
+            (100, "D. Rice", "Declan", "Rice", .midfielder, .england, 4, 6.5),
+            (101, "J. Bellingham", "Jude", "Bellingham", .midfielder, .england, 22, 8.5),
+            (102, "P. Foden", "Phil", "Foden", .midfielder, .england, 11, 8.0),
+            (103, "B. Saka", "Bukayo", "Saka", .midfielder, .england, 7, 8.0),
+            (104, "H. Kane", "Harry", "Kane", .forward, .england, 9, 11.0),
+            (105, "R. Sterling", "Raheem", "Sterling", .forward, .england, 10, 7.5),
+            (106, "M. Rashford", "Marcus", "Rashford", .forward, .england, 19, 7.5),
+            
+            // France (IDs 107-111)
+            (107, "M. Maignan", "Mike", "Maignan", .goalkeeper, .france, 16, 5.0),
+            (108, "T. Hernández", "Theo", "Hernández", .defender, .france, 22, 5.5),
+            (109, "A. Tchouaméni", "Aurélien", "Tchouaméni", .midfielder, .france, 8, 7.0),
+            (110, "A. Griezmann", "Antoine", "Griezmann", .midfielder, .france, 7, 9.0),
+            (111, "K. Mbappé", "Kylian", "Mbappé", .forward, .france, 10, 12.0),
+            
+            // Germany (IDs 112-116)
+            (112, "M. Neuer", "Manuel", "Neuer", .goalkeeper, .germany, 1, 5.0),
+            (113, "A. Rüdiger", "Antonio", "Rüdiger", .defender, .germany, 2, 5.0),
+            (114, "J. Kimmich", "Joshua", "Kimmich", .midfielder, .germany, 6, 7.5),
+            (115, "İ. Gündoğan", "İlkay", "Gündoğan", .midfielder, .germany, 21, 7.0),
+            (116, "K. Havertz", "Kai", "Havertz", .forward, .germany, 7, 8.0),
+            
+            // Mexico (IDs 117-121, saltando 118)
+            (117, "C. Montes", "César", "Montes", .defender, .mexico, 3, 5.0),
+            (119, "E. Álvarez", "Edson", "Álvarez", .midfielder, .mexico, 4, 6.5),
+            (120, "H. Lozano", "Hirving", "Lozano", .midfielder, .mexico, 22, 8.0),
+            (121, "S. Giménez", "Santiago", "Giménez", .forward, .mexico, 11, 8.5),
+            
+            // Outliers (Usaremos el ID 10 y 13 como IDs únicos para Messi y Ochoa)
+            (10, "L. Messi", "Lionel", "Messi", .forward, .argentina, 10, 11.5),
+            (13, "G. Ochoa", "Guillermo", "Ochoa", .goalkeeper, .mexico, 13, 5.0)
         ]
+    }
+    
+    static func seedPlayers(context: ModelContext) {
+        let playerData = getPlayerData()
         
-        var playerId = 1
         for player in playerData {
             let newPlayer = Player(
-                id: playerId,
+                id: player.id,
                 name: player.name,
                 firstName: player.firstName,
                 lastName: player.lastName,
@@ -354,7 +374,6 @@ class WorldCupDataSeeder {
                 group: player.nation.group
             )
             context.insert(newPlayer)
-            playerId += 1
         }
     }
     

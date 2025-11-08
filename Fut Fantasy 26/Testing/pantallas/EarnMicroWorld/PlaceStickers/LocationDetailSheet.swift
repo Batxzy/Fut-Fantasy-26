@@ -18,129 +18,129 @@ struct LocationDetailSheet: View {
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                // Circular Apple Maps button
-                Button {
-                    location.mapItem.openInMaps()
-                } label: {
-                    Image(systemName: "map.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                }
-                .glassEffect(.regular.interactive())
-                Spacer()
+        ScrollView {
+            VStack(spacing: 16) {
                 
-                // Dismiss button
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                }
-                .glassEffect(.regular.interactive())
-            }
-            .padding(.horizontal)
-            .debugOutline()
-            
-            VStack (spacing: 13){
-                HStack(spacing: 12){
-                    
-                    Image(systemName:location.imageName)
-                        .font(.system(size: 26))
-                        .foregroundStyle(.black)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(location.mainColor))
-                    
-                    VStack(alignment:.leading ,spacing: 4) {
-                        Text(location.name)
-                            .fontWidth(.condensed)
-                            .font(.system(size: 24))
-                            .fontDesign(.default)
-                            .fontWeight(.medium)
-                            .kerning(0.3)
-                            .foregroundStyle(.white)
+                VStack (spacing: -20){
+                    HStack {
+                        // Circular Apple Maps button
+                        Button {
+                            location.mapItem.openInMaps()
+                        } label: {
+                            Image(systemName: "map.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                        }
+                        .glassEffect(.regular.interactive())
+                        Spacer()
                         
-                        if let locality = location.mapItem.placemark.locality,
-                           let country = location.mapItem.placemark.country {
-                            Text("\(locality), \(country)")
+                        // Dismiss button
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white)
+                                .frame(width: 44, height: 44)
+                        }
+                        .glassEffect(.regular.interactive())
+                    }
+                    .padding(.horizontal)
+                    
+                    VStack (spacing: 13){
+                        HStack(spacing: 12){
+                            
+                            Image(systemName:location.imageName)
+                                .font(.system(size: 26))
+                                .foregroundStyle(.black)
+                                .frame(width: 44, height: 44)
+                                .background(Circle().fill(location.mainColor))
+                            
+                            VStack(alignment:.leading ,spacing: 4) {
+                                Text(location.name)
+                                    .fontWidth(.condensed)
+                                    .font(.system(size: 24))
+                                    .fontDesign(.default)
+                                    .fontWeight(.medium)
+                                    .kerning(0.3)
+                                    .foregroundStyle(.white)
+                                
+                                if let locality = location.mapItem.placemark.locality,
+                                   let country = location.mapItem.placemark.country {
+                                    Text("\(locality), \(country)")
+                                        .fontWidth(.condensed)
+                                        .font(.system(size: 14))
+                                        .fontDesign(.default)
+                                        .fontWeight(.medium)
+                                        .kerning(0.3)
+                                        .foregroundStyle(.white.opacity(0.65))
+                                }
+                            }
+                        }
+                        .frame(alignment: .topLeading)
+                        
+                        
+                        VStack(spacing:2){
+                            EarnPoints(
+                                points: 8000,
+                                textColor: location.mainColor,
+                                iconColor: location.mainColor
+                            )
+                            Text("Reward available")
                                 .fontWidth(.condensed)
-                                .font(.system(size: 14))
+                                .font(.system(size: 11))
                                 .fontDesign(.default)
                                 .fontWeight(.medium)
-                                .kerning(0.3)
+                                .kerning(0)
                                 .foregroundStyle(.white.opacity(0.65))
                         }
                     }
                 }
-                .frame(alignment: .topLeading)
+               
                 
-                
-                VStack(spacing:2){
-                    EarnPoints(
-                        points: 8000,
-                        textColor: location.mainColor,
-                        iconColor: location.mainColor
-                    )
-                    Text("Reward available")
-                        .fontWidth(.condensed)
-                        .font(.system(size: 11))
-                        .fontDesign(.default)
-                        .fontWeight(.bold)
-                        .kerning(0)
-                        .foregroundStyle(.white.opacity(0.65))
-                }
-            }
-            
-            
-            // Custom AR button
-            Button {
-                dismiss()
-                showARView = true
-            } label: {
-                VStack(spacing: 8) {
-                    if isWithinGeofence {
-                        HStack {
-                            Image(systemName: "document.fill")
-                                .foregroundStyle(location.accentColor)
-                            
-                            Text("Lets Paste")
+                // Custom AR button
+                Button {
+                    dismiss()
+                    showARView = true
+                } label: {
+                    VStack(spacing: 8) {
+                        if isWithinGeofence {
+                            HStack {
+                                Image(systemName: "document.fill")
+                                    .foregroundStyle(location.accentColor)
+                                
+                                Text("Lets Paste")
+                                    .font(.headline)
+                                    .foregroundStyle(location.accentColor)
+                            }
+                        } else {
+                            Text("Get closer to unlock")
                                 .font(.headline)
-                                .foregroundStyle(location.accentColor)
+                                .foregroundStyle(.gray)
+                            Text("\(Int(distance - 200))m away from activation")
+                                .font(.caption)
+                                .foregroundStyle(.gray.opacity(0.8))
                         }
-                    } else {
-                        Text("Get closer to unlock")
-                            .font(.headline)
-                            .foregroundStyle(.gray)
-                        Text("\(Int(distance - 200))m away from activation")
-                            .font(.caption)
-                            .foregroundStyle(.gray.opacity(0.8))
                     }
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
+                    )
                 }
-                .padding(.vertical, 16)
-                .padding(.horizontal, 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
-                )
+                .disabled(!isWithinGeofence)
+                .padding(.horizontal)
             }
-            .disabled(!isWithinGeofence)
-            .padding(.horizontal)
-            
-            Spacer()
+            .padding(.top, 16)
         }
-        .padding(.top,16)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .padding(.vertical)
-        .presentationDetents([.fraction(0.3), .medium])
+        .presentationDetents([.height(160),.medium])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        .presentationBackground(.mainBg.opacity(0.6 ))
     }
 }
-
 
 struct EarnPoints: View {
      let points: Int

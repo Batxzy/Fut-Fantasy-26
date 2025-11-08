@@ -113,8 +113,19 @@ final class Player: Hashable {
     // MARK: - Image Generator
     
     static func generatePlayerImageURL(name: String, id: Int) -> String {
-        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "Player"
-        return "https://ui-avatars.com/api/?name=\(encodedName)&size=200&background=random&bold=true&format=png"
+        
+        let playerSeederData = WorldCupDataSeeder.getPlayerData().first {
+            $0.id == id
+        }
+        
+        if let data = playerSeederData {
+            let cleanFirstName = data.firstName.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: ".", with: "")
+            let cleanLastName = data.lastName.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: ".", with: "")
+            
+            return "\(id)_\(cleanFirstName)_\(cleanLastName)"
+        }
+        
+        return "FallbackPlayer"
     }
     
     // MARK: - Computed Properties

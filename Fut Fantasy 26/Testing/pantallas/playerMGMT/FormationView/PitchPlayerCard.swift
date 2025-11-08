@@ -37,21 +37,17 @@ struct PitchPlayerCard: View {
     private var playerCircle: some View {
         ZStack {
             
+            
             Circle()
                 .fill(.white)
                 .frame(width: 65, height: 65)
             
-                // imagen del pais
-                AsyncImage(url: URL(string: player.nationFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                }
-                .frame(width: 32, height: 20)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
+                Image(player.imageURL)
+                            .resizable()
+                            .padding(.top,3)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 65, height: 65)
+                            .clipShape(Circle())
     
         }
         .overlay(
@@ -191,5 +187,5 @@ struct EmptyPlayerSlot: View {
 #Preview("Empty Slot") {
     EmptyPlayerSlot(position: .defender, onTap: {})
         .padding(50)
-        .background(Color.pitchGreenDark) // So you can see the white elements
+        .background(Color.pitchGreenDark)
 }

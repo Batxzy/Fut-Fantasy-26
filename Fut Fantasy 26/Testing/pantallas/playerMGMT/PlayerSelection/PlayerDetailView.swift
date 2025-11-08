@@ -123,15 +123,15 @@ struct PlayerDetailView: View {
     private var playerHeader: some View {
         
         HStack(spacing:10){
-            AsyncImage(url: player.imageURL.isEmpty ? nil : URL(string: player.imageURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle().fill(Color.gray.opacity(0.2))
-            }
-            .frame(width: 100, height: 100)
-            .clipShape(Circle())
+            
+            Image(player.imageURL)
+                .resizable()
+                .padding(.top,3)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 100, height: 100)
+                .background(.white)
+                .clipShape(Circle())
+
 
             VStack(alignment: .center){
                 HStack(spacing: 12){

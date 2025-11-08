@@ -34,7 +34,7 @@ struct SquadView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(.bgBlue)
+                Color(red: 0.1, green: 0.14, blue: 0.49)
                     .ignoresSafeArea()
                 
                 if let squad = squad {

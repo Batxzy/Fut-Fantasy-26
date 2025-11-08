@@ -106,16 +106,11 @@ struct BenchPlayerCard: View {
                     .fill(.white)
                     .frame(width: 65, height: 65)
                 
-                AsyncImage(url: URL(string: player.nationFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                }
-                .frame(width: 32, height: 20)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
+                Image(player.imageURL)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 60, height: 60)
+                    .clipShape(Circle())
             }
             
             .overlay(
@@ -279,7 +274,7 @@ struct EmptyBenchSlot: View {
 
 #Preview("Bench Player Card - Unselected") {
     let samplePlayer = Player(
-        id: 7,
+        id: 111,
         name: "Mbappé",
         firstName: "Kylian",
         lastName: "Mbappé",

@@ -17,16 +17,15 @@ struct PlayerRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Player image
-            AsyncImage(url: player.imageURL.isEmpty ? nil : URL(string: player.imageURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle().fill(Color.gray.opacity(0.2))
-            }
+            
+            Image(player.imageURL)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .padding(.top,3)
             .frame(width: 45, height: 45)
+            .background(.white)
             .clipShape(Circle())
+            
             
             Rectangle()
                 .foregroundStyle(Color.wpAqua)
