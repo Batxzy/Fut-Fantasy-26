@@ -17,10 +17,10 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     var locations: [CuratedLocation] = []
     var distancesToLocations: [String: Double] = [:]
     
-    // Define places with their colors in one place
-    let placeConfigs: [String: (mainColor: Color, accentColor: Color)] = [
-        "IBB7581ED75F54DD0": (.wpMint, .wpBlueOcean),
-        "I7D6783FDABFDF92": (.wpRedBright, .wpGreenLime)
+    // Define places with their colors and icon/image name in one place
+    let placeConfigs: [String: (mainColor: Color, accentColor: Color, imageName: String)] = [
+        "IBB7581ED75F54DD0": (.wpMint, .wpBlueOcean, "soccerball"),
+        "I7D6783FDABFDF92": (.wpRedBright, .wpGreenLime, "soccerball")
     ]
     
     override init() {
@@ -37,7 +37,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     func loadPlaces() async {
         var loadedLocations: [CuratedLocation] = []
         
-        for (placeID, colors) in placeConfigs {
+        for (placeID, config) in placeConfigs { // Changed colors to config
             guard let identifier = MKMapItem.Identifier(rawValue: placeID) else {
                 continue
             }
@@ -47,10 +47,11 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
                     CuratedLocation(
                         id: placeID,
                         mapItem: mapItem,
-                        mainColor: colors.mainColor,
-                        accentColor: colors.accentColor
-                    )
+                        mainColor: config.mainColor,
+                        accentColor: config.accentColor,
+                        imageName: config.imageName
                 )
+                    )
             }
         }
         

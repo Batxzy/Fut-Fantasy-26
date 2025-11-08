@@ -21,7 +21,7 @@ struct InteractiveMapView: View {
             Map(position: $cameraPosition) {
                 ForEach(locationManager.locations) { location in
                     Annotation(location.name, coordinate: location.coordinate) {
-                        Image(systemName: "soccerball")
+                        Image(systemName: location.imageName )
                             .font(.system(size: 24))
                             .foregroundStyle(.black, .white)
                             .padding(5)

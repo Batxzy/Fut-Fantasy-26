@@ -7,6 +7,7 @@
 
 import SwiftUI
 import MapKit
+import Contacts
 
 struct LocationDetailSheet: View {
     let location: CuratedLocation
@@ -31,22 +32,6 @@ struct LocationDetailSheet: View {
                 .glassEffect(.regular.interactive())
                 Spacer()
                 
-                // Location details (center)
-                VStack(spacing: 4) {
-                    Text(location.name)
-                        .font(.headline)
-                        .multilineTextAlignment(.center)
-                    
-                    if let locality = location.mapItem.placemark.locality,
-                       let country = location.mapItem.placemark.country {
-                        Text("\(locality), \(country)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
                 // Dismiss button
                 Button {
                     dismiss()
@@ -59,13 +44,57 @@ struct LocationDetailSheet: View {
                 .glassEffect(.regular.interactive())
             }
             .padding(.horizontal)
+            .debugOutline()
             
-            EarnButton(
-                points: 8000,
-                backgroundColor: location.mainColor,
-                textColor: location.accentColor,
-                iconColors: (location.mainColor, location.accentColor)
-            )
+            VStack (spacing: 13){
+                HStack(spacing: 12){
+                    
+                    Image(systemName:location.imageName)
+                        .font(.system(size: 26))
+                        .foregroundStyle(.black)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(location.mainColor))
+                    
+                    VStack(alignment:.leading ,spacing: 4) {
+                        Text(location.name)
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(0.3)
+                            .foregroundStyle(.white)
+                        
+                        if let locality = location.mapItem.placemark.locality,
+                           let country = location.mapItem.placemark.country {
+                            Text("\(locality), \(country)")
+                                .fontWidth(.condensed)
+                                .font(.system(size: 14))
+                                .fontDesign(.default)
+                                .fontWeight(.medium)
+                                .kerning(0.3)
+                                .foregroundStyle(.white.opacity(0.65))
+                        }
+                    }
+                }
+                .frame(alignment: .topLeading)
+                
+                
+                VStack(spacing:2){
+                    EarnPoints(
+                        points: 8000,
+                        textColor: location.mainColor,
+                        iconColor: location.mainColor
+                    )
+                    Text("Reward available")
+                        .fontWidth(.condensed)
+                        .font(.system(size: 11))
+                        .fontDesign(.default)
+                        .fontWeight(.bold)
+                        .kerning(0)
+                        .foregroundStyle(.white.opacity(0.65))
+                }
+            }
+            
             
             // Custom AR button
             Button {
@@ -112,16 +141,53 @@ struct LocationDetailSheet: View {
     }
 }
 
+
+struct EarnPoints: View {
+     let points: Int
+     let textColor: Color
+     let iconColor: Color
+     
+     var body: some View {
+         HStack(spacing: 5) {
+             Text("+\(points)")
+                 .fontWidth(.condensed)
+                 .font(.system(size: 28))
+                 .fontDesign(.default)
+                 .fontWeight(.semibold)
+                 .kerning(0.3)
+                 .foregroundStyle(textColor)
+             
+             Image(systemName: "star.circle.fill")
+                 .font(.system(size: 24))
+                 .foregroundStyle(iconColor)
+         }
+     }
+ }
+
+
 #Preview {
     let mockCoordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
-    let mockPlacemark = MKPlacemark(coordinate: mockCoordinate)
+    
+    // Use legacy address dictionary keys for MKPlacemark
+    let addressDictionary: [String: Any] = [
+        "City": "San Francisco",
+        "Country": "United States"
+    ]
+    
+    let mockPlacemark = MKPlacemark(
+        coordinate: mockCoordinate,
+        addressDictionary: addressDictionary
+    )
+    
     let mockMapItem = MKMapItem(placemark: mockPlacemark)
     mockMapItem.name = "Soccer Stadium"
+    
     let mockLocation = CuratedLocation(
         id: "preview-id",
         mapItem: mockMapItem,
         mainColor: .wpMint,
-        accentColor: .wpBlueOcean
+        accentColor: .wpBlueOcean,
+        imageName: "soccerball"
     )
     
     return LocationDetailSheet(
