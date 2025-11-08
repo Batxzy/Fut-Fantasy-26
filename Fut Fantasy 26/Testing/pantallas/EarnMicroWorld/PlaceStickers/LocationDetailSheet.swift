@@ -19,7 +19,7 @@ struct LocationDetailSheet: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 20) {
                 
                 VStack (spacing: -20){
                     HStack {
@@ -106,14 +106,9 @@ struct LocationDetailSheet: View {
                 } label: {
                     VStack(spacing: 8) {
                         if isWithinGeofence {
-                            HStack {
-                                Image(systemName: "document.fill")
-                                    .foregroundStyle(location.accentColor)
-                                
                                 Text("Lets Paste")
                                     .font(.headline)
-                                    .foregroundStyle(location.accentColor)
-                            }
+                                    .foregroundStyle(.black)
                         } else {
                             Text("Get closer to unlock")
                                 .font(.headline)
@@ -123,10 +118,10 @@ struct LocationDetailSheet: View {
                                 .foregroundStyle(.gray.opacity(0.8))
                         }
                     }
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 7)
                     .padding(.horizontal, 50)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 20)
                             .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
                     )
                 }
@@ -135,7 +130,7 @@ struct LocationDetailSheet: View {
             }
             .padding(.top, 16)
         }
-        .presentationDetents([.height(160),.medium])
+        .presentationDetents([.height(155),.medium])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         .presentationBackground(.mainBg.opacity(0.6 ))

@@ -6,13 +6,6 @@
 //
 
 
-//
-//  StickerPickerSheet.swift
-//  Fut Fantasy 26
-//
-//  Created by Jose julian Lopez on 06/11/25.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -23,7 +16,7 @@ struct StickerPickerSheet: View {
     @Query(sort: \Collectible.createdAt, order: .reverse) private var collectibles: [Collectible]
     
     @State private var selectedTab: CollectibleType = .sticker
-    private let columnCount = 3
+    private let columnCount = 2
     
     private var columns: [[Collectible]] {
         let filteredCollectibles = collectibles.filter { $0.type == selectedTab }
@@ -45,26 +38,40 @@ struct StickerPickerSheet: View {
             VStack(spacing: 0) {
                 
                 // "STICKERS" / "BADGES" tabs
-                HStack(spacing: 20) {
+                HStack(spacing: 15) {
                     Button(action: { selectedTab = .sticker }) {
-                        Text("STICKERS")
-                            .font(.system(size: 20, weight: .heavy))
-                            .foregroundStyle(selectedTab == .sticker ? .white : .white.opacity(0.4))
+                        Text("Stickers")
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(1.2)
+                            .foregroundStyle(selectedTab == .sticker ? .wpMint : .white.opacity(0.4))
+                        
                     }
                     
+                    Rectangle()
+                        .frame(width: 2,height: 20)
+                        .foregroundStyle(.white.opacity(0.6))
+                        
+                    
                     Button(action: { selectedTab = .badge }) {
-                        Text("BADGES")
-                            .font(.system(size: 20, weight: .heavy))
-                            .foregroundStyle(selectedTab == .badge ? .white : .white.opacity(0.4))
+                        Text("Badges")
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(1.2)
+                            .foregroundStyle(selectedTab == .badge ? .wpMint : .white.opacity(0.4))
                     }
                     
                     Spacer()
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
+                .padding(.top, 19)
+                .padding(.bottom, 19)
                 
-                // Main ScrollView for the entire layout
+                // Main ScrollView
                 ScrollView {
                     HStack(alignment: .top, spacing: 12) {
                         ForEach(columns.indices, id: \.self) { columnIndex in
@@ -72,7 +79,11 @@ struct StickerPickerSheet: View {
                                 ForEach(columns[columnIndex]) { collectible in
                                     
                                     Button(action: {
-                                        selectedCollectible = collectible
+                                        if selectedCollectible?.id == collectible.id {
+                                            selectedCollectible = nil
+                                        } else {
+                                            selectedCollectible = collectible
+                                        }
                                     }) {
                                         let isSelected = selectedCollectible?.id == collectible.id
                                         
@@ -81,13 +92,12 @@ struct StickerPickerSheet: View {
                                                 .resizable()
                                                 .aspectRatio(contentMode: .fit)
                                                 .frame(maxWidth: .infinity)
-                                                .background(.white.opacity(0.1))
-                                                .cornerRadius(8)
                                                 .clipped()
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 4)
-                                                )
+                                                .brightness(isSelected ? 0.1 : 0)
+                                                .saturation(isSelected ? 1.3 : 1.0)
+                                                .contrast(isSelected ? 1.1 : 1.0)
+                                                .scaleEffect(isSelected ? 1.0 : 0.95)
+                                                .animation(.spring(response: 0.7, dampingFraction: 0.7), value: isSelected)
                                         } else {
                                             Rectangle()
                                                 .fill(.gray.opacity(0.2))
