@@ -9,6 +9,9 @@
 import SwiftUI
 
 
+import SwiftUI
+
+
 // MARK: - Win Card
 struct WinCard: View {
     let score: Double
@@ -50,7 +53,7 @@ struct WinCard: View {
                     .fontWeight(.medium)
                     .foregroundStyle(.wpBlueOcean)
                     .padding(.horizontal, 53)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 8)
                     .background(Color.wpMint)
                     .cornerRadius(15)
             }
@@ -65,7 +68,7 @@ struct WinCard: View {
 // MARK: - Almost Card
 struct AlmostCard: View {
     let score: Double
-    let restartAction: () -> Void
+    let restartAction: () async -> Void // MODIFIED: Made async
     
     var body: some View {
         VStack(alignment: .center) {
@@ -86,7 +89,11 @@ struct AlmostCard: View {
             
             Spacer()
             
-            Button(action: restartAction) {
+            Button(action: {
+                Task {
+                    await restartAction()
+                }
+            }) {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 24))
                     .foregroundStyle(.wpBlueOcean)

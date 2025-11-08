@@ -5,6 +5,12 @@
 //  Created by Jose julian Lopez on 07/11/25.
 //
 
+//
+//  GameViewModel.swift
+//  Fut Fantasy 26
+//
+//  Created by Jose julian Lopez on 07/11/25.
+//
 import SwiftUI
 import Vision
 import AVFoundation
@@ -25,10 +31,14 @@ class GameViewModel {
     
     var gameState: GameState = .start
     
-    var finalImage: Image?
+    var finalUIImage: UIImage?
     var finalScore: Double = 0.0
     
     var referencePoseImageName: String = "Messi Celebration Pointing Up"
+    
+    var exportProgress: Double = 0.0
+    var isExportComplete: Bool = false
+    var shareImageURL: URL?
     
     init() {
         cameraViewModel.delegate = poseViewModel
@@ -41,9 +51,6 @@ class GameViewModel {
             try await poseViewModel.loadModelAsync()
             
             
-            poseViewModel.messiConfidence = 0.0
-            poseViewModel.noPoseConfidence = 0.0
-            
             await cameraViewModel.checkPermission()
             
             await MainActor.run {
@@ -53,19 +60,18 @@ class GameViewModel {
             }
             
         } catch {
-            // Handle the error, e.g., show an alert to the user
             print("❌ FAILED TO START GAME: Could not load Core ML model.")
         }
     }
     
     func endGame() {
         print("Ending game...")
-        cameraViewModel.stopSession()
+        cameraViewModel.stopSession() // This correctly stops the camera
         
         self.finalScore = poseViewModel.messiConfidence
         
         if let buffer = poseViewModel.lastSampleBuffer {
-            self.finalImage = imageFromSampleBuffer(buffer)
+            self.finalUIImage = uiImageFromSampleBuffer(buffer)
         }
         
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -73,26 +79,149 @@ class GameViewModel {
         }
     }
     
-    func restartGame() {
+    func restartGame() async {
         print("Restarting game...")
-        self.finalImage = nil
-        self.finalScore = 0.0
         
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-            gameState = .start
+        self.finalUIImage = nil
+        self.finalScore = 0.0
+        self.shareImageURL = nil
+        self.exportProgress = 0.0
+        self.isExportComplete = false
+        
+        poseViewModel.reset() // <-- Call the new reset function
+        
+        do {
+            try await poseViewModel.loadModelAsync()
+            
+            await cameraViewModel.checkPermission()
+            
+            await MainActor.run {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    gameState = .playing
+                }
+            }
+        } catch {
+            print("❌ FAILED TO RESTART GAME. Going to StartView.")
+            await MainActor.run {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    gameState = .start
+                }
+            }
         }
     }
     
-    private func imageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> Image? {
-        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
+    func resetToStart() {
+        print("Resetting game to start...")
         
-        let ciImage = CIImage(cvPixelBuffer: imageBuffer)
-        let context = CIContext()
+        cameraViewModel.stopSession()
+
+        self.finalUIImage = nil
+        self.finalScore = 0.0
+        self.shareImageURL = nil
+        self.exportProgress = 0.0
+        self.isExportComplete = false
         
-        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+      
+        poseViewModel.reset()
         
-        let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
-        
-        return Image(uiImage: uiImage)
+        DispatchQueue.main.async {
+            self.gameState = .start
+        }
     }
-}
+    
+    @MainActor
+        func prepareShareImage(scale: CGFloat) async {
+            self.exportProgress = 0.0
+            self.isExportComplete = false
+            self.shareImageURL = nil
+            
+            await MainActor.run { self.exportProgress = 0.2 }
+            
+            let viewToRender = ShareImageView(
+                frameUIImage: self.finalUIImage,
+                referencePoseImageName: self.referencePoseImageName
+            )
+            
+            let renderer = ImageRenderer(content: viewToRender)
+            
+            renderer.scale = scale
+            
+            guard let uiImage = renderer.uiImage else {
+                print("❌ Failed to render share image")
+                return
+            }
+            
+            await MainActor.run { self.exportProgress = 0.6 }
+            
+            guard let data = uiImage.pngData() else {
+                print("❌ Failed to get PNG data from rendered image")
+                return
+            }
+            
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("png")
+            
+            do {
+                try data.write(to: tempURL)
+                self.shareImageURL = tempURL
+                await MainActor.run { self.exportProgress = 1.0 }
+                try await Task.sleep(nanoseconds: 300_000_000)
+                await MainActor.run { self.isExportComplete = true }
+                try await Task.sleep(nanoseconds: 500_000_000)
+            } catch {
+                print("❌ Failed to write image data to temp URL: \(error)")
+            }
+        }
+        
+        private func uiImageFromSampleBuffer(_ sampleBuffer: CMSampleBuffer) -> UIImage? {
+            guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return nil }
+            
+            let ciImage = CIImage(cvPixelBuffer: imageBuffer)
+            let context = CIContext()
+            
+            guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+            
+            let uiImage = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
+            
+            return uiImage
+        }
+        
+        
+        private struct ShareImageView: View {
+            let frameUIImage: UIImage?
+            let referencePoseImageName: String
+            @Namespace private var shareNamespace
+            
+            var body: some View {
+                ZStack {
+                    Color.mainBg.ignoresSafeArea()
+                    
+                    VStack {
+                        if let uiImage = frameUIImage {
+                            ZStack(alignment: .bottomTrailing) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 298)
+                                    .cornerRadius(20)
+                                
+                                Image(referencePoseImageName)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 120)
+                                    .cornerRadius(10)
+                                    .padding(8)
+                                    .matchedGeometryEffect(id: "refImage", in: shareNamespace)
+                            }
+                        } else {
+                            Color.black
+                                .frame(width: 298, height: 400)
+                                .cornerRadius(20)
+                        }
+                    }
+                    .padding(24)
+                }
+            }
+        }
+    }

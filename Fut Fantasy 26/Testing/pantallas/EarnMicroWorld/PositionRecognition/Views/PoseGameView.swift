@@ -30,7 +30,7 @@ struct PoseGameView: View {
                 PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
                     .transition(.push(from: .bottom).combined(with: .scale))
             case .end:
-                EndView(gameViewModel: gameViewModel)
+                EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -102,7 +102,6 @@ struct PlayingView: View {
                 .blur(radius: isImageFocused ? 10 : 0)
                 
                 
-                // ✅ Dark overlay BEFORE image
                 if isImageFocused {
                     Color.black.opacity(0.6)
                         .ignoresSafeArea()
@@ -158,33 +157,40 @@ struct PlayingView: View {
     }
 }
 
-// MARK: - EndSubView
-
-struct EndView: View {
-    @Bindable var gameViewModel: GameViewModel
-    @Environment(\.dismiss) private var dismiss
-    
-    var isPerfect: Bool {
-        gameViewModel.finalScore >= 0.8
-    }
+// MARK: - WinContent
+struct WinContent: View {
+    let score: Double
+    let FrameUIImage: UIImage?
+    let referencePoseImageName: String
+    var namespace: Namespace.ID
     
     var body: some View {
-        ZStack {
-            Color.mainBg.ignoresSafeArea()
-            
-            ContentLayer(
-                isPerfect: isPerfect,
-                score: gameViewModel.finalScore,
-                restartAction: gameViewModel.restartGame,
-                FrameImage: gameViewModel.finalImage
-            )
-        }
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Exit") { dismiss() }
+        VStack(spacing: 24) {
+            if let uiImage = FrameUIImage {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 298)
+                        .cornerRadius(20)
+                    
+                    Image(referencePoseImageName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 120)
+                        .cornerRadius(10)
+                        .padding(8)
+                        .matchedGeometryEffect(id: "refImage", in: namespace)
+                }
+            } else {
+                Color.black
+                    .frame(width: 298, height: 400)
+                    .cornerRadius(20)
             }
+            
+            WinCard(score: score)
         }
+        .padding(24)
     }
 }
 
@@ -192,17 +198,22 @@ struct EndView: View {
 private struct ContentLayer: View {
     let isPerfect: Bool
     let score: Double
-    let restartAction: () -> Void
-    let FrameImage : Image?
+    let restartAction: () async -> Void
+    let FrameUIImage: UIImage?
+    let referencePoseImageName: String
+    var namespace: Namespace.ID
     
     var body: some View {
         VStack {
             Spacer()
             
             if isPerfect {
-                
-                winContent(score: score, FrameImage: FrameImage)
-                
+                WinContent(
+                    score: score,
+                    FrameUIImage: FrameUIImage,
+                    referencePoseImageName: referencePoseImageName,
+                    namespace: namespace
+                )
             } else {
                 AlmostCard(score: score, restartAction: restartAction)
             }
@@ -212,48 +223,195 @@ private struct ContentLayer: View {
     }
 }
 
-
-struct winContent : View {
+// MARK: - EndSubView
+struct EndView: View {
+    @Bindable var gameViewModel: GameViewModel
+    @Environment(\.dismiss) private var dismiss
+    var namespace: Namespace.ID
     
-    let score : Double
-    let FrameImage : Image?
+    // --- ADD THIS LINE ---
+    @Environment(\.displayScale) private var displayScale // Get scale from the view's context
+
+    @State private var showShareSheet = false
+    @State private var showExportProgress = false
+    
+    @State private var scoreToDisplay: Double = 0.0
+    @State private var uiImageToDisplay: UIImage? = nil
+    @State private var referenceImageToDisplay: String = ""
+    
+    var isPerfect: Bool {
+        scoreToDisplay >= 0.8
+    }
+    
     var body: some View {
-        
-        VStack(spacing: 24){
+        ZStack {
+            Color.mainBg.ignoresSafeArea()
             
-            if let FrameImage {
-                FrameImage
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 298)
-            } else {
-                Color.black.ignoresSafeArea()
+            ContentLayer(
+                isPerfect: isPerfect,
+                score: scoreToDisplay,
+                restartAction: gameViewModel.restartGame,
+                FrameUIImage: uiImageToDisplay,
+                referencePoseImageName: referenceImageToDisplay,
+                namespace: namespace
+            )
+            
+            if showExportProgress {
+                ExportProgressView(
+                    isShowing: $showExportProgress,
+                    progress: gameViewModel.exportProgress,
+                    isComplete: gameViewModel.isExportComplete
+                )
+                .transition(.opacity)
             }
-
-                
-
-
-            WinCard(score: score)
         }
-        .padding(24)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Exit") {
+                    gameViewModel.resetToStart()
+                    dismiss()
+                }
+            }
+            
+            if isPerfect {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        Task {
+                            showExportProgress = true
+                            await gameViewModel.prepareShareImage(scale: displayScale)
+                            showExportProgress = false
+                            showShareSheet = true
+                        }
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let imageURL = gameViewModel.shareImageURL {
+                ActivityViewController(imageURL: imageURL)
+            }
+        }
+        .onAppear {
+            self.scoreToDisplay = gameViewModel.finalScore
+            self.uiImageToDisplay = gameViewModel.finalUIImage
+            self.referenceImageToDisplay = gameViewModel.referencePoseImageName
+        }
     }
 }
 
 
+// MARK: - Activity View Controller (Share Sheet)
+struct ActivityViewController: UIViewControllerRepresentable {
+    var imageURL: URL
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [imageURL], applicationActivities: nil)
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
 
-#Preview {
-    winContent(
+// MARK: - Placeholder Export Progress View
+struct ExportProgressView: View {
+    @Binding var isShowing: Bool
+    var progress: Double
+    var isComplete: Bool
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.7)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                if isComplete {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(.green)
+                    Text("Ready!")
+                        .font(.title2).bold()
+                        .foregroundStyle(.white)
+                } else {
+                    ProgressView(value: progress)
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(2)
+                    Text("Preparing Image...")
+                        .font(.title2).bold()
+                        .foregroundStyle(.white)
+                        .padding(.top, 20)
+                }
+            }
+            .padding(40)
+            .background(Color.black.opacity(0.8))
+            .cornerRadius(20)
+        }
+    }
+}
+
+#Preview("PoseGameView") {
+    PoseGameView()
+}
+
+#Preview("StartView") {
+    @Previewable @Namespace var namespace
+    @Previewable @State var mockViewModel = GameViewModel()
+    
+    StartView(gameViewModel: mockViewModel, namespace: namespace)
+}
+
+#Preview("WinContent") {
+    @Previewable @Namespace var namespace
+    
+    WinContent(
         score: 0.85,
-        FrameImage: Image(systemName: "person.fill")
+        FrameUIImage: nil,
+        referencePoseImageName: "defaultPose",
+        namespace: namespace
     )
 }
 
-#Preview {
+#Preview("EndView - Perfect Score") {
+    @Previewable @Namespace var namespace
     @Previewable @State var mockViewModel = GameViewModel()
     
-    EndView(gameViewModel: mockViewModel)
+    EndView(gameViewModel: mockViewModel, namespace: namespace)
         .onAppear {
             mockViewModel.finalScore = 0.85
-            mockViewModel.finalImage = Image(systemName: "person.fill")
+            mockViewModel.finalUIImage = nil
         }
+}
+
+#Preview("EndView - Almost") {
+    @Previewable @Namespace var namespace
+    @Previewable @State var mockViewModel = GameViewModel()
+    
+    EndView(gameViewModel: mockViewModel, namespace: namespace)
+        .onAppear {
+            mockViewModel.finalScore = 0.65
+            mockViewModel.finalUIImage = nil
+        }
+}
+
+#Preview("ExportProgressView - Loading") {
+    @Previewable @State var isShowing = true
+    
+    ExportProgressView(
+        isShowing: $isShowing,
+        progress: 0.6,
+        isComplete: false
+    )
+}
+
+#Preview("ExportProgressView - Complete") {
+    @Previewable @State var isShowing = true
+    
+    ExportProgressView(
+        isShowing: $isShowing,
+        progress: 1.0,
+        isComplete: true
+    )
 }
