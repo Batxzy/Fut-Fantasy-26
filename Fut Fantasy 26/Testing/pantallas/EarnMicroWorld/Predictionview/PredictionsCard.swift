@@ -163,15 +163,12 @@ struct PredictionsCard: View {
             try modelContext.save()
             print("✅ Save successful")
             
-            // Force refresh the context
             modelContext.processPendingChanges()
             
-            // Query all predictions
             let allDescriptor = FetchDescriptor<Prediction>()
             let allPredictions = try? modelContext.fetch(allDescriptor)
             print("📊 Total predictions in database: \(allPredictions?.count ?? 0)")
             
-            // Query for this specific fixture
             let descriptor = FetchDescriptor<Prediction>(predicate: #Predicate { $0.fixtureId == fixtureId })
             let saved = try? modelContext.fetch(descriptor)
             print("📊 Predictions for fixture \(fixtureId): \(saved?.count ?? 0)")
@@ -189,7 +186,7 @@ struct PredictionsCard: View {
     #Preview {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(
-            for: Player.self, Squad.self, Fixture.self, Prediction.self,  // Added Prediction.self
+            for: Player.self, Squad.self, Fixture.self, Prediction.self,
             configurations: config
         )
         

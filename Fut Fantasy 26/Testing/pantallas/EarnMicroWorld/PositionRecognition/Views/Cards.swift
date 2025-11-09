@@ -68,7 +68,7 @@ struct WinCard: View {
 // MARK: - Almost Card
 struct AlmostCard: View {
     let score: Double
-    let restartAction: () async -> Void // MODIFIED: Made async
+    let restartAction: () async -> Void
     
     var body: some View {
         VStack(alignment: .center) {

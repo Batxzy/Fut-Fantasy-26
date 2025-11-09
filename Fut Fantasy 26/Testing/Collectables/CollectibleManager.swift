@@ -18,11 +18,29 @@ class CollectibleManager {
     var selectedCollectibleForDetail: Collectible?
     
     private let predefinedBadges = [
-        (name: "World Cup Winner", imageName: "Throphy"),
-        (name: "The G.O.A.T.", imageName: "LaCabra"),
-        (name: "On The Spot", imageName: "PinPoint"),
-        (name: "Quiz Master", imageName: "VectorArtQuestion")
-    ]
+            (name: "World Cup Winner", imageName: "Group 200"),
+            (name: "The G.O.A.T.", imageName: "Group 190"),
+            (name: "On The Spot", imageName: "Group 196"),
+            (name: "Quiz Master", imageName: "Group 184"),
+            (name: "Clean Sheet King", imageName: "Group 197"),
+            (name: "Hat-Trick Hero", imageName: "Group 205"),
+            (name: "Assist Machine", imageName: "Group 188"),
+            (name: "The Wall", imageName: "Group 157"),
+            (name: "Midfield General", imageName: "Group 156"),
+            (name: "Forward Finisher", imageName: "Group 155"),
+            (name: "Defender's Will", imageName: "Group 154"),
+            (name: "The Captain", imageName: "Group 152"),
+            (name: "The Vice", imageName: "Group 151"),
+            (name: "Golden Boot", imageName: "Group 147"),
+            (name: "Golden Glove", imageName: "Group 146"),
+            (name: "Group Master", imageName: "Group 145"),
+            (name: "Matchday Winner", imageName: "Group 149"),
+            (name: "Budget Master", imageName: "Group 148"),
+            (name: "Transfer Genius", imageName: "Group 144"),
+            (name: "First Blood", imageName: "Group 115"),
+            (name: "Unbreakable", imageName: "Group 143"),
+            (name: "Rising Star", imageName: "Group 114")
+        ]
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext

@@ -229,8 +229,7 @@ struct EndView: View {
     @Environment(\.dismiss) private var dismiss
     var namespace: Namespace.ID
     
-    // --- ADD THIS LINE ---
-    @Environment(\.displayScale) private var displayScale // Get scale from the view's context
+    @Environment(\.displayScale) private var displayScale
 
     @State private var showShareSheet = false
     @State private var showExportProgress = false

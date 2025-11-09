@@ -27,11 +27,23 @@ struct StickerARViewContainer: UIViewRepresentable {
         arView.session.run(config)
         arView.addCoaching()
         
+        // Single tap for placing
         let tapGesture = UITapGestureRecognizer(
             target: context.coordinator,
             action: #selector(context.coordinator.handleTap)
         )
         arView.addGestureRecognizer(tapGesture)
+        
+        // Double tap for deleting
+        let doubleTapGesture = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(context.coordinator.handleDoubleTap)
+        )
+        doubleTapGesture.numberOfTapsRequired = 2
+        arView.addGestureRecognizer(doubleTapGesture)
+        
+        // Prevent single tap when double-tapping
+        tapGesture.require(toFail: doubleTapGesture)
         
         context.coordinator.arView = arView
         
@@ -51,9 +63,11 @@ struct StickerARViewContainer: UIViewRepresentable {
         var selectedCollectible: Collectible?
         weak var arView: ARView?
         var planeAnchors: [UUID: AnchorEntity] = [:]
+        var placedStickers: [AnchorEntity] = []
         var showPlanes: Bool = false
         
-        // ARSessionDelegate methods
+        // MARK: - ARSessionDelegate methods
+        
         func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
             for anchor in anchors {
                 guard let planeAnchor = anchor as? ARPlaneAnchor else { continue }
@@ -74,6 +88,8 @@ struct StickerARViewContainer: UIViewRepresentable {
                 removePlaneVisualization(for: planeAnchor)
             }
         }
+        
+        // MARK: - Gesture Handlers
         
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
             guard let arView = arView,
@@ -104,11 +120,39 @@ struct StickerARViewContainer: UIViewRepresentable {
                 let anchor = AnchorEntity(world: firstResult.worldTransform)
                 stickerEntity.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
                 stickerEntity.transform.rotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
+                
+                stickerEntity.generateCollisionShapes(recursive: true)
+                
                 anchor.addChild(stickerEntity)
                 arView.scene.addAnchor(anchor)
+                
+                arView.installGestures([.all], for: stickerEntity)
+                
+                placedStickers.append(anchor)
+                
                 print("✅ Collectible placed on wall!")
             }
         }
+        
+        @objc func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
+            guard let arView = arView else { return }
+            
+            let tapLocation = recognizer.location(in: arView)
+            
+            if let entity = arView.entity(at: tapLocation) as? ModelEntity {
+                if let anchor = entity.anchor {
+                    arView.scene.removeAnchor(anchor)
+                    
+                    if let index = placedStickers.firstIndex(where: { $0 == anchor }) {
+                        placedStickers.remove(at: index)
+                    }
+                    
+                    print("🗑️ Sticker deleted!")
+                }
+            }
+        }
+        
+        // MARK: - Plane Visualization
         
         private func addPlaneVisualization(for planeAnchor: ARPlaneAnchor) {
             guard let arView = arView else { return }
@@ -161,6 +205,8 @@ struct StickerARViewContainer: UIViewRepresentable {
                 anchor.isEnabled = show
             }
         }
+        
+        // MARK: - Sticker Creation
         
         private func createStickerEntity(from image: UIImage) -> ModelEntity? {
             guard let cgImage = image.cgImage else {

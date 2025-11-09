@@ -163,7 +163,6 @@ struct EarnPoints: View {
 #Preview {
     let mockCoordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
     
-    // Use legacy address dictionary keys for MKPlacemark
     let addressDictionary: [String: Any] = [
         "City": "San Francisco",
         "Country": "United States"

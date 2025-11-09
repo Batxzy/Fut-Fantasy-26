@@ -9,11 +9,18 @@ import SwiftUI
 import SwiftData
 
 struct ProfileView: View {
-    @Query(FetchDescriptor<Squad>()) private var squads: [Squad]
-    
+    @Environment(CollectibleManager.self) private var collectibleManager
+    @Query private var squads: [Squad]
+    @Query(sort: \Collectible.createdAt, order: .reverse) private var userCollectibles: [Collectible]
+        
     var currentSquad: Squad? {
         squads.first
     }
+    
+    var userBadges: [Collectible] {
+        userCollectibles.filter { $0.type == .badge && $0.squad?.id == currentSquad?.id }
+    }
+    
     
     var body: some View {
         NavigationStack {
@@ -115,8 +122,15 @@ struct ProfileView: View {
     }
     
     private var badgesSection: some View {
-        // A list of your badge images
-        let badgeImages = ["Throphy", "LaCabra", "PinPoint", "VectorArtQuestion"]
+        
+        
+        let obtainedBadges = userBadges.prefix(6)
+        
+        let displaySource: [(name: String, imageName: String)] = obtainedBadges.isEmpty ?
+                [] :
+                Array(obtainedBadges.map { (name: $0.name, imageName: $0.imageName ?? "DefaultBadge") })
+            
+        let isEmptyState = displaySource.isEmpty
         
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
@@ -134,23 +148,30 @@ struct ProfileView: View {
                 }
             }
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    // Looping over the actual images
-                    ForEach(badgeImages, id: \.self) { imageName in
-                        Image(imageName)
-                            .resizable()
-                            .padding()
-                            .scaledToFit()
-                            .frame(width: 116, height: 155)
-                            .background(.wpAqua.opacity(0.2))
-                            .cornerRadius(12)
-                            .clipped()
+            if isEmptyState {
+                        Text("Start earning badges by completing challenges!")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 10)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(displaySource.map { $0.imageName }, id: \.self) { imageName in
+                                    
+                                    Image(imageName)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 116, height: 155)
+                                        .background(Color.wpAqua.opacity(0.2))
+                                        .cornerRadius(12)
+                                        .clipped()
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
     
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 14) {

@@ -50,7 +50,7 @@ class PoseEstimationViewModel_1: NSObject, AVCaptureVideoDataOutputSampleBufferD
             print("✅ Model loaded successfully")
         } catch {
             print("❌ Error loading Core ML model: \(error.localizedDescription)")
-            throw error // Re-throw the error so GameViewModel knows it failed
+            throw error
         }
     }
     

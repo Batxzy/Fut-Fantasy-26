@@ -16,7 +16,7 @@ struct BadgeGalleryView: View {
     
     @Query(sort: \Collectible.createdAt, order: .reverse) private var collectibles: [Collectible]
     
-    @State private var selectedTab: CollectibleType = .sticker
+    @State private var selectedTab: CollectibleType = .badge
     private let columnCount = 3
     
     @State private var selectedPhotoItem: PhotosPickerItem?

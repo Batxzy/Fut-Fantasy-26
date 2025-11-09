@@ -17,7 +17,6 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     var locations: [CuratedLocation] = []
     var distancesToLocations: [String: Double] = [:]
     
-    // Define places with their colors and icon/image name in one place
     let placeConfigs: [String: (mainColor: Color, accentColor: Color, imageName: String)] = [
         "IBB7581ED75F54DD0": (.wpMint, .wpBlueOcean, "soccerball"),
         "I7D6783FDABFDF92": (.wpRedBright, .wpGreenLime, "soccerball")
@@ -37,7 +36,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     func loadPlaces() async {
         var loadedLocations: [CuratedLocation] = []
         
-        for (placeID, config) in placeConfigs { // Changed colors to config
+        for (placeID, config) in placeConfigs {
             guard let identifier = MKMapItem.Identifier(rawValue: placeID) else {
                 continue
             }

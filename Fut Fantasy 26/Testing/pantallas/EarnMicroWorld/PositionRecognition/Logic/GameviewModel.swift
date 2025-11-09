@@ -66,7 +66,7 @@ class GameViewModel {
     
     func endGame() {
         print("Ending game...")
-        cameraViewModel.stopSession() // This correctly stops the camera
+        cameraViewModel.stopSession()
         
         self.finalScore = poseViewModel.messiConfidence
         
@@ -88,7 +88,7 @@ class GameViewModel {
         self.exportProgress = 0.0
         self.isExportComplete = false
         
-        poseViewModel.reset() // <-- Call the new reset function
+        poseViewModel.reset()
         
         do {
             try await poseViewModel.loadModelAsync()
