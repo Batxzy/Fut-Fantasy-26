@@ -22,15 +22,6 @@ struct StickerPlacementARView: View {
                             showPlanes: $showPlanes
                         )
             
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-            }
-            .glassEffect(.regular.interactive())
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
@@ -51,6 +42,19 @@ struct StickerPlacementARView: View {
             .padding(.horizontal,16)
             .offset(y: -sheetHeight)
             .animation(.interpolatingSpring(duration: animationDuration, bounce: 0, initialVelocity: 0), value: sheetHeight)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                }
+                .glassEffect(.regular.interactive())
+            }
         }
         .sheet(isPresented: .constant(true)) {
             StickerPickerSheet(selectedCollectible: $selectedCollectible)

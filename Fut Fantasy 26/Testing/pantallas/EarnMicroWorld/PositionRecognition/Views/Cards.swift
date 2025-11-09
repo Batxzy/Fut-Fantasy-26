@@ -19,16 +19,25 @@ struct WinCard: View {
             
             Text("Perfect!")
                 .textCase(.uppercase)
-                .font(.system(size: 28, weight: .black))
+                .fontWidth(.compressed)
+                .font(.system(size: 28))
+                .fontDesign(.default)
+                .fontWeight(.black)
+                .kerning(0.6)
                 .foregroundStyle(.wpGreenYellow)
             
             Text(String(format: "%.0f%% similarity", score * 100))
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 14))
+                .fontWidth(.condensed)
+                .fontWeight(.semibold)
                 .foregroundStyle(.white)
             
             HStack {
                 Text("+1000")
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.system(size: 34))
+                    .fontWidth(.condensed)
+                    .fontWeight(.semibold)
+                    .kerning(0.4)
                     .foregroundStyle(.wpGreenYellow)
                 Image(systemName: "star.circle.fill")
                     .font(.system(size: 24))

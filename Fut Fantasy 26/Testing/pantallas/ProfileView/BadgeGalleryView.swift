@@ -153,6 +153,7 @@ struct BadgeGalleryView: View {
                 }
             }
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 

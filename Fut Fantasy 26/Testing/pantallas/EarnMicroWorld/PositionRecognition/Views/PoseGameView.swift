@@ -330,7 +330,8 @@ struct EndView: View {
                 referencePoseImageName: referenceImageToDisplay,
                 namespace: namespace,
                 onClaim: { 
-                    print("✅ Reward claimed by user")
+                    gameViewModel.resetToStart()
+                    dismiss()
                 }
             )
             
@@ -345,29 +346,22 @@ struct EndView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Exit") {
-                    gameViewModel.resetToStart()
-                    dismiss()
-                }
-            }
-            
-            if isPerfect {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        Task {
-                            showExportProgress = true
-                            await gameViewModel.prepareShareImage(scale: displayScale)
-                            showExportProgress = false
-                            showShareSheet = true
+                    if isPerfect {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button(action: {
+                                Task {
+                                    showExportProgress = true
+                                    await gameViewModel.prepareShareImage(scale: displayScale)
+                                    showExportProgress = false
+                                    showShareSheet = true
+                                }
+                            }) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.white)
+                            }
                         }
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.white)
                     }
                 }
-            }
-        }
         .sheet(isPresented: $showShareSheet) {
             if let imageURL = gameViewModel.shareImageURL {
                 ActivityViewController(imageURL: imageURL)

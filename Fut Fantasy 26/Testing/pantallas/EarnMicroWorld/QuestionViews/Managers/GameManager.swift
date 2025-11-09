@@ -196,26 +196,32 @@ final class GameManager {
     // MARK: - Squad Budget Integration
     
     func awardPointsToSquad(squadId: UUID, points: Int) async throws {
-        print("🎮 [GameManager] Awarding \(points) points to squad budget \(squadId)")
-        
-        // Fetch the squad
-        let predicate = #Predicate<Squad> { $0.id == squadId }
-        var descriptor = FetchDescriptor<Squad>(predicate: predicate)
-        descriptor.fetchLimit = 1
-        
-        guard let squad = try modelContext.fetch(descriptor).first else {
-            print("   ❌ Squad not found")
-            throw RepositoryError.notFound
-        }
-        
-        // Add points directly to initialBudget (which is the squad's money/coins)
-        squad.initialBudget += Double(points)
-        print("   ✅ Added \(points) to budget. New budget: \(squad.initialBudget)")
-        
-        // Save through repository
-        try await squadRepository.updateSquad(squad)
-        print("   ✅ Squad budget updated successfully")
-    }
+           print("🎮 [GameManager] Awarding \(points) display points to squad budget \(squadId)")
+           
+           let predicate = #Predicate<Squad> { $0.id == squadId }
+           var descriptor = FetchDescriptor<Squad>(predicate: predicate)
+           descriptor.fetchLimit = 1
+           
+           guard let squad = try modelContext.fetch(descriptor).first else {
+               print("   ❌ Squad not found")
+               throw RepositoryError.notFound
+           }
+           
+           let displayToMillionDivisor: Double = 1000.0
+           let millionsToAdd = Double(points) / displayToMillionDivisor
+           
+           squad.initialBudget += millionsToAdd
+           
+           print("""
+                   ✅ Budget increment:
+                      Display points: \(points)
+                      Converted to millions: \(String(format: "%.3f", millionsToAdd))M
+                      New initialBudget: \(String(format: "%.3f", squad.initialBudget))M
+                  """)
+           
+           try await squadRepository.updateSquad(squad)
+           print("   ✅ Squad budget updated successfully")
+       }
     
     // MARK: - Timer Calculations
     

@@ -212,7 +212,7 @@ struct EarnPoints: View {
      
      var body: some View {
          HStack(spacing: 5) {
-             Text("+\(points)M")
+             Text("+\(points)")
                  .fontWidth(.condensed)
                  .font(.system(size: 28))
                  .fontDesign(.default)

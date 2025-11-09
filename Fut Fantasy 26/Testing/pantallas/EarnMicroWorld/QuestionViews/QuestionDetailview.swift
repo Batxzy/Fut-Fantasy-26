@@ -25,6 +25,10 @@ struct QuestionDetailview: View {
         }
     }
     
+    private var displayPointsForOverlay: Int {
+            viewModel.currentQuestion?.totalPoints ?? 0
+        }
+    
     var body: some View {
         ZStack {
             Color.mainBg.ignoresSafeArea()
@@ -46,7 +50,7 @@ struct QuestionDetailview: View {
                         
                         if viewModel.showResult {
                             if let result = viewModel.lastResult, result.isCorrect {
-                                CorrectAnswerOverlay(points: result.pointsEarned)
+                                CorrectAnswerOverlay(points: displayPointsForOverlay)
                                     .transition(.blurReplace.animation(.bouncy).combined(with: .scale.animation(.bouncy)))
                                     .offset(y:-25)
                                     .frame(height: 180, alignment: .top)
@@ -256,6 +260,7 @@ struct QuizAnswerButton: View {
     }
 }
 
+/*
 #Preview("Multiple Choice") {
     
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -335,3 +340,5 @@ struct QuizAnswerButton: View {
 #Preview("True badge"){
     CorrectAnswerOverlay(points: 1000)
 }
+
+*/

@@ -50,7 +50,7 @@ final class Question {
     @Attribute(.unique) var id: UUID
     var text: String
     var correctAnswer: String
-    var basePoints: Int
+    var rewardMillions: Double
     var category: QuestionCategory
     var difficulty: QuestionDifficulty
     var questionType: QuestionType
@@ -66,37 +66,37 @@ final class Question {
     var availableDate: Date? // The specific day this question is available
     
     init(
-        text: String,
-        correctAnswer: String,
-        basePoints: Int,
-        category: QuestionCategory,
-        difficulty: QuestionDifficulty,
-        questionType: QuestionType,
-        options: [String]? = nil,
-        availableDate: Date? = nil
-    ) {
-        self.id = UUID()
-        self.text = text
-        self.correctAnswer = correctAnswer
-        self.basePoints = basePoints
-        self.category = category
-        self.difficulty = difficulty
-        self.questionType = questionType
-        self.options = options
-        self.createdDate = Date()
-        self.isActive = true
-        self.availableDate = availableDate
-    }
+            text: String,
+            correctAnswer: String,
+            category: QuestionCategory,
+            difficulty: QuestionDifficulty,
+            questionType: QuestionType,
+            rewardMillions: Double,
+            options: [String]? = nil,
+            availableDate: Date? = nil
+        ) {
+            self.id = UUID()
+            self.text = text
+            self.correctAnswer = correctAnswer
+            self.category = category
+            self.difficulty = difficulty
+            self.questionType = questionType
+            self.options = options
+            self.createdDate = Date()
+            self.isActive = true
+            self.availableDate = availableDate
+            self.rewardMillions = rewardMillions
+        }
     
     // MARK: - Computed Properties
     
     var totalPoints: Int {
-        Int(Double(basePoints) * difficulty.pointsMultiplier)
-    }
-    
-    var displayPoints: String {
-        "+\(totalPoints)"
-    }
+            Int((rewardMillions * 1000).rounded())  
+        }
+        
+        var displayPoints: String {
+            "+\(totalPoints)"
+        }
     
     // MARK: - Answer Validation
     
