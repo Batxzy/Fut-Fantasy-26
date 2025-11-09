@@ -113,18 +113,23 @@ struct BadgeGalleryView: View {
             }
         }
         .navigationTitle("Gallery")
+       
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                PhotosPicker(
-                    selection: $selectedPhotoItem,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
-                    Image(systemName: "plus")
+                if selectedTab == .sticker {
+                    PhotosPicker(
+                        selection: $selectedPhotoItem,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        Image(systemName: "plus")
+                    }
+                    .transition(.blurReplace(.downUp).combined(with: .opacity))
                 }
             }
         }
+        .animation(.spring(duration: 0.2), value: selectedTab)
         .onChange(of: selectedPhotoItem) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
