@@ -10,37 +10,51 @@ import AVKit
 import CoreML
 import Vision
 
-struct CameraPreviewView_1: UIViewRepresentable {
+import SwiftUI
+import AVKit
+import Vision
+
+struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
-    let rotation: Double
     
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = view.bounds
-        previewLayer.connection?.videoRotationAngle = rotation
+        previewLayer.connection?.videoRotationAngle = 90
         view.layer.addSublayer(previewLayer)
+        
+        // Store the layer for updates
+        context.coordinator.previewLayer = previewLayer
+        
         return view
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
-        Task {
-            if let previewLayer = uiView.layer.sublayers?.first as? AVCaptureVideoPreviewLayer {
+        if let previewLayer = context.coordinator.previewLayer {
+            DispatchQueue.main.async {
                 previewLayer.frame = uiView.bounds
-                previewLayer.connection?.videoRotationAngle = rotation
             }
         }
     }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+    
+    class Coordinator {
+        var previewLayer: AVCaptureVideoPreviewLayer?
+    }
 }
 
-struct PoseOverlayView_1: View {
+struct PoseOverlayView: View {
     let bodyParts: [HumanBodyPoseObservation.JointName: CGPoint]
-    let connections: [BodyConnection_1]
+    let connections: [BodyConnection]
     
     var body: some View {
         GeometryReader { geometry in
             Canvas { context, size in
+                // Draw connections
                 for connection in connections {
                     if let fromPoint = bodyParts[connection.from],
                        let toPoint = bodyParts[connection.to] {
@@ -52,6 +66,8 @@ struct PoseOverlayView_1: View {
                         context.stroke(path, with: .color(.green), lineWidth: 4)
                     }
                 }
+                
+                // Draw joints
                 for (_, point) in bodyParts {
                     let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
                     let rect = CGRect(x: center.x - 6, y: center.y - 6, width: 12, height: 12)

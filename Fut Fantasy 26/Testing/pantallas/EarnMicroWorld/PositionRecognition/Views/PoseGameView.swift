@@ -12,7 +12,6 @@ import AVFoundation
 import Observation
 import CoreML
 
-
 struct PoseGameView: View {
     @State private var gameViewModel = GameViewModel()
     
@@ -29,6 +28,7 @@ struct PoseGameView: View {
             case .playing:
                 PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
                     .transition(.push(from: .bottom).combined(with: .scale))
+                    
             case .end:
                 EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
                     .transition(.scale.combined(with: .opacity))
@@ -51,7 +51,6 @@ struct StartView: View {
                 .font(.title).bold()
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-            
             
             Image(gameViewModel.referencePoseImageName)
                 .resizable()
@@ -88,19 +87,17 @@ struct PlayingView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                CameraPreviewView_1(
-                    session: gameViewModel.cameraViewModel.session,
-                    rotation: 90.0
-                )
-                .ignoresSafeArea()
-                .blur(radius: isImageFocused ? 10 : 0)
+                // Updated: Removed rotation parameter (always portrait now)
+                CameraPreviewView(session: gameViewModel.cameraViewModel.session)
+                    .ignoresSafeArea()
+                    .blur(radius: isImageFocused ? 10 : 0)
                 
-                PoseOverlayView_1(
+                // Updated: Renamed from PoseOverlayView_1
+                PoseOverlayView(
                     bodyParts: gameViewModel.poseViewModel.detectedBodyParts,
                     connections: gameViewModel.poseViewModel.bodyConnections
                 )
                 .blur(radius: isImageFocused ? 10 : 0)
-                
                 
                 if isImageFocused {
                     Color.black.opacity(0.6)
@@ -127,7 +124,6 @@ struct PlayingView: View {
                         
                         HStack {
                             Spacer()
-                            
                             
                             Image(gameViewModel.referencePoseImageName)
                                 .resizable()
@@ -301,7 +297,6 @@ struct EndView: View {
         }
     }
 }
-
 
 // MARK: - Activity View Controller (Share Sheet)
 struct ActivityViewController: UIViewControllerRepresentable {
