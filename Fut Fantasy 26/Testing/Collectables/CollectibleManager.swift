@@ -17,29 +17,44 @@ class CollectibleManager {
     
     var selectedCollectibleForDetail: Collectible?
     
-    private let predefinedBadges = [
-            (name: "World Cup Winner", imageName: "Group 200"),
-            (name: "The G.O.A.T.", imageName: "Group 190"),
-            (name: "On The Spot", imageName: "Group 196"),
-            (name: "Quiz Master", imageName: "Group 184"),
-            (name: "Clean Sheet King", imageName: "Group 197"),
-            (name: "Hat-Trick Hero", imageName: "Group 205"),
-            (name: "Assist Machine", imageName: "Group 188"),
-            (name: "The Wall", imageName: "Group 157"),
-            (name: "Midfield General", imageName: "Group 156"),
-            (name: "Forward Finisher", imageName: "Group 155"),
-            (name: "Defender's Will", imageName: "Group 154"),
-            (name: "The Captain", imageName: "Group 152"),
-            (name: "The Vice", imageName: "Group 151"),
-            (name: "Golden Boot", imageName: "Group 147"),
-            (name: "Golden Glove", imageName: "Group 146"),
-            (name: "Group Master", imageName: "Group 145"),
-            (name: "Matchday Winner", imageName: "Group 149"),
-            (name: "Budget Master", imageName: "Group 148"),
-            (name: "Transfer Genius", imageName: "Group 144"),
+    public let predefinedBadges = [
+            // Total: 33 imágenes (Nuevos archivos 198, 199, 222, etc. incluidos)
+            (name: "Rising Star", imageName: "Group 114"),
             (name: "First Blood", imageName: "Group 115"),
             (name: "Unbreakable", imageName: "Group 143"),
-            (name: "Rising Star", imageName: "Group 114")
+            (name: "Transfer Genius", imageName: "Group 144"),
+            (name: "Group Master", imageName: "Group 145"),
+            (name: "Golden Glove", imageName: "Group 146"),
+            (name: "Golden Boot", imageName: "Group 147"),
+            (name: "Budget Master", imageName: "Group 148"),
+            (name: "Matchday Winner", imageName: "Group 149"),
+            (name: "The Vice", imageName: "Group 151"),
+            (name: "The Captain", imageName: "Group 152"),
+            (name: "Defender's Will", imageName: "Group 154"),
+            (name: "Forward Finisher", imageName: "Group 155"),
+            (name: "Midfield General", imageName: "Group 156"),
+            (name: "The Wall", imageName: "Group 157"),
+            
+            (name: "Quiz Master", imageName: "Group 184"),
+            (name: "Assist Machine", imageName: "Group 188"),
+            (name: "The G.O.A.T.", imageName: "Group 190"),
+            (name: "On The Spot", imageName: "Group 196"),
+            (name: "Clean Sheet King", imageName: "Group 197"),
+            (name: "Double Clean Sheet", imageName: "Group 198"), // Nuevo
+            (name: "Triple Clean Sheet", imageName: "Group 199"), // Nuevo
+            
+            (name: "World Cup Winner", imageName: "Group 200"),
+            (name: "The Strategist", imageName: "Group 202"),
+            (name: "Hat-Trick Hero", imageName: "Group 205"),
+            (name: "Finalist", imageName: "Group 206"),
+            (name: "Clutch Moment", imageName: "Group 210"),
+            
+            (name: "The Legend", imageName: "Group 222"), // Nuevo
+            (name: "MVP", imageName: "Group 225"),
+            (name: "Rookie of the Year", imageName: "Group 226"),
+            (name: "Silver Star", imageName: "Group 227"),
+            (name: "Bronze Star", imageName: "Group 228"),
+            (name: "Golden Star", imageName: "Group 229")
         ]
     
     init(modelContext: ModelContext) {

@@ -25,12 +25,12 @@ struct StickerPlacementARView: View {
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
+                Image(systemName: "xmark")
+                    .font(.system(size: 20))
                     .foregroundStyle(.white)
-                    .shadow(radius: 4)
+                    .frame(width: 44, height: 44)
             }
-            .padding()
+            .glassEffect(.regular.interactive())
         }
         .overlay(alignment: .bottomTrailing) {
             Button {

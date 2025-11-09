@@ -15,7 +15,7 @@ struct StickerPickerSheet: View {
     
     @Query(sort: \Collectible.createdAt, order: .reverse) private var collectibles: [Collectible]
     
-    @State private var selectedTab: CollectibleType = .sticker
+    @State private var selectedTab: CollectibleType = .badge
     private let columnCount = 2
     
     private var columns: [[Collectible]] {
@@ -39,6 +39,21 @@ struct StickerPickerSheet: View {
                 
                 // "STICKERS" / "BADGES" tabs
                 HStack(spacing: 15) {
+                    
+                    Button(action: { selectedTab = .badge }) {
+                        Text("Badges")
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(1.2)
+                            .foregroundStyle(selectedTab == .badge ? .wpMint : .white.opacity(0.4))
+                    }
+                    
+                    Rectangle()
+                        .frame(width: 2,height: 20)
+                        .foregroundStyle(.white.opacity(0.6))
+                    
                     Button(action: { selectedTab = .sticker }) {
                         Text("Stickers")
                             .fontWidth(.condensed)
@@ -50,20 +65,6 @@ struct StickerPickerSheet: View {
                         
                     }
                     
-                    Rectangle()
-                        .frame(width: 2,height: 20)
-                        .foregroundStyle(.white.opacity(0.6))
-                    
-                    
-                    Button(action: { selectedTab = .badge }) {
-                        Text("Badges")
-                            .fontWidth(.condensed)
-                            .font(.system(size: 24))
-                            .fontDesign(.default)
-                            .fontWeight(.medium)
-                            .kerning(1.2)
-                            .foregroundStyle(selectedTab == .badge ? .wpMint : .white.opacity(0.4))
-                    }
                     
                     Spacer()
                 }

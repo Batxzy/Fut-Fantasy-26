@@ -130,7 +130,7 @@ struct LocationDetailSheet: View {
             }
             .padding(.top, 16)
         }
-        .presentationDetents([.fraction(0.25),.fraction(0.30)])
+        .presentationDetents([.height(250),.fraction(0.30)])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
         .presentationBackground(.mainBg.opacity(0.6 ))

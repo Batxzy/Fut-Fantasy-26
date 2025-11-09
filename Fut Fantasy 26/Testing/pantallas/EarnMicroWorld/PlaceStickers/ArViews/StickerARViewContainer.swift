@@ -22,7 +22,8 @@ struct StickerARViewContainer: UIViewRepresentable {
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = .vertical
         config.isLightEstimationEnabled = true
-        
+        config.frameSemantics = .personSegmentationWithDepth
+
         arView.session.delegate = context.coordinator
         arView.session.run(config)
         arView.addCoaching()

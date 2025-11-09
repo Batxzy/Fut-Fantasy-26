@@ -43,24 +43,39 @@ struct BadgeGalleryView: View {
             VStack(spacing: 0) {
                 
                 // "STICKERS" / "BADGES" tabs
-                HStack(spacing: 20) {
-                    Button(action: { selectedTab = .sticker }) {
-                        Text("STICKERS")
-                            .font(.system(size: 20, weight: .heavy))
-                            .foregroundStyle(selectedTab == .sticker ? .white : .white.opacity(0.4))
-                    }
+                HStack(spacing: 15) {
                     
                     Button(action: { selectedTab = .badge }) {
-                        Text("BADGES")
-                            .font(.system(size: 20, weight: .heavy))
-                            .foregroundStyle(selectedTab == .badge ? .white : .white.opacity(0.4))
+                        Text("Badges")
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(1.2)
+                            .foregroundStyle(selectedTab == .badge ? .wpMint : .white.opacity(0.4))
                     }
+                    
+                    Rectangle()
+                        .frame(width: 2,height: 20)
+                        .foregroundStyle(.white.opacity(0.6))
+                    
+                    Button(action: { selectedTab = .sticker }) {
+                        Text("Stickers")
+                            .fontWidth(.condensed)
+                            .font(.system(size: 24))
+                            .fontDesign(.default)
+                            .fontWeight(.medium)
+                            .kerning(1.2)
+                            .foregroundStyle(selectedTab == .sticker ? .wpMint : .white.opacity(0.4))
+                        
+                    }
+                    
                     
                     Spacer()
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 16)
+                .padding(.top, 19)
+                .padding(.bottom, 19)
                 
                 // Main ScrollView for the entire layout
                 ScrollView {
