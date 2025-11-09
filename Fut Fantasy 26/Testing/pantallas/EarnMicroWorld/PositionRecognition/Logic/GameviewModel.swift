@@ -21,20 +21,27 @@ enum GameState {
 class GameViewModel {
     var cameraViewModel = CameraViewModel()
     var poseViewModel = PoseEstimationViewModel()
-    
     var gameState: GameState = .start
     
     var finalUIImage: UIImage?
     var finalScore: Double = 0.0
-    
     var referencePoseImageName: String = "Messi Celebration Pointing Up"
     
     var exportProgress: Double = 0.0
     var isExportComplete: Bool = false
     var shareImageURL: URL?
     
+    // Economy integration
+    var rewardManager: RewardManager?
+    var currentSquad: Squad?
+    
     init() {
         cameraViewModel.delegate = poseViewModel
+    }
+    
+    func configureEconomy(squad: Squad, rewardManager: RewardManager) {
+        self.currentSquad = squad
+        self.rewardManager = rewardManager
     }
     
     func startGame() async {
@@ -60,14 +67,17 @@ class GameViewModel {
     
     func endGame() {
         print("🛑 Ending game...")
+        
         cameraViewModel.stopSession()
         
-        self.finalScore = poseViewModel.messiConfidence
-        
+        finalScore = poseViewModel.messiConfidence
         if let buffer = poseViewModel.lastSampleBuffer {
-            self.finalUIImage = uiImageFromSampleBuffer(buffer)
+            finalUIImage = uiImageFromSampleBuffer(buffer)
         }
         
+        if let squad = currentSquad, let rm = rewardManager {
+            rm.awardPoseIfEligible(score: finalScore, to: squad)
+        }
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
             gameState = .end
         }

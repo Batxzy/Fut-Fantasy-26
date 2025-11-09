@@ -9,13 +9,45 @@ import SwiftUI
 import MapKit
 import Contacts
 
+import SwiftUI
+import MapKit
+import SwiftData
+
 struct LocationDetailSheet: View {
     let location: CuratedLocation
     let distance: Double
     let isWithinGeofence: Bool
     @Binding var showARView: Bool
     
+    @Query private var squads: [Squad]
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
+    
+    @State private var remainingTime: TimeInterval?
+    @State private var timer: Timer?
+    @State private var showRewardAlert = false
+    
+    private var currentSquad: Squad? {
+        squads.first
+    }
+    
+    private var canClaimReward: Bool {
+        guard let squad = currentSquad else { return false }
+        return squad.canClaimLocationReward(locationId: location.id, cooldownHours: location.cooldownHours)
+    }
+    
+    private var formattedTimeRemaining: String {
+        guard let time = remainingTime, time > 0 else { return "" }
+        
+        let hours = Int(time) / 3600
+        let minutes = (Int(time) % 3600) / 60
+        
+        return "\(hours)h \(minutes)m remaining"
+    }
+    
+    private var displayRewardPoints: Int {
+            Int(location.rewardAmountMillions * 1000) // multiplier
+        }
     
     var body: some View {
         ScrollView {
@@ -23,7 +55,6 @@ struct LocationDetailSheet: View {
                 
                 VStack (spacing: -20){
                     HStack {
-                        // Circular Apple Maps button
                         Button {
                             location.mapItem.openInMaps()
                         } label: {
@@ -35,7 +66,6 @@ struct LocationDetailSheet: View {
                         .glassEffect(.regular.interactive())
                         Spacer()
                         
-                        // Dismiss button
                         Button {
                             dismiss()
                         } label: {
@@ -83,50 +113,70 @@ struct LocationDetailSheet: View {
                         
                         VStack(spacing:2){
                             EarnPoints(
-                                points: 8000,
-                                textColor: location.mainColor,
-                                iconColor: location.mainColor
+                                points: displayRewardPoints,
+                                textColor: canClaimReward ? location.mainColor : .gray,
+                                iconColor: canClaimReward ? location.mainColor : .gray
                             )
-                            Text("Reward available")
-                                .fontWidth(.condensed)
-                                .font(.system(size: 11))
-                                .fontDesign(.default)
-                                .fontWeight(.medium)
-                                .kerning(0)
-                                .foregroundStyle(.white.opacity(0.65))
+                            
+                            if canClaimReward {
+                                Text("Reward available")
+                                    .fontWidth(.condensed)
+                                    .font(.system(size: 11))
+                                    .fontDesign(.default)
+                                    .fontWeight(.medium)
+                                    .kerning(0)
+                                    .foregroundStyle(.white.opacity(0.65))
+                            } else {
+                                Text(formattedTimeRemaining)
+                                    .fontWidth(.condensed)
+                                    .font(.system(size: 11))
+                                    .fontDesign(.default)
+                                    .fontWeight(.medium)
+                                    .kerning(0)
+                                    .foregroundStyle(.gray)
+                            }
                         }
                     }
                 }
                
                 
-                // Custom AR button
                 Button {
-                    dismiss()
-                    showARView = true
-                } label: {
-                    VStack(spacing: 8) {
-                        if isWithinGeofence {
-                                Text("Lets Paste")
+                        if isWithinGeofence, let squad = currentSquad {
+                            
+                            if canClaimReward {
+                                
+                                let rewardManager = RewardManager(modelContext: modelContext)
+                                rewardManager.tryAwardLocation(location: location, squad: squad)
+                                updateRemainingTime()
+                            }
+                        }
+                        
+                        dismiss()
+                        showARView = true
+                    } label: {
+                        VStack(spacing: 8) {
+                            if isWithinGeofence {
+                                Text(canClaimReward ? "Claim & Paste" : "Paste Stickers")
                                     .font(.headline)
                                     .foregroundStyle(.black)
-                        } else {
-                            Text("Get closer to unlock")
-                                .font(.headline)
-                                .foregroundStyle(.gray)
-                            Text("\(Int(distance - 200))m away from activation")
-                                .font(.caption)
-                                .foregroundStyle(.gray.opacity(0.8))
+                            } else {
+                                Text("Get closer to unlock")
+                                    .font(.headline)
+                                    .foregroundStyle(.gray)
+                                Text("\(max(0, Int(distance - 200)))m away from activation")
+                                    .font(.caption)
+                                    .foregroundStyle(.gray.opacity(0.8))
+                            }
                         }
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 50)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
+                        )
                     }
-                    .padding(.vertical, 7)
-                    .padding(.horizontal, 50)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
-                    )
-                }
-                .disabled(!isWithinGeofence)
-                .padding(.horizontal)
+                    .disabled(!isWithinGeofence)
+                    .padding(.horizontal)
             }
             .padding(.top, 16)
         }
@@ -134,6 +184,24 @@ struct LocationDetailSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
         .presentationBackground(.mainBg.opacity(0.6 ))
+        .onAppear {
+            updateRemainingTime()
+            startTimer()
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func updateRemainingTime() {
+        guard let squad = currentSquad else { return }
+        remainingTime = squad.timeUntilNextLocationReward(locationId: location.id, cooldownHours: location.cooldownHours)
+    }
+    
+    private func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            updateRemainingTime()
+        }
     }
 }
 
@@ -144,7 +212,7 @@ struct EarnPoints: View {
      
      var body: some View {
          HStack(spacing: 5) {
-             Text("+\(points)")
+             Text("+\(points)M")
                  .fontWidth(.condensed)
                  .font(.system(size: 28))
                  .fontDesign(.default)
@@ -159,7 +227,7 @@ struct EarnPoints: View {
      }
  }
 
-
+/*
 #Preview {
     let mockCoordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
     
@@ -181,8 +249,13 @@ struct EarnPoints: View {
         mapItem: mockMapItem,
         mainColor: .wpMint,
         accentColor: .wpBlueOcean,
-        imageName: "soccerball"
+        imageName: "soccerball",
+        rewardAmount: 8.0,
+        cooldownHours: 24
     )
+    
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Squad.self, configurations: config)
     
     return LocationDetailSheet(
         location: mockLocation,
@@ -190,4 +263,6 @@ struct EarnPoints: View {
         isWithinGeofence: true,
         showARView: .constant(false)
     )
+    .modelContainer(container)
 }
+*/

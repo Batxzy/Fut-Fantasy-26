@@ -81,7 +81,7 @@ class EffectsPipeline {
         }
     }
 
-    // ✅ ADD THIS FUNCTION
+    
     private func normalizeImageSize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
         let size = image.size
         let maxOriginal = max(size.width, size.height)

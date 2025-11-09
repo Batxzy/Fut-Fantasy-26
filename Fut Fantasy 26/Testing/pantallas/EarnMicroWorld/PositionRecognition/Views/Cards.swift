@@ -9,48 +9,37 @@
 import SwiftUI
 
 
-import SwiftUI
-
-
 // MARK: - Win Card
 struct WinCard: View {
     let score: Double
+    let onDismiss: () -> Void
     
     var body: some View {
         VStack(alignment: .center) {
+            
             Text("Perfect!")
                 .textCase(.uppercase)
-                .fontWidth(.compressed)
-                .font(.system(size: 28))
-                .fontDesign(.default)
-                .fontWeight(.black)
-                .kerning(0.6)
+                .font(.system(size: 28, weight: .black))
                 .foregroundStyle(.wpGreenYellow)
             
             Text(String(format: "%.0f%% similarity", score * 100))
-                .font(.system(size: 14))
-                .fontWidth(.condensed)
-                .fontWeight(.semibold)
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
             
             HStack {
                 Text("+1000")
-                    .font(.system(size: 34))
-                    .fontWidth(.condensed)
-                    .fontWeight(.semibold)
-                    .kerning(0.4)
+                    .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(.wpGreenYellow)
-                
                 Image(systemName: "star.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(.wpGreenYellow)
             }
             
             Spacer()
-            Button(action: { /* Add save logic */ }) {
-                Text("Claim")
-                    .font(.system(size: 16))
-                    .fontWeight(.medium)
+            
+            Button(action: onDismiss) {
+                Text("Continue")
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.wpBlueOcean)
                     .padding(.horizontal, 53)
                     .padding(.vertical, 8)

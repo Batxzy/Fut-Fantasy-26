@@ -12,11 +12,18 @@ import Vision
 import AVFoundation
 import Observation
 import CoreML
+import CoreData
+import SwiftData
 
 struct PoseGameView: View {
     @State private var gameViewModel = GameViewModel()
-    
-    @Namespace private var gameNamespace
+        @Query private var squads: [Squad]
+        @Environment(\.modelContext) private var modelContext
+        @Namespace private var gameNamespace
+        
+        private var currentSquad: Squad? {
+            squads.first
+        }
     
     var body: some View {
         ZStack {
@@ -37,8 +44,14 @@ struct PoseGameView: View {
         }
         .statusBar(hidden: true)
         .toolbarVisibility(.hidden, for: .tabBar)
-    }
-}
+        .onAppear {
+                    if let squad = currentSquad {
+                        let rewardManager = RewardManager(modelContext: modelContext)
+                        gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
+                    }
+                }
+            }
+        }
 
 // MARK: - StartSubView
 
@@ -222,6 +235,7 @@ struct WinContent: View {
     let FrameUIImage: UIImage?
     let referencePoseImageName: String
     var namespace: Namespace.ID
+    let onClaim: () -> Void
     
     var body: some View {
         VStack(spacing: 24) {
@@ -247,11 +261,12 @@ struct WinContent: View {
                     .cornerRadius(20)
             }
             
-            WinCard(score: score)
+            WinCard(score: score, onDismiss: onClaim)
         }
         .padding(24)
     }
 }
+
 
 // MARK: - Content Layer End
 private struct ContentLayer: View {
@@ -261,6 +276,7 @@ private struct ContentLayer: View {
     let FrameUIImage: UIImage?
     let referencePoseImageName: String
     var namespace: Namespace.ID
+    let onClaim: () -> Void
     
     var body: some View {
         VStack {
@@ -271,7 +287,8 @@ private struct ContentLayer: View {
                     score: score,
                     FrameUIImage: FrameUIImage,
                     referencePoseImageName: referencePoseImageName,
-                    namespace: namespace
+                    namespace: namespace,
+                    onClaim: onClaim
                 )
             } else {
                 AlmostCard(score: score, restartAction: restartAction)
@@ -311,7 +328,10 @@ struct EndView: View {
                 restartAction: gameViewModel.restartGame,
                 FrameUIImage: uiImageToDisplay,
                 referencePoseImageName: referenceImageToDisplay,
-                namespace: namespace
+                namespace: namespace,
+                onClaim: { 
+                    print("✅ Reward claimed by user")
+                }
             )
             
             if showExportProgress {
@@ -409,6 +429,7 @@ struct ExportProgressView: View {
     }
 }
 
+/*
 #Preview("PoseGameView") {
     PoseGameView()
 }
@@ -499,3 +520,5 @@ struct ExportProgressView: View {
         isComplete: true
     )
 }
+
+*/

@@ -21,7 +21,7 @@ struct PlayerDetailView: View {
     @Query private var squads: [Squad]
     
     @State private var showingAddConfirmation = false
-    @State private var showValidationError = false  // ✅ ADD THIS
+    @State private var showValidationError = false
     @State private var validationErrorMessage = ""
     
     var currentSquad: Squad? {

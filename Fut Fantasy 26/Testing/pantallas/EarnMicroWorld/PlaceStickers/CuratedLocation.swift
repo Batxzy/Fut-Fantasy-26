@@ -14,6 +14,8 @@ struct CuratedLocation: Identifiable, Equatable {
     let mainColor: Color
     let accentColor: Color
     let imageName: String
+    let rewardAmountMillions: Double
+    let cooldownHours: Int
     
     var name: String { mapItem.name ?? "Unknown Location" }
     var coordinate: CLLocationCoordinate2D { mapItem.placemark.coordinate }

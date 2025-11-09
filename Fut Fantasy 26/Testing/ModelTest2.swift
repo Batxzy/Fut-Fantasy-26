@@ -352,26 +352,27 @@ final class Squad {
     var ownerName: String
     
     // Budget
-    var initialBudget: Double // £100m (includes earnings from questions/challenges)
+    var initialBudget: Double
     
-    // Transfer Management
+    var lastLocationRewardDate: [String: Date] = [:]
+
+   
     var freeTransfersRemaining: Int
     var totalTransfersMade: Int
-    var pointsDeductedFromTransfers: Int // 4 points per extra transfer
-    var hasUnlimitedTransfers: Bool // Certain stages
+    var pointsDeductedFromTransfers: Int
+    var hasUnlimitedTransfers: Bool
     
     // Points
     var totalPoints: Int
     var matchdayPoints: Int
     
-    // **KEY CHANGE**: Store player IDs in 2D structure by position
-    // [goalkeepers, defenders, midfielders, forwards]
+   
     var startingXIIDs: [[Int]]
     var benchIDs: [Int]
     
     // Relationships
     @Relationship(deleteRule: .nullify)
-    var players: [Player]? // All 15 players
+    var players: [Player]?
     
     @Relationship(deleteRule: .nullify)
     var captain: Player?
@@ -383,7 +384,7 @@ final class Squad {
     var transfers: [Transfer]?
     
     @Relationship(deleteRule: .cascade, inverse: \MatchdaySquad.squad)
-    var matchdaySquads: [MatchdaySquad]? // Snapshots per matchday
+    var matchdaySquads: [MatchdaySquad]?
     
     @Relationship(deleteRule: .cascade, inverse: \Collectible.squad)
         var collectibles: [Collectible]? = []
@@ -391,7 +392,7 @@ final class Squad {
     init(
         teamName: String,
         ownerName: String = "Manager",
-        initialBudget: Double = 1000.0
+        initialBudget: Double = 100.0
     ) {
         self.id = UUID()
         self.teamName = teamName
@@ -404,9 +405,10 @@ final class Squad {
         self.totalPoints = 0
         self.matchdayPoints = 0
         
-        // **NEW**: Initialize 2D array: [GK, DEF, MID, FWD]
         self.startingXIIDs = [[], [], [], []]
         self.benchIDs = []
+        
+        self.lastLocationRewardDate = [:]
     }
     
     // MARK: - Computed Properties (BACKWARDS COMPATIBLE)
@@ -477,6 +479,44 @@ final class Squad {
     }
     
     // MARK: - Helper Methods
+    
+    // MARK: - Reward Economy Helpers (Multiplier system)
+       // Display “currency” = millions * 1000 (purely cosmetic)
+       var displayCurrencyPoints: Int { Int(initialBudget * 1000) }
+       var displayCurrencyPointsFormatted: String {
+           let f = NumberFormatter()
+           f.numberStyle = .decimal
+           return f.string(from: NSNumber(value: displayCurrencyPoints)) ?? "0"
+       }
+       
+       // Add actual millions (e.g. 1.0 => +1000 displayed)
+       func addCurrencyMillions(_ amount: Double) {
+           initialBudget += amount
+           print("💰 +\(amount)M added. New budget: \(initialBudget)M (display \(Int(amount * 1000)))")
+       }
+       
+       func canClaimLocationReward(locationId: String, cooldownHours: Int) -> Bool {
+           guard let last = lastLocationRewardDate[locationId] else { return true }
+           let elapsedHours = Date().timeIntervalSince(last) / 3600
+           return elapsedHours >= Double(cooldownHours)
+       }
+       
+       func timeUntilNextLocationReward(locationId: String, cooldownHours: Int) -> TimeInterval? {
+           guard let last = lastLocationRewardDate[locationId] else { return nil }
+           let next = last.addingTimeInterval(Double(cooldownHours) * 3600)
+           let remaining = next.timeIntervalSince(Date())
+           return remaining > 0 ? remaining : nil
+       }
+       
+       func claimLocationReward(locationId: String, amountMillions: Double, cooldownHours: Int) {
+           guard canClaimLocationReward(locationId: locationId, cooldownHours: cooldownHours) else {
+               print("⏱️ Location \(locationId) on cooldown.")
+               return
+           }
+           addCurrencyMillions(amountMillions)
+           lastLocationRewardDate[locationId] = Date()
+           print("🎁 Claimed location \(locationId) reward: \(amountMillions)M (display \(Int(amountMillions * 1000)))")
+       }
     
     func playerCount(for position: PlayerPosition) -> Int {
         players?.filter { $0.position == position }.count ?? 0
