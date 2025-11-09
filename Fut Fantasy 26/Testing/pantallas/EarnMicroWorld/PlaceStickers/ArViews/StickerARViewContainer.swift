@@ -11,47 +11,69 @@ import RealityKit
 import ARKit
 import SwiftData
 
-struct StickerARViewContainer : UIViewRepresentable {
-   
-    // Takes the selected collectible from the sheet
-    @Binding var selectedCollectible: Collectible?
 
+struct StickerARViewContainer: UIViewRepresentable {
+    @Binding var selectedCollectible: Collectible?
+    @Binding var showPlanes: Bool
+    
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
-            
-        // configuracion del ar kit
+        
         let config = ARWorldTrackingConfiguration()
         config.planeDetection = .vertical
         config.isLightEstimationEnabled = true
         
+        arView.session.delegate = context.coordinator
         arView.session.run(config)
         arView.addCoaching()
         
-        // Añadir gesture recognizer para tap-to-place
         let tapGesture = UITapGestureRecognizer(
             target: context.coordinator,
             action: #selector(context.coordinator.handleTap)
         )
         arView.addGestureRecognizer(tapGesture)
         
-        // Pass the ARView to the coordinator
         context.coordinator.arView = arView
         
         return arView
     }
     
     func updateUIView(_ uiView: ARView, context: Context) {
-        // Update the coordinator with the currently selected sticker
         context.coordinator.selectedCollectible = selectedCollectible
+        context.coordinator.updatePlaneVisibility(showPlanes)
     }
     
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
     
-    class Coordinator: NSObject {
+    class Coordinator: NSObject, ARSessionDelegate {
         var selectedCollectible: Collectible?
         weak var arView: ARView?
+        var planeAnchors: [UUID: AnchorEntity] = [:]
+        var showPlanes: Bool = false
+        
+        // ARSessionDelegate methods
+        func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
+            for anchor in anchors {
+                guard let planeAnchor = anchor as? ARPlaneAnchor else { continue }
+                addPlaneVisualization(for: planeAnchor)
+            }
+        }
+        
+        func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
+            for anchor in anchors {
+                guard let planeAnchor = anchor as? ARPlaneAnchor else { continue }
+                updatePlaneVisualization(for: planeAnchor)
+            }
+        }
+        
+        func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
+            for anchor in anchors {
+                guard let planeAnchor = anchor as? ARPlaneAnchor else { continue }
+                removePlaneVisualization(for: planeAnchor)
+            }
+        }
         
         @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
             guard let arView = arView,
@@ -59,7 +81,6 @@ struct StickerARViewContainer : UIViewRepresentable {
                 print("⚠️ No collectible selected")
                 return
             }
-            
             
             guard let uiImage = collectible.uiImage else {
                 print("⚠️ Selected item has no placeable image data.")
@@ -79,19 +100,65 @@ struct StickerARViewContainer : UIViewRepresentable {
                 return
             }
             
-            // Create and place the sticker entity
-            if let stickerEntity = createStickerEntity(
-                from: uiImage
-            ) {
+            if let stickerEntity = createStickerEntity(from: uiImage) {
                 let anchor = AnchorEntity(world: firstResult.worldTransform)
-                
                 stickerEntity.orientation = simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
                 stickerEntity.transform.rotation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
-                            
                 anchor.addChild(stickerEntity)
                 arView.scene.addAnchor(anchor)
-                
                 print("✅ Collectible placed on wall!")
+            }
+        }
+        
+        private func addPlaneVisualization(for planeAnchor: ARPlaneAnchor) {
+            guard let arView = arView else { return }
+            
+            let anchor = AnchorEntity(anchor: planeAnchor)
+            
+            let mesh = MeshResource.generatePlane(
+                width: planeAnchor.planeExtent.width,
+                depth: planeAnchor.planeExtent.height
+            )
+            
+            var material = SimpleMaterial()
+            material.color = .init(
+                tint: UIColor(Color.wpMint).withAlphaComponent(0.3),
+                texture: nil
+            )
+            
+            let planeEntity = ModelEntity(mesh: mesh, materials: [material])
+            planeEntity.position = [planeAnchor.center.x, 0, planeAnchor.center.z]
+            
+            anchor.addChild(planeEntity)
+            anchor.isEnabled = showPlanes
+            arView.scene.addAnchor(anchor)
+            
+            planeAnchors[planeAnchor.identifier] = anchor
+        }
+        
+        private func updatePlaneVisualization(for planeAnchor: ARPlaneAnchor) {
+            guard let anchor = planeAnchors[planeAnchor.identifier],
+                  let planeEntity = anchor.children.first as? ModelEntity else { return }
+            
+            let mesh = MeshResource.generatePlane(
+                width: planeAnchor.planeExtent.width,
+                depth: planeAnchor.planeExtent.height
+            )
+            
+            planeEntity.model?.mesh = mesh
+            planeEntity.position = [planeAnchor.center.x, 0, planeAnchor.center.z]
+        }
+        
+        private func removePlaneVisualization(for planeAnchor: ARPlaneAnchor) {
+            guard let anchor = planeAnchors[planeAnchor.identifier] else { return }
+            arView?.scene.removeAnchor(anchor)
+            planeAnchors.removeValue(forKey: planeAnchor.identifier)
+        }
+        
+        func updatePlaneVisibility(_ show: Bool) {
+            showPlanes = show
+            for anchor in planeAnchors.values {
+                anchor.isEnabled = show
             }
         }
         
@@ -115,8 +182,6 @@ struct StickerARViewContainer : UIViewRepresentable {
             material.roughness = .init(floatLiteral: 1.0)
             material.emissiveColor = .init(texture: .init(texture))
             material.emissiveIntensity = 0.6
-            
-            // Enable transparency
             material.blending = .transparent(opacity: 1.0)
             material.opacityThreshold = 0.0
             

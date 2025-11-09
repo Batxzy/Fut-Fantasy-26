@@ -53,7 +53,7 @@ struct StickerPickerSheet: View {
                     Rectangle()
                         .frame(width: 2,height: 20)
                         .foregroundStyle(.white.opacity(0.6))
-                        
+                    
                     
                     Button(action: { selectedTab = .badge }) {
                         Text("Badges")
@@ -117,7 +117,6 @@ struct StickerPickerSheet: View {
         }
     }
 }
-
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
