@@ -126,9 +126,9 @@ final class SwiftDataSquadRepository: SquadRepository {
             let canAddToStarting: Bool
             switch player.position {
             case .goalkeeper: canAddToStarting = positionCount < 1
-            case .defender: canAddToStarting = positionCount < 5
-            case .midfielder: canAddToStarting = positionCount < 5
-            case .forward: canAddToStarting = positionCount < 3
+            case .defender: canAddToStarting = positionCount < 4
+            case .midfielder: canAddToStarting = positionCount < 3
+            case .forward: canAddToStarting = positionCount < 3 
             }
             
             if canAddToStarting {

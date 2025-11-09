@@ -151,10 +151,18 @@ struct SquadView: View {
                 )
                 .animation(.bouncy(duration: 0.75), value: squad.bench?.map { $0.id })
                 
-                Button("Set Captain & Vice-Captain") {
+                Button(action: {
                     showingCaptainSelection = true
+                }) {
+                    Text("Set Captain & Vice-Captain")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.black)
                 }
-                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(Color.wpMint)
+                .cornerRadius(16)
+                .padding(.horizontal, 38)
             }
         }
         .scrollContentBackground(.hidden)

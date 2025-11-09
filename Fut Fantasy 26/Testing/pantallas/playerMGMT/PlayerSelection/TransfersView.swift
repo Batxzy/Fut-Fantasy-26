@@ -122,7 +122,7 @@ struct TransfersView: View {
                         } label: {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.title2)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.black)
                         }
                         .buttonStyle(.glassProminent)
                         .disabled(isProcessing || isPendingTransfer(player))
@@ -170,7 +170,7 @@ struct TransfersView: View {
                         .font(.caption)
                         .lineLimit(1)
                     
-                    Text(transfer.playerOut.displayPrice)
+                    Text(transfer.playerIn.displayPrice)
                         .font(.caption2)
                         .foregroundStyle(.green)
                 }
@@ -180,7 +180,7 @@ struct TransfersView: View {
                 
                 // Player in
                 VStack {
-                    Image(transfer.playerOut.imageURL)
+                    Image(transfer.playerIn.imageURL)
                         .resizable()
                         .padding(.top,3)
                         .aspectRatio(contentMode: .fit)

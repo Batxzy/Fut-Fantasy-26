@@ -64,7 +64,6 @@ final class SwiftDataPlayerRepository: PlayerRepository {
     ) async throws {
         print("⚽ [PlayerRepo] Updating performance for player \(playerId)")
         
-        // Fetch player using @Query pattern in the calling view
         let predicate = #Predicate<Player> { $0.id == playerId }
         var descriptor = FetchDescriptor<Player>(predicate: predicate)
         descriptor.fetchLimit = 1

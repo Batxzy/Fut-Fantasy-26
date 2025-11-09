@@ -42,20 +42,93 @@ struct PlayersView: View {
     
     func canAddPlayer(_ player: Player) -> Bool {
         guard let squad = currentSquad else { return false }
-        return !isInSquad(player) && !squad.isFull && squad.currentBudget >= player.price
+        
+        if isInSquad(player) || squad.isFull || squad.currentBudget < player.price {
+            return false
+        }
+        
+        if !squad.canAddPlayer(position: player.position) {
+            return false
+        }
+        
+        let totalStarting = squad.startingXI?.count ?? 0
+        if totalStarting < 11 {
+            let currentInStarting = squad.startingPlayerCount(for: player.position)
+            
+            let maxInStarting: Int
+            switch player.position {
+            case .goalkeeper: maxInStarting = 1
+            case .defender: maxInStarting = 4
+            case .midfielder: maxInStarting = 3
+            case .forward: maxInStarting = 3
+            }
+            
+            if currentInStarting >= maxInStarting {
+                let benchCount = squad.bench?.count ?? 0
+                return benchCount < 4
+            }
+        } else {
+            let benchCount = squad.bench?.count ?? 0
+            return benchCount < 4
+        }
+        
+        return true
     }
-    
+
     private func addPlayerToSquad() async {
         guard let squad = currentSquad, let player = playerToAdd else { return }
         
+        if squad.isFull {
+            validationErrorMessage = "Squad is full. You have 15/15 players."
+            showValidationError = true
+            return
+        }
+        
         if !squad.canAddPlayer(position: player.position) {
-            validationErrorMessage = "Position limit reached for \(player.position.fullName)s (\(player.position.squadLimit) max)"
+            validationErrorMessage = "Position limit reached for \(player.position.fullName)s (\(player.position.squadLimit) max in squad)"
             showValidationError = true
             return
         }
         
         if squad.currentBudget < player.price {
             validationErrorMessage = "Insufficient budget. You need £\(String(format: "%.1f", player.price))M but only have £\(squad.displayBudget)"
+            showValidationError = true
+            return
+        }
+        
+        let totalStarting = squad.startingXI?.count ?? 0
+        if totalStarting < 11 {
+            let currentInStarting = squad.startingPlayerCount(for: player.position)
+            
+            let maxInStarting: Int
+            switch player.position {
+            case .goalkeeper: maxInStarting = 1
+            case .defender: maxInStarting = 4
+            case .midfielder: maxInStarting = 3
+            case .forward: maxInStarting = 3     
+            }
+            
+            if currentInStarting >= maxInStarting {
+                let benchCount = squad.bench?.count ?? 0
+                if benchCount >= 4 {
+                    validationErrorMessage = "Starting XI is full for \(player.position.fullName)s and bench is full (4/4)"
+                    showValidationError = true
+                    return
+                }
+            }
+        } else {
+            let benchCount = squad.bench?.count ?? 0
+            if benchCount >= 4 {
+                validationErrorMessage = "Bench is full (4/4). Remove a player first."
+                showValidationError = true
+                return
+            }
+        }
+        
+        let currentStage: TournamentStage = .groupStage
+        if !squad.canAddPlayerFromNation(player.nation, stage: currentStage) {
+            let maxAllowed = currentStage.maxPlayersPerNation
+            validationErrorMessage = "Nation limit reached for \(player.nation.rawValue) (\(maxAllowed) max per nation)"
             showValidationError = true
             return
         }
@@ -176,15 +249,19 @@ struct PlayersView: View {
                     await addPlayerToSquad()
                 }
             }
-            
+        } message: {
+            if let player = playerToAdd {
+                Text("Add \(player.name) to your squad for \(player.displayPrice)?")
+            }
+        }
         .alert("Cannot Add Player", isPresented: $showValidationError) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(validationErrorMessage)
         }
-        } message: {
-            if let player = playerToAdd {
-                Text("Add \(player.name) to your squad for \(player.displayPrice)?")
+        .onAppear {
+            if let position = preSelectedPosition, selectedPosition == nil {
+                selectedPosition = position
             }
         }
         .onAppear {
@@ -270,17 +347,14 @@ struct PlayersView: View {
                         Color.clear.opacity(0.40).frame(height: 230)
                         
                         ForEach(filteredPlayers, id: \.id) { player in
-                            ZStack {
-                                NavigationLink(destination: PlayerDetailView(
-                                    player: player,
-                                    viewModel: viewModel,
-                                    playerRepository: playerRepository,
-                                    squadRepository: squadRepository
-                                )) {
-                                    EmptyView()
-                                }
-                                .opacity(0)
-                                
+                            
+                         
+                            NavigationLink(destination: PlayerDetailView(
+                                player: player,
+                                viewModel: viewModel,
+                                playerRepository: playerRepository,
+                                squadRepository: squadRepository
+                            )) {
                                 HStack(spacing: 12) {
                                     PlayerRowView(player: player)
                                     
@@ -296,11 +370,13 @@ struct PlayersView: View {
                                     }
                                     .buttonStyle(.plain)
                                     .disabled(isInSquad(player) || !canAddPlayer(player))
+                                    .opacity(isInSquad(player) || !canAddPlayer(player) ? 0.5 : 1.0)
                                 }
                                 .padding(.leading, 16)
                                 .padding(.trailing, 16)
                                 .padding(.vertical, 16)
                             }
+                            .buttonStyle(.plain)
                             .background(Color(.systemGray6))
                             
                             Divider()

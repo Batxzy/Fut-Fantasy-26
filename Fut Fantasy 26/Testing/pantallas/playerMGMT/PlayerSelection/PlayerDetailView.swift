@@ -21,6 +21,8 @@ struct PlayerDetailView: View {
     @Query private var squads: [Squad]
     
     @State private var showingAddConfirmation = false
+    @State private var showValidationError = false  // ✅ ADD THIS
+    @State private var validationErrorMessage = ""
     
     var currentSquad: Squad? {
         squads.first
@@ -32,12 +34,83 @@ struct PlayerDetailView: View {
     
     private func addPlayerToSquad() async {
         guard let squad = currentSquad else { return }
-                
+        
+        if squad.isFull {
+            validationErrorMessage = "Squad is full. You have 15/15 players. Remove a player to add \(player.name)."
+            showValidationError = true
+            return
+        }
+        
+        if !squad.canAddPlayer(position: player.position) {
+            let posLimit = player.position.squadLimit
+            validationErrorMessage = "You already have \(posLimit) \(player.position.fullName)s in your squad (maximum allowed). Remove one to add \(player.name)."
+            showValidationError = true
+            return
+        }
+        
+        if squad.currentBudget < player.price {
+            let shortfall = player.price - squad.currentBudget
+            validationErrorMessage = "Insufficient budget. \(player.name) costs \(player.displayPrice) but you only have £\(squad.displayBudget) remaining. You need £\(String(format: "%.1f", shortfall))M more."
+            showValidationError = true
+            return
+        }
+        
+        let totalStarting = squad.startingXI?.count ?? 0
+        if totalStarting < 11 {
+            let currentInStarting = squad.startingPlayerCount(for: player.position)
+            
+            let maxInStarting: Int
+            let positionName: String
+            switch player.position {
+            case .goalkeeper:
+                maxInStarting = 1
+                positionName = "Goalkeeper"
+            case .defender:
+                maxInStarting = 4
+                positionName = "Defender"
+            case .midfielder:
+                maxInStarting = 3
+                positionName = "Midfielder"
+            case .forward:
+                maxInStarting = 3
+                positionName = "Forward"
+            }
+            
+            if currentInStarting >= maxInStarting {
+                let benchCount = squad.bench?.count ?? 0
+                if benchCount >= 4 {
+                    validationErrorMessage = "Cannot add \(player.name). Your starting XI already has \(maxInStarting) \(positionName)s (formation 1-4-3-3) and your bench is full (4/4). Remove a player first."
+                    showValidationError = true
+                    return
+                }
+                print("ℹ️ [PlayerDetail] \(player.name) will be added to bench (starting XI position full)")
+            }
+        } else {
+            let benchCount = squad.bench?.count ?? 0
+            if benchCount >= 4 {
+                validationErrorMessage = "Cannot add \(player.name). Your starting XI (1-4-3-3) is complete and your bench is full (4/4). Remove a player first."
+                showValidationError = true
+                return
+            }
+        }
+        
+        // Validation 5: Nation limit
+        let currentStage: TournamentStage = .groupStage
+        if !squad.canAddPlayerFromNation(player.nation, stage: currentStage) {
+            let maxAllowed = currentStage.maxPlayersPerNation
+            let currentCount = squad.playersFromNation(player.nation)
+            validationErrorMessage = "Cannot add \(player.name). You already have \(currentCount) players from \(player.nation.rawValue). Maximum \(maxAllowed) players per nation allowed during \(currentStage.rawValue)."
+            showValidationError = true
+            return
+        }
+        
+        // All validations passed - add player
         do {
             try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
             print("✅ [PlayerDetail] Player added successfully")
         } catch {
-            viewModel.errorMessage = error.localizedDescription
+            validationErrorMessage = "Failed to add player: \(error.localizedDescription)"
+            showValidationError = true
             print("❌ [PlayerDetail] Failed to add player: \(error)")
         }
     }
@@ -116,6 +189,11 @@ struct PlayerDetailView: View {
         } message: {
             Text("Add \(player.name) to your squad for \(player.displayPrice)?")
         }
+        .alert("Cannot Add Player", isPresented: $showValidationError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(validationErrorMessage)
+        }
     }
     
     // MARK: - View Components
@@ -186,47 +264,122 @@ struct PlayerDetailView: View {
     private var actionButton: some View {
         if let squad = currentSquad {
             if isInSquad {
-                Label("In Squad", systemImage: "checkmark.circle.fill")
+                Text("In Squad")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.green.opacity(0.2))
-                    .foregroundStyle(.green)
-                    .cornerRadius(12)
+                    .frame(height: 40)
+                    .background(Color.wpGreenLime)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
             } else if squad.isFull {
-                Label("Squad Full (15/15)", systemImage: "person.3.fill")
+                Text("Squad Full (15/15)")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.orange.opacity(0.2))
-                    .foregroundStyle(.orange)
-                    .cornerRadius(12)
+                    .frame(height: 40)
+                    .background(Color.wpRedOrange)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
+            } else if !squad.canAddPlayer(position: player.position) {
+                Text("\(player.position.fullName) Limit Reached (\(player.position.squadLimit)/\(player.position.squadLimit))")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.wpRedOrange)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
             } else if squad.currentBudget < player.price {
-                Label("Can't Afford", systemImage: "exclamationmark.triangle.fill")
+                Text("Can't Afford (£\(squad.displayBudget) left)")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.red.opacity(0.2))
-                    .foregroundStyle(.red)
-                    .cornerRadius(12)
+                    .frame(height: 40)
+                    .background(Color.wpRedDark)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
+            } else if !canAddToStartingOrBench(player: player, squad: squad) {
+                Text("\(player.position.fullName) Spots Full")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.wpRedOrange)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
+            } else if !canAddPlayerNation(player: player, squad: squad) {
+                Text("\(player.nation.rawValue) Limit Reached")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.wpPurpleOrchid)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
             } else {
                 Button {
-                    showingAddConfirmation = true
-                } label: {
-                    Label("Add to Squad", systemImage: "plus.circle.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(.blue)
-                        .foregroundStyle(.white)
-                        .cornerRadius(12)
-                }
+                       showingAddConfirmation = true
+                   } label: {
+                       HStack(spacing: 5) {
+                           Text("Buy for \(String(format: "%.0fM", player.price))")
+                               .font(.system(size: 20, weight: .semibold))
+                               .foregroundStyle(.black)
+                           
+                           Image(systemName: "star.circle.fill")
+                               .foregroundStyle(.black)
+                       }
+                   }
+                   .frame(maxWidth: .infinity)
+                   .frame(height: 40)
+                   .background(Color.wpMint)
+                   .cornerRadius(16)
+                   .padding(.horizontal, 38)
             }
         } else {
-            // Replace ProgressView with a "Create Squad" message
-            Label("No Squad Available", systemImage: "exclamationmark.triangle")
+            Text("No Squad Available")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.black)
                 .frame(maxWidth: .infinity)
-                .padding()
-                .background(.gray.opacity(0.2))
-                .foregroundStyle(.secondary)
-                .cornerRadius(12)
+                .frame(height: 40)
+                .background(Color.wpBlueSky.opacity(0.5))
+                .cornerRadius(16)
+                .padding(.horizontal, 38)
         }
+    }
+    
+    // MARK: - Helper Functions
+
+    private func canAddToStartingOrBench(player: Player, squad: Squad) -> Bool {
+        let totalStarting = squad.startingXI?.count ?? 0
+        
+        if totalStarting < 11 {
+            let currentInStarting = squad.startingPlayerCount(for: player.position)
+            
+           
+            let maxInStarting: Int
+            switch player.position {
+            case .goalkeeper: maxInStarting = 1
+            case .defender: maxInStarting = 4
+            case .midfielder: maxInStarting = 3
+            case .forward: maxInStarting = 3
+            }
+            
+            if currentInStarting >= maxInStarting {
+                let benchCount = squad.bench?.count ?? 0
+                return benchCount < 4
+            }
+            
+            return true
+        } else {
+            let benchCount = squad.bench?.count ?? 0
+            return benchCount < 4
+        }
+    }
+
+    private func canAddPlayerNation(player: Player, squad: Squad) -> Bool {
+        let currentStage: TournamentStage = .groupStage
+        return squad.canAddPlayerFromNation(player.nation, stage: currentStage)
     }
     
     private var statsSection: some View {
@@ -309,4 +462,15 @@ extension Player {
     var displayPriceNoDecimals: String {
         return String(format: "$%.0fM", price)
     }
+}
+
+struct buttonBottom : View {
+    
+    var body : some View {
+        Text("Hello, World!")
+    }
+}
+
+#Preview{
+    
 }
