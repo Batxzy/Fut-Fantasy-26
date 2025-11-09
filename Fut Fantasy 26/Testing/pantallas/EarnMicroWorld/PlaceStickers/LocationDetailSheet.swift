@@ -130,9 +130,9 @@ struct LocationDetailSheet: View {
             }
             .padding(.top, 16)
         }
-        .presentationDetents([.height(155),.medium])
+        .presentationDetents([.fraction(0.25),.fraction(0.30)])
         .presentationDragIndicator(.visible)
-        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
         .presentationBackground(.mainBg.opacity(0.6 ))
     }
 }

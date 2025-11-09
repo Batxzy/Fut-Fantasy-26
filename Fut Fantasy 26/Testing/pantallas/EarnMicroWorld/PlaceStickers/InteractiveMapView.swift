@@ -60,6 +60,10 @@ struct InteractiveMapView: View {
                 }
             }
             .mapStyle(.standard(elevation: .realistic, emphasis: .automatic, pointsOfInterest: .excludingAll, showsTraffic: false))
+            .mapControls{
+                MapUserLocationButton()
+                MapPitchToggle()
+            }
             .toolbar(.hidden, for: .tabBar)
             .task {
                 await locationManager.loadPlaces()
