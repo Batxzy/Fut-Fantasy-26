@@ -6,6 +6,7 @@
 //
 
 
+
 import SwiftUI
 import Vision
 import AVFoundation
@@ -76,6 +77,61 @@ struct StartView: View {
     }
 }
 
+// MARK: - Prediction Confidence View
+
+struct PredictionConfidenceView: View {
+    let messiConfidence: Double
+    let noPoseConfidence: Double
+    
+    private var displayConfidence: Double {
+        messiConfidence
+    }
+    
+    private var confidenceColor: Color {
+        switch displayConfidence {
+        case 0.8...:
+            return .green
+        case 0.5..<0.8:
+            return .yellow
+        default:
+            return .red
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Confidence percentage
+            Text(String(format: "%.0f%%", displayConfidence * 100))
+                .font(.system(size: 24, weight: .black, design: .rounded))
+                .foregroundStyle(confidenceColor)
+                .shadow(color: confidenceColor.opacity(0.5), radius: 10)
+            
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background
+                    Capsule()
+                        .fill(.white.opacity(0.2))
+                        .frame(height: 4)
+                    
+                    // Progress
+                    Capsule()
+                        .fill(confidenceColor)
+                        .frame(width: geometry.size.width * displayConfidence, height: 8)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: displayConfidence)
+                }
+            }
+            .frame(height: 8)
+        }
+        .frame(width: 200)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.mainBg)
+        )
+    }
+}
+
 // MARK: - PlayingSubView
 
 struct PlayingView: View {
@@ -87,12 +143,10 @@ struct PlayingView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Updated: Removed rotation parameter (always portrait now)
                 CameraPreviewView(session: gameViewModel.cameraViewModel.session)
                     .ignoresSafeArea()
                     .blur(radius: isImageFocused ? 10 : 0)
                 
-                // Updated: Renamed from PoseOverlayView_1
                 PoseOverlayView(
                     bodyParts: gameViewModel.poseViewModel.detectedBodyParts,
                     connections: gameViewModel.poseViewModel.bodyConnections
@@ -107,6 +161,15 @@ struct PlayingView: View {
                 }
                 
                 VStack {
+                    if !isImageFocused {
+                        PredictionConfidenceView(
+                            messiConfidence: gameViewModel.poseViewModel.messiConfidence,
+                            noPoseConfidence: gameViewModel.poseViewModel.noPoseConfidence
+                        )
+                        .padding(.top, 60)
+                        .padding(.horizontal, 20)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                     Spacer()
                     ZStack {
                         Button(action: gameViewModel.endGame) {
@@ -310,7 +373,7 @@ struct ActivityViewController: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-// MARK: - Placeholder Export Progress View
+// MARK: - Export Progress View
 struct ExportProgressView: View {
     @Binding var isShowing: Bool
     var progress: Double
@@ -355,6 +418,33 @@ struct ExportProgressView: View {
     @Previewable @State var mockViewModel = GameViewModel()
     
     StartView(gameViewModel: mockViewModel, namespace: namespace)
+}
+
+#Preview("PredictionConfidenceView - High") {
+    PredictionConfidenceView(
+        messiConfidence: 0.92,
+        noPoseConfidence: 0.08
+    )
+    .padding()
+    .background(Color.black)
+}
+
+#Preview("PredictionConfidenceView - Medium") {
+    PredictionConfidenceView(
+        messiConfidence: 0.65,
+        noPoseConfidence: 0.35
+    )
+    .padding()
+    .background(Color.black)
+}
+
+#Preview("PredictionConfidenceView - Low") {
+    PredictionConfidenceView(
+        messiConfidence: 0.25,
+        noPoseConfidence: 0.75
+    )
+    .padding()
+    .background(Color.black)
 }
 
 #Preview("WinContent") {

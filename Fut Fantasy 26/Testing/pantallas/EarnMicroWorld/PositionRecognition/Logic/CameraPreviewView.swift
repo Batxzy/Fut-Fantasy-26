@@ -10,9 +10,6 @@ import AVKit
 import CoreML
 import Vision
 
-import SwiftUI
-import AVKit
-import Vision
 
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
