@@ -39,27 +39,32 @@ class WorldCupDataSeeder {
     static func seedSquadIfNeeded(
         squadRepository: SquadRepository,
         playerRepository: PlayerRepository,
+        collectibleManager: CollectibleManager, // Parameter added
         context: ModelContext
     ) async {
         print("👥 [Seeder] Checking squad status...")
         
         do {
-            // Check if squad already exists
             let squadDescriptor = FetchDescriptor<Squad>()
             let existingSquads = try context.fetch(squadDescriptor)
             
             if !existingSquads.isEmpty {
+                let existingSquad = existingSquads.first!
+                
+                try collectibleManager.seedInitialBadges(for: existingSquad)
+                
                 print("✅ [Seeder] Squad already exists. No action needed.")
                 return
             }
             
-            // Create new empty squad
             let newSquad = try await squadRepository.createSquad(teamName: "My Team")
             print("✅ [Seeder] Created new empty squad with ID: \(newSquad.id)")
             
+            try collectibleManager.seedInitialBadges(for: newSquad)
+            
         } catch {
             print("❌ [Seeder] ERROR during squad seeding: \(error)")
-            print("   Error details: \(error.localizedDescription)")
+            print("   Error details: \(error.localizedDescription)")
         }
     }
     

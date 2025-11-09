@@ -10,22 +10,51 @@ import SwiftData
 
 struct CollectibleDetailView: View {
     let collectible: Collectible
-        
-        @Environment(CollectibleManager.self) private var collectibleManager
-        @State private var showARMode = false
-        
-        @State private var scale: CGFloat = 1.0
-        @State private var lastScaleValue: CGFloat = 1.0
-
-    var magnification: some Gesture {
+    
+    @Environment(CollectibleManager.self) private var collectibleManager
+    @State private var showARMode = false
+    
+    // Gesture states for zoom (pinch) and rotation
+    @GestureState private var gestureScale: CGFloat = 1.0
+    @GestureState private var gestureRotation: Angle = .zero
+    
+    // Accumulated animated scale and rotation
+    @State private var animScale: CGFloat = 1.0
+    @State private var animRotation: Angle = .zero
+    
+    // Current scale and rotation
+    private var currentScale: CGFloat {
+        gestureScale * animScale
+    }
+    private var currentRotation: Angle {
+        gestureRotation + animRotation
+    }
+    
+    // Animation to return to normal
+    private let spring = Animation.spring(.smooth)
+    
+    // Gestures
+    private var pinch: some Gesture {
         MagnificationGesture()
-            .onChanged { value in
-                let delta = value / self.lastScaleValue
-                self.lastScaleValue = value
-                self.scale *= delta
+            .updating($gestureScale) { value, state, _ in
+                state = value
             }
-            .onEnded { _ in
-                self.lastScaleValue = 1.0
+            .onEnded { final in
+                animScale = final
+                // Smoothly return to normal scale
+                withAnimation(spring) { animScale = 1.0 }
+            }
+    }
+    
+    private var rotate: some Gesture {
+        RotationGesture()
+            .updating($gestureRotation) { value, state, _ in
+                state = value
+            }
+            .onEnded { final in
+                animRotation = final
+                // Smoothly return to normal rotation
+                withAnimation(spring) { animRotation = .zero }
             }
     }
 
@@ -40,9 +69,12 @@ struct CollectibleDetailView: View {
                 image
                     .resizable()
                     .scaledToFit()
-                    .scaleEffect(scale)
-                    .gesture(magnification)
-                    .debugOutline()
+                    .scaleEffect(currentScale)
+                    .rotationEffect(currentRotation)
+                    .highPriorityGesture(
+                        pinch.simultaneously(with: rotate),
+                        including: .gesture
+                    )
             } else {
                 ContentUnavailableView("Image Not Found", systemImage: "photo.fill")
             }
@@ -54,30 +86,28 @@ struct CollectibleDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(collectible.name)
                             .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                         
-                        // --- ADDED DIMENSIONS HERE ---
                         if let uiImage = collectible.uiImage {
                             Text("Width: \(Int(uiImage.size.width))px")
                                 .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                             Text("Height: \(Int(uiImage.size.height))px")
                                 .font(.system(.body, design: .monospaced))
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                         }
-                        // --- END OF ADDED DIMENSIONS ---
                         
                         Text("Type: \(collectible.type.rawValue.capitalized)")
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                         
                         Text("Created: \(collectible.createdAt.formatted(date: .abbreviated, time: .omitted))")
                             .font(.system(.body, design: .monospaced))
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                         
-                        Text("Zoom: \(String(format: "%.2f", scale))x")
+                        Text("Zoom: \(String(format: "%.2f", currentScale))x")
                             .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.black.opacity(0.7))
+                            .foregroundColor(.white.opacity(0.7))
                     }
                     .padding()
                     .background(.ultraThinMaterial.opacity(0.8))
@@ -89,25 +119,24 @@ struct CollectibleDetailView: View {
             }
         }
         .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            // Only show "View in AR" if it's an image we can place
-                            if collectible.uiImage != nil {
-                                Button {
-                                    collectibleManager.selectedCollectibleForDetail = collectible
-                                    showARMode = true
-                                } label: {
-                                    Label("View in AR", systemImage: "arkit")
-                                }
-                            }
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    if collectible.uiImage != nil {
+                        Button {
+                            collectibleManager.selectedCollectibleForDetail = collectible
+                            showARMode = true
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Label("View in AR", systemImage: "arkit")
                         }
                     }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-                .fullScreenCover(isPresented: $showARMode) {
-                    CollectibleDetailARView()
-                }
+            }
+        }
+        .fullScreenCover(isPresented: $showARMode) {
+            CollectibleDetailARView()
+        }
         .navigationTitle("Collectible Detail")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -135,7 +164,7 @@ struct TransparencyCheckerboard: View {
                         )
                         context.fill(
                             Path(rect),
-                            with: .color(isEven ? Color(red: 0.9, green: 0.9, blue: 0.9) : .white)
+                            with: .color(isEven ? Color(red: 0.15, green: 0.15, blue: 0.15) : .black)
                         )
                     }
                 }

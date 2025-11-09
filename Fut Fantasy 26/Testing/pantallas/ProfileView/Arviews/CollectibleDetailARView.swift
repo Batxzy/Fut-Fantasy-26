@@ -7,66 +7,69 @@
 
 
 import SwiftUI
+import SwiftData
 
 struct CollectibleDetailARView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(CollectibleManager.self) private var collectibleManager
-    @State private var showDebug = true
+    @State private var showPlanes: Bool = false
     
     var body: some View {
-        ZStack {
-            // This container will read from the Environment Manager
-            CollectibleDetailARContainer()
+        ZStack(alignment: .topTrailing) {
+            CollectibleDetailARContainer(showPlanes: $showPlanes)
                 .ignoresSafeArea()
             
-            VStack {
-                HStack {
-                    // Debug toggle
-                    Button {
-                        showDebug.toggle()
-                    } label: {
-                        Image(systemName: showDebug ? "eye.fill" : "eye.slash.fill")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .shadow(radius: 4)
-                    }
-                    
-                    Spacer()
-                    
-                    // Dismiss button
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title)
-                            .foregroundStyle(.white)
-                            .shadow(radius: 4)
-                    }
+            // Top buttons overlay
+            HStack {
+                Button {
+                    showPlanes.toggle()
+                } label: {
+                    Image(systemName: showPlanes ? "eye.fill" : "eye.slash.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
                 }
-                .padding()
-                
-                if showDebug {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("🐛 Debug Info")
-                            .font(.headline)
-                        
-                        if let collectible = collectibleManager.selectedCollectibleForDetail {
-                            Text("Selected: \(collectible.name)")
-                            if let img = collectible.uiImage {
-                                Text("Size: \(Int(img.size.width))x\(Int(img.size.height))")
-                            }
-                        } else {
-                            Text("No collectible selected")
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
-                    .padding()
-                }
+                .glassEffect(.regular.interactive())
                 
                 Spacer()
+                
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                }
+                .glassEffect(.regular.interactive())
             }
+            .padding(.horizontal,20)
+            .padding(.leading,40)
         }
     }
+}
+
+
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Squad.self, Collectible.self,
+        configurations: config
+    )
+    let context = container.mainContext
+    let manager = CollectibleManager(modelContext: context)
+    let squad = Squad(teamName: "Preview Squad")
+    context.insert(squad)
+    
+    // Seed some collectibles
+    try? manager.seedInitialBadges(for: squad)
+    
+    // Set a selected collectible for the detail view
+    if let firstCollectible = try? context.fetch(FetchDescriptor<Collectible>()).first {
+        manager.selectedCollectibleForDetail = firstCollectible
+    }
+    
+    return CollectibleDetailARView()
+        .modelContainer(container)
+        .environment(manager)
 }

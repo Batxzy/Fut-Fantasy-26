@@ -55,6 +55,7 @@ struct FantasyFootballApp: App {
             )
             .modelContainer(modelContainer)
             .environment(collectibleManager)
+            .environment(collectibleManager)
             .environment(effectsPipeline)
             .task {
                 print("🚀 [App] Starting data seeding...")
@@ -63,6 +64,7 @@ struct FantasyFootballApp: App {
                 await WorldCupDataSeeder.seedSquadIfNeeded(
                     squadRepository: squadRepository,
                     playerRepository: playerRepository,
+                    collectibleManager: collectibleManager,
                     context: modelContainer.mainContext
                 )
                 
