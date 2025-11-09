@@ -12,6 +12,7 @@ import SwiftUI
 struct BenchView: View {
     let benchPlayers: [Player]
     let isEditMode: Bool
+    let startingXICount: Int
     
     @Binding var selectedSlot: PlayerSlot?
     let isPlayerTappable: (PlayerSlot) -> Bool
@@ -47,10 +48,13 @@ struct BenchView: View {
                 }
                 
                 ForEach(0..<(4 - benchPlayers.count), id: \.self) { _ in
-                    EmptyBenchSlot()
-                        .onTapGesture {
-                            navigateToAddPlayer = true
-                        }
+               EmptyBenchSlot()
+                   .onTapGesture {
+                       if startingXICount >= 11 {
+                           navigateToAddPlayer = true
+                       }
+                   }
+                   .opacity(startingXICount >= 11 ? 1.0 : 0.5)
                 }
             }
         }
@@ -225,6 +229,7 @@ struct EmptyBenchSlot: View {
                 BenchView(
                     benchPlayers: benchPlayers,
                     isEditMode: false,
+                    startingXICount: 2,
                     selectedSlot: $selectedSlot,
                     isPlayerTappable: { slot in
                         return true

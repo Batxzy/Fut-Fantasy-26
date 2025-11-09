@@ -28,6 +28,8 @@ struct PlayersView: View {
     @State private var sortType: PlayerSortType = .points
     @State private var playerToAdd: Player?
     @State private var showAddConfirmation = false
+    @State private var showValidationError = false
+    @State private var validationErrorMessage = ""
     @Namespace private var namespace
     
     var currentSquad: Squad? {
@@ -46,11 +48,24 @@ struct PlayersView: View {
     private func addPlayerToSquad() async {
         guard let squad = currentSquad, let player = playerToAdd else { return }
         
+        if !squad.canAddPlayer(position: player.position) {
+            validationErrorMessage = "Position limit reached for \(player.position.fullName)s (\(player.position.squadLimit) max)"
+            showValidationError = true
+            return
+        }
+        
+        if squad.currentBudget < player.price {
+            validationErrorMessage = "Insufficient budget. You need £\(String(format: "%.1f", player.price))M but only have £\(squad.displayBudget)"
+            showValidationError = true
+            return
+        }
+        
         do {
             try await squadRepository.addPlayerToSquad(playerId: player.id, squadId: squad.id)
             print("✅ [PlayersView] Player added successfully")
         } catch {
-            viewModel.errorMessage = error.localizedDescription
+            validationErrorMessage = error.localizedDescription
+            showValidationError = true
             print("❌ [PlayersView] Failed to add player: \(error)")
         }
     }
@@ -161,6 +176,12 @@ struct PlayersView: View {
                     await addPlayerToSquad()
                 }
             }
+            
+        .alert("Cannot Add Player", isPresented: $showValidationError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(validationErrorMessage)
+        }
         } message: {
             if let player = playerToAdd {
                 Text("Add \(player.name) to your squad for \(player.displayPrice)?")

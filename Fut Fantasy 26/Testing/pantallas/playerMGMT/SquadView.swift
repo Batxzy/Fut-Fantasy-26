@@ -142,6 +142,7 @@ struct SquadView: View {
                 BenchView(
                     benchPlayers: squad.bench ?? [],
                     isEditMode: isEditMode,
+                    startingXICount: squad.startingXI?.count ?? 0,
                     selectedSlot: $selectedSlot,
                     isPlayerTappable: isPlayerTappable,
                     onPlayerTap: handlePlayerTap,

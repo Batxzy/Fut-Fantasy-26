@@ -158,11 +158,13 @@ struct TransfersView: View {
             HStack(alignment: .center, spacing: 6) {
                 // Player out
                 VStack {
-                    AsyncImage(url: URL(string: transfer.playerOut.imageURL)) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: { Circle().fill(.quaternary) }
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
+                    Image(transfer.playerOut.imageURL)
+                        .resizable()
+                        .padding(.top,3)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                        .background(.white)
+                        .clipShape(Circle())
                     
                     Text(transfer.playerOut.lastName.isEmpty ? transfer.playerOut.name : transfer.playerOut.lastName)
                         .font(.caption)
@@ -178,11 +180,13 @@ struct TransfersView: View {
                 
                 // Player in
                 VStack {
-                    AsyncImage(url: URL(string: transfer.playerIn.imageURL)) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: { Circle().fill(.quaternary) }
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
+                    Image(transfer.playerOut.imageURL)
+                        .resizable()
+                        .padding(.top,3)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                        .background(.white)
+                        .clipShape(Circle())
                     
                     Text(transfer.playerIn.lastName.isEmpty ? transfer.playerIn.name : transfer.playerIn.lastName)
                         .font(.caption)
