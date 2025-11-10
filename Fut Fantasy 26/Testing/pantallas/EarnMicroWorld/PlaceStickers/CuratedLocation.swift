@@ -16,6 +16,7 @@ struct CuratedLocation: Identifiable, Equatable {
     let imageName: String
     let rewardAmountMillions: Double
     let cooldownHours: Int
+    let geofenceRadius: Double
     
     var name: String { mapItem.name ?? "Unknown Location" }
     var coordinate: CLLocationCoordinate2D { mapItem.placemark.coordinate }

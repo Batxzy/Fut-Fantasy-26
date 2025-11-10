@@ -44,7 +44,7 @@ struct StickerPlacementARView: View {
             .animation(.interpolatingSpring(duration: animationDuration, bounce: 0, initialVelocity: 0), value: sheetHeight)
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarLeading) {
                 Button {
                     dismiss()
                 } label: {
@@ -53,7 +53,6 @@ struct StickerPlacementARView: View {
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
                 }
-                .glassEffect(.regular.interactive())
             }
         }
         .sheet(isPresented: .constant(true)) {

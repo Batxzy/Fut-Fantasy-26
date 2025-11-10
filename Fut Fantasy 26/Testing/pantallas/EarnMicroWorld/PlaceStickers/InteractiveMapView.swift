@@ -5,6 +5,13 @@
 //  Created by Jose julian Lopez on 05/11/25.
 //
 
+//
+//  InteractiveMapView.swift
+//  Fut Fantasy 26
+//
+//  Created by Jose julian Lopez on 05/11/25.
+//
+
 import SwiftUI
 import MapKit
 
@@ -21,7 +28,7 @@ struct InteractiveMapView: View {
             Map(position: $cameraPosition) {
                 ForEach(locationManager.locations) { location in
                     Annotation(location.name, coordinate: location.coordinate) {
-                        Image(systemName: location.imageName )
+                        Image(systemName: location.imageName)
                             .font(.system(size: 24))
                             .foregroundStyle(.black)
                             .padding(5)
@@ -50,7 +57,7 @@ struct InteractiveMapView: View {
                     }
                     .tag(location.id)
 
-                    MapCircle(center: location.coordinate, radius: 200)
+                    MapCircle(center: location.coordinate, radius: location.geofenceRadius)  // Use custom radius
                         .foregroundStyle(location.mainColor.opacity(0.15))
                         .stroke(location.mainColor, lineWidth: 4)
                 }
@@ -90,9 +97,6 @@ struct InteractiveMapView: View {
         }
     }
 }
-
-
-
 
 #Preview{
     InteractiveMapView()

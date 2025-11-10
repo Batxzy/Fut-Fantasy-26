@@ -163,10 +163,6 @@ struct MatchCard: View {
                     }
                     .frame(width: 30, height: 30)
                     .clipShape(Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.black, lineWidth: 1)
-                    }
                     
                     Text(fixture.homeNation.rawValue)
                         .textStyle(.caption, weight: .bold)
@@ -192,10 +188,7 @@ struct MatchCard: View {
                     }
                     .frame(width: 30, height: 30)
                     .clipShape(Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.black, lineWidth: 1)
-                    }
+                    
                     
                     Text(fixture.awayNation.rawValue)
                         .textStyle(.caption, weight: .bold)

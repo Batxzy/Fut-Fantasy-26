@@ -8,9 +8,6 @@
 import SwiftUI
 import MapKit
 import Contacts
-
-import SwiftUI
-import MapKit
 import SwiftData
 
 struct LocationDetailSheet: View {
@@ -46,14 +43,14 @@ struct LocationDetailSheet: View {
     }
     
     private var displayRewardPoints: Int {
-            Int(location.rewardAmountMillions * 1000) // multiplier
-        }
+        Int(location.rewardAmountMillions * 1000)
+    }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 
-                VStack (spacing: -20){
+                VStack(spacing: -20){
                     HStack {
                         Button {
                             location.mapItem.openInMaps()
@@ -78,10 +75,10 @@ struct LocationDetailSheet: View {
                     }
                     .padding(.horizontal)
                     
-                    VStack (spacing: 13){
+                    VStack(spacing: 13){
                         HStack(spacing: 12){
                             
-                            Image(systemName:location.imageName)
+                            Image(systemName: location.imageName)
                                 .font(.system(size: 26))
                                 .padding(10)
                                 .foregroundStyle(.black)
@@ -89,7 +86,7 @@ struct LocationDetailSheet: View {
                                 .background(Circle().fill(location.mainColor))
                                 
                             
-                            VStack(alignment:.leading ,spacing: 4) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(location.name)
                                     .fontWidth(.condensed)
                                     .font(.system(size: 24))
@@ -113,7 +110,7 @@ struct LocationDetailSheet: View {
                         .frame(alignment: .topLeading)
                         
                         
-                        VStack(spacing:2){
+                        VStack(spacing: 2){
                             EarnPoints(
                                 points: displayRewardPoints,
                                 textColor: canClaimReward ? location.mainColor : .gray,
@@ -143,49 +140,48 @@ struct LocationDetailSheet: View {
                
                 
                 Button {
-                        if isWithinGeofence, let squad = currentSquad {
-                            
-                            if canClaimReward {
-                                
-                                let rewardManager = RewardManager(modelContext: modelContext)
-                                rewardManager.tryAwardLocation(location: location, squad: squad)
-                                updateRemainingTime()
-                            }
-                        }
+                    if isWithinGeofence, let squad = currentSquad {
                         
-                        dismiss()
-                        showARView = true
-                    } label: {
-                        VStack(spacing: 8) {
-                            if isWithinGeofence {
-                                Text(canClaimReward ? "Claim & Paste" : "Paste Stickers")
-                                    .font(.headline)
-                                    .foregroundStyle(.black)
-                            } else {
-                                Text("Get closer to unlock")
-                                    .font(.headline)
-                                    .foregroundStyle(.gray)
-                                Text("\(max(0, Int(distance - 200)))m away from activation")
-                                    .font(.caption)
-                                    .foregroundStyle(.gray.opacity(0.8))
-                            }
+                        if canClaimReward {
+                            let rewardManager = RewardManager(modelContext: modelContext)
+                            rewardManager.tryAwardLocation(location: location, squad: squad)
+                            updateRemainingTime()
                         }
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 50)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
-                        )
                     }
-                    .disabled(!isWithinGeofence)
-                    .padding(.horizontal)
+                    
+                    dismiss()
+                    showARView = true
+                } label: {
+                    VStack(spacing: 8) {
+                        if isWithinGeofence {
+                            Text(canClaimReward ? "Claim & Paste" : "Paste Stickers")
+                                .font(.headline)
+                                .foregroundStyle(.black)
+                        } else {
+                            Text("Get closer to unlock")
+                                .font(.headline)
+                                .foregroundStyle(.gray)
+                            Text("\(max(0, Int(distance - location.geofenceRadius)))m away from activation")  // Use custom radius
+                                .font(.caption)
+                                .foregroundStyle(.gray.opacity(0.8))
+                        }
+                    }
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(isWithinGeofence ? location.mainColor : Color.gray.opacity(0.2))
+                    )
+                }
+                .disabled(!isWithinGeofence)
+                .padding(.horizontal)
             }
             .padding(.top, 16)
         }
-        .presentationDetents([.height(250),.fraction(0.30)])
+        .presentationDetents([.height(250), .fraction(0.30)])
         .presentationDragIndicator(.visible)
         .presentationBackgroundInteraction(.enabled(upThrough: .fraction(0.30)))
-        .presentationBackground(.mainBg.opacity(0.6 ))
+        .presentationBackground(.mainBg.opacity(0.6))
         .onAppear {
             updateRemainingTime()
             startTimer()
@@ -208,26 +204,26 @@ struct LocationDetailSheet: View {
 }
 
 struct EarnPoints: View {
-     let points: Int
-     let textColor: Color
-     let iconColor: Color
-     
-     var body: some View {
-         HStack(spacing: 5) {
-             Text("+\(points)")
-                 .fontWidth(.condensed)
-                 .font(.system(size: 28))
-                 .fontDesign(.default)
-                 .fontWeight(.semibold)
-                 .kerning(0.3)
-                 .foregroundColor(textColor)
-             
-             Image(systemName: "star.circle.fill")
-                 .font(.system(size: 24))
-                 .foregroundColor(iconColor)
-         }
-     }
- }
+    let points: Int
+    let textColor: Color
+    let iconColor: Color
+    
+    var body: some View {
+        HStack(spacing: 5) {
+            Text("+\(points)")
+                .fontWidth(.condensed)
+                .font(.system(size: 28))
+                .fontDesign(.default)
+                .fontWeight(.semibold)
+                .kerning(0.3)
+                .foregroundColor(textColor)
+            
+            Image(systemName: "star.circle.fill")
+                .font(.system(size: 24))
+                .foregroundColor(iconColor)
+        }
+    }
+}
 
 #Preview {
     Image(systemName: "party.popper.fill")
