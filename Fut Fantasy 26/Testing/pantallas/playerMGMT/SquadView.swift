@@ -37,6 +37,7 @@ struct SquadView: View {
                 Color(red: 0.1, green: 0.14, blue: 0.49)
                     .ignoresSafeArea()
                 
+               
                 if let squad = squad {
                     squadContent(squad: squad)
                 } else {

@@ -119,15 +119,22 @@ final class Player: Hashable {
         }
         
         if let data = playerSeederData {
-            let cleanFirstName = data.firstName.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: ".", with: "")
-            let cleanLastName = data.lastName.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: ".", with: "")
+            let cleanFirstName = data.firstName
+                .folding(options: .diacriticInsensitive, locale: .current)
+                .replacingOccurrences(of: " ", with: "_")
+                .replacingOccurrences(of: ".", with: "")
+            
+            // Clean and normalize last name (remove accents, spaces, dots)
+            let cleanLastName = data.lastName
+                .folding(options: .diacriticInsensitive, locale: .current)
+                .replacingOccurrences(of: " ", with: "_")
+                .replacingOccurrences(of: ".", with: "")
             
             return "\(id)_\(cleanFirstName)_\(cleanLastName)"
         }
         
         return "FallbackPlayer"
     }
-    
     // MARK: - Computed Properties
     
     var displayPrice: String {

@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import Foundation
 
 struct DebugBoundingBox: ViewModifier {
     let color: Color
@@ -33,3 +34,4 @@ extension View {
         }
     }
 }
+

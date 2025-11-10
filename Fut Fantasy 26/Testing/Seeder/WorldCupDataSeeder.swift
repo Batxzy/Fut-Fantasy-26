@@ -340,7 +340,7 @@ class WorldCupDataSeeder {
             // France (IDs 107-111)
             (107, "M. Maignan", "Mike", "Maignan", .goalkeeper, .france, 16, 5.0),
             (108, "T. Hernández", "Theo", "Hernández", .defender, .france, 22, 5.5),
-            (109, "A. Tchouaméni", "Aurélien", "Tchouaméni", .midfielder, .france, 8, 7.0),
+            (109, "A. Tchouaméni", "Aurélien", "Tchouameni", .midfielder, .france, 8, 7.0),
             (110, "A. Griezmann", "Antoine", "Griezmann", .midfielder, .france, 7, 9.0),
             (111, "K. Mbappé", "Kylian", "Mbappé", .forward, .france, 10, 12.0),
             
