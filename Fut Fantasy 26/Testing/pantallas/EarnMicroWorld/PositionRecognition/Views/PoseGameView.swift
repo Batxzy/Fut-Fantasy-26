@@ -17,47 +17,59 @@ import SwiftData
 
 struct PoseGameView: View {
     @State private var gameViewModel = GameViewModel()
-        @Query private var squads: [Squad]
-        @Environment(\.modelContext) private var modelContext
-        @Namespace private var gameNamespace
+       @State private var questionViewModel: QuestionViewModel?
+       @Query private var squads: [Squad]
+       @Environment(\.modelContext) private var modelContext
+       @Namespace private var gameNamespace
+       
         
         private var currentSquad: Squad? {
             squads.first
         }
     
-    var body: some View {
-        ZStack {
-            Color.mainBg.ignoresSafeArea()
-            
-            switch gameViewModel.gameState {
-            case .start:
-                StartView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                
-            case .playing:
-                PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                    .transition(.push(from: .bottom).combined(with: .scale))
-                    
-            case .end:
-                EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                    .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .statusBar(hidden: true)
-        .toolbarVisibility(.hidden, for: .tabBar)
-        .onAppear {
-                    if let squad = currentSquad {
-                        let rewardManager = RewardManager(modelContext: modelContext)
-                        gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
-                    }
-                }
-            }
-        }
-
+    
+       var body: some View {
+           ZStack {
+               Color.mainBg.ignoresSafeArea()
+               
+               if let qvm = questionViewModel {
+                   switch gameViewModel.gameState {
+                   case .start:
+                       StartView(gameViewModel: gameViewModel, questionViewModel: qvm, namespace: gameNamespace)
+                       
+                   case .playing:
+                       PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
+                           .transition(.push(from: .bottom).combined(with: .scale))
+                           
+                   case .end:
+                       EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
+                           .transition(.scale.combined(with: .opacity))
+                   }
+               }
+           }
+           .statusBar(hidden: true)
+           .toolbarVisibility(.hidden, for: .tabBar)
+           .onAppear {
+               if let squad = currentSquad {
+                   let rewardManager = RewardManager(modelContext: modelContext)
+                   gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
+                   
+                   if questionViewModel == nil {
+                       questionViewModel = QuestionViewModel.create(modelContext: modelContext, squadId: squad.id)
+                   }
+               }
+           }
+       }
+   }
 // MARK: - StartSubView
+
+import SwiftUI
 
 struct StartView: View {
     @Bindable var gameViewModel: GameViewModel
+    @Bindable var questionViewModel: QuestionViewModel
     var namespace: Namespace.ID
+    @State private var showQuestionView = false
     
     var body: some View {
         VStack(spacing: 30) {
@@ -86,6 +98,30 @@ struct StartView: View {
                     .background(Color.wpGreenYellow)
                     .cornerRadius(30)
             }
+            
+            Button(action: {
+                Task {
+                    await questionViewModel.loadRandomQuestion()
+                    showQuestionView = true
+                }
+            }) {
+                
+                    Text("Try Random Question")
+
+                
+                .font(.title2)
+                .fontWeight(.medium)
+                .foregroundStyle(.wpGreenYellow)
+                .padding(.vertical, 8)
+                .padding(.horizontal,40)
+                .background(
+                    RoundedRectangle(cornerRadius: 30)
+                        .stroke(.wpGreenYellow, lineWidth: 2)
+                )
+            }
+        }
+        .navigationDestination(isPresented: $showQuestionView) {
+            QuestionDetailview(viewModel: questionViewModel)
         }
     }
 }
@@ -423,16 +459,31 @@ struct ExportProgressView: View {
     }
 }
 
-/*
 #Preview("PoseGameView") {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Squad.self, configurations: config)
+    
     PoseGameView()
+        .modelContainer(container)
 }
 
 #Preview("StartView") {
     @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
+    @Previewable @State var mockGameViewModel = GameViewModel()
     
-    StartView(gameViewModel: mockViewModel, namespace: namespace)
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Squad.self, Question.self, configurations: config)
+    let mockQuestionViewModel = QuestionViewModel.create(
+        modelContext: container.mainContext,
+        squadId: UUID()
+    )
+    
+    StartView(
+        gameViewModel: mockGameViewModel,
+        questionViewModel: mockQuestionViewModel,
+        namespace: namespace
+    )
+    .modelContainer(container)
 }
 
 #Preview("PredictionConfidenceView - High") {
@@ -469,7 +520,8 @@ struct ExportProgressView: View {
         score: 0.85,
         FrameUIImage: nil,
         referencePoseImageName: "defaultPose",
-        namespace: namespace
+        namespace: namespace,
+        onClaim: {}
     )
 }
 
@@ -514,5 +566,3 @@ struct ExportProgressView: View {
         isComplete: true
     )
 }
-
-*/

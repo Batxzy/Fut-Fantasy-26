@@ -83,9 +83,11 @@ struct LocationDetailSheet: View {
                             
                             Image(systemName:location.imageName)
                                 .font(.system(size: 26))
+                                .padding(10)
                                 .foregroundStyle(.black)
                                 .frame(width: 44, height: 44)
                                 .background(Circle().fill(location.mainColor))
+                                
                             
                             VStack(alignment:.leading ,spacing: 4) {
                                 Text(location.name)
@@ -218,51 +220,19 @@ struct EarnPoints: View {
                  .fontDesign(.default)
                  .fontWeight(.semibold)
                  .kerning(0.3)
-                 .foregroundStyle(textColor)
+                 .foregroundColor(textColor)
              
              Image(systemName: "star.circle.fill")
                  .font(.system(size: 24))
-                 .foregroundStyle(iconColor)
+                 .foregroundColor(iconColor)
          }
      }
  }
 
-/*
 #Preview {
-    let mockCoordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
-    
-    let addressDictionary: [String: Any] = [
-        "City": "San Francisco",
-        "Country": "United States"
-    ]
-    
-    let mockPlacemark = MKPlacemark(
-        coordinate: mockCoordinate,
-        addressDictionary: addressDictionary
-    )
-    
-    let mockMapItem = MKMapItem(placemark: mockPlacemark)
-    mockMapItem.name = "Soccer Stadium"
-    
-    let mockLocation = CuratedLocation(
-        id: "preview-id",
-        mapItem: mockMapItem,
-        mainColor: .wpMint,
-        accentColor: .wpBlueOcean,
-        imageName: "soccerball",
-        rewardAmount: 8.0,
-        cooldownHours: 24
-    )
-    
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Squad.self, configurations: config)
-    
-    return LocationDetailSheet(
-        location: mockLocation,
-        distance: 35.0,
-        isWithinGeofence: true,
-        showARView: .constant(false)
-    )
-    .modelContainer(container)
+    Image(systemName: "party.popper.fill")
+        .font(.system(size: 26))
+        .padding(10)
+        .foregroundStyle(.black)
+        .background(Circle().fill(.wpMint))
 }
-*/

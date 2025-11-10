@@ -71,7 +71,33 @@ final class QuestionViewModel {
     
     // MARK: - Data Loading
     
-    
+    func loadRandomQuestion() async {
+        isLoading = true
+        resetAnswer()
+        
+        do {
+            if let question = try await gameManager.getRandomQuestion() {
+                await MainActor.run {
+                    self.currentQuestion = question
+                    self.questionState = .available
+                    self.isLoading = false
+                }
+                print("✅ Random question loaded")
+            } else {
+                await MainActor.run {
+                    self.currentQuestion = nil
+                    self.questionState = .available
+                    self.isLoading = false
+                }
+                print("⚠️ No random question available")
+            }
+        } catch {
+            print("❌ Error loading random question: \(error)")
+            await MainActor.run {
+                self.isLoading = false
+            }
+        }
+    }
     
     func resetProgressForDemo() async {
             print("📱 [QuestionVM] Resetting all question progress for demo")

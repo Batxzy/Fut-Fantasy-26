@@ -18,8 +18,29 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     var distancesToLocations: [String: Double] = [:]
     
     let placeConfigs: [String: (mainColor: Color, accentColor: Color, imageName: String, rewardMillions: Double, cooldownHours: Int)] = [
+        
+        //estadios
         "IBB7581ED75F54DD0": (.wpMint, .wpBlueOcean, "soccerball", 8.0, 24),
-        "I7D6783FDABFDF92": (.wpRedBright, .wpGreenLime, "soccerball", 12.0, 48)
+        "I7D6783FDABFDF92": (.wpGreen, .wpGreenDeep, "soccerball", 12.0, 48),
+        
+        //Parque rojo
+        "I5C4F66F5C7319C30": (.wpRedBright, .wpGreenLime, "party.popper.fill", 12.0, 48),
+        
+        //Estadio azteca
+        "IC9717FB9601973": (.wpGreenLime, .wpBlueOcean, "soccerball", 12.0, 48),
+        
+        //Estadio bbva
+        "I80022CCB097B4927" :(.wpBlue, .white, "soccerball", 12.0, 48),
+        
+        // La fundidora
+        "I6A3EE76AC50CEDD2"  :(.wpGreenMalachite, .wpGreenDeep, "party.popper.fill", 12.0, 48),
+        
+        
+        //Angel
+        "I643021F2AD95AD53" :(.wpMagenta, .wpGreenYellow, "party.popper.fill", 12.0, 48),
+        
+        //Centro Banamex
+        "I525CDD84EACEE4E1" :(.wpMint, .wpGreenLime, "dollarsign.bank.building.fill", 12.0, 48),
     ]
     
     override init() {

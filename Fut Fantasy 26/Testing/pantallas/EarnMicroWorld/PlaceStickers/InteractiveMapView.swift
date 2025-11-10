@@ -23,7 +23,7 @@ struct InteractiveMapView: View {
                     Annotation(location.name, coordinate: location.coordinate) {
                         Image(systemName: location.imageName )
                             .font(.system(size: 24))
-                            .foregroundStyle(.black, .white)
+                            .foregroundStyle(.black)
                             .padding(5)
                             .background(
                                 RoundedRectangle(cornerRadius: 10)

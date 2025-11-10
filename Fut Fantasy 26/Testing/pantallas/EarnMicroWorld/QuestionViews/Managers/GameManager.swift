@@ -64,6 +64,22 @@ final class GameManager {
     
     // MARK: - Question State Management
     
+    func getRandomQuestion() async throws -> Question? {
+        print("🎮 [GameManager] Getting random question")
+        
+        let questions = try await questionRepository.getAllQuestions()
+        let activeQuestions = questions.filter { $0.isActive }
+        
+        guard !activeQuestions.isEmpty else {
+            print("   ❌ No active questions available")
+            return nil
+        }
+        
+        let randomQuestion = activeQuestions.randomElement()
+        print("   ✅ Found random question")
+        return randomQuestion
+    }
+    
     func debugQuestionDates() async throws {
            print("🔍 Starting debug...")
            
@@ -223,7 +239,6 @@ final class GameManager {
            print("   ✅ Squad budget updated successfully")
        }
     
-    // MARK: - Timer Calculations
     
     // MARK: - Constants
     
