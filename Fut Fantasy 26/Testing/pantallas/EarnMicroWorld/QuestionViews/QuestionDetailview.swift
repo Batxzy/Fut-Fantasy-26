@@ -11,7 +11,8 @@ import SwiftData
 struct QuestionDetailview: View {
     
     @Bindable var viewModel: QuestionViewModel
-    
+    @Environment(\.dismiss) private var dismiss
+
     private var options: [String] {
         guard let question = viewModel.currentQuestion else { return [] }
         
@@ -54,10 +55,22 @@ struct QuestionDetailview: View {
                                     .transition(.blurReplace.animation(.bouncy).combined(with: .scale.animation(.bouncy)))
                                     .offset(y:-25)
                                     .frame(height: 180, alignment: .top)
+                                    .onAppear {
+                                        // Auto-dismiss after animation completes (2 seconds)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                            dismiss()
+                                        }
+                                    }
                                    
                             } else {
                                 IncorrectAnswerOverlay()
                                     .transition(.scale.animation(.bouncy))
+                                    .onAppear {
+                                        // Auto-dismiss after animation completes (2 seconds)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                            dismiss()
+                                        }
+                                    }
                             }
                         }
                     }
@@ -259,86 +272,3 @@ struct QuizAnswerButton: View {
         }
     }
 }
-
-/*
-#Preview("Multiple Choice") {
-    
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Player.self, Squad.self, Question.self, UserQuestionProgress.self,
-        configurations: config
-    )
-    let context = container.mainContext
-    
-    let today = Calendar.current.startOfDay(for: Date())
-    let question = Question(
-        text: "How many World Cups have been held in Mexico?",
-        correctAnswer: "2",
-        basePoints: 1000,
-        category: .history,
-        difficulty: .easy,
-        questionType: .multipleChoice,
-        options: ["1", "2", "3", "4"],
-        availableDate: today
-    )
-    context.insert(question)
-    
-    let squad = Squad(teamName: "Preview")
-    context.insert(squad)
-    
-    let vm = QuestionViewModel.create(modelContext: context, squadId: squad.id)
-    
-    vm.currentQuestion = question
-    vm.questionState = .available
-    
-    return NavigationStack {
-        QuestionDetailview(viewModel: vm)
-    }
-    .modelContainer(container)
-    .environment(\.modelContext, context)
-}
-
-#Preview("True/False - Result") {
-    
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Player.self, Squad.self, Question.self, UserQuestionProgress.self,
-        configurations: config
-    )
-    let context = container.mainContext
-    
-    let today = Calendar.current.startOfDay(for: Date())
-    let question = Question(
-        text: "Brazil has won the World Cup 5 times.",
-        correctAnswer: "True",
-        basePoints: 500,
-        category: .trivia,
-        difficulty: .easy,
-        questionType: .trueFalse,
-        availableDate: today
-    )
-    context.insert(question)
-    
-    let squad = Squad(teamName: "Preview")
-    context.insert(squad)
-    
-    let vm = QuestionViewModel.create(modelContext: context, squadId: squad.id)
-    
-    vm.currentQuestion = question
-    vm.questionState = .answered
-    vm.userAnswer = "True"
-    vm.showResult = true
-    vm.lastResult = (isCorrect: false, pointsEarned: 0)
-    
-    return NavigationStack {
-        QuestionDetailview(viewModel: vm)
-    }
-    .modelContainer(container)
-    .environment(\.modelContext, context)
-}
-
-#Preview("True badge"){
-    CorrectAnswerOverlay(points: 1000)
-}
-
-*/

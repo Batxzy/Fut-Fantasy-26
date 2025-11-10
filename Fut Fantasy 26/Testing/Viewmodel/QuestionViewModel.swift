@@ -123,41 +123,39 @@ final class QuestionViewModel {
         }
     
     func loadTodaysQuestion() async {
-           do {
-               guard let result = try await gameManager.getTodaysQuestion() else {
-                   print("❌ No daily question available")
-                   return
-               }
-               
-               currentQuestion = result.question
-               isRandomQuestion = false  // Mark as daily
-               print("✅ Daily question loaded")
-           } catch {
-               print("❌ Failed to load daily question: \(error)")
-           }
-       }
-       
-       func submitAnswer(_ answer: String) async {
-           guard let question = currentQuestion else {
-               print("❌ No question to submit")
-               return
-           }
-           
-           do {
-               let result = try await gameManager.submitAnswer(
-                   question: question,
-                   userAnswer: answer,
-                   squadId: squadId,
-                   isRandomQuestion: isRandomQuestion
-               )
-               
-               print("✅ Answer submitted: correct=\(result.isCorrect), points=\(result.pointsEarned)")
-           } catch {
-               print("❌ Failed to submit answer: \(error)")
-           }
-       }
-    
-    // MARK: - Answer Submission
+        print("📱 [QuestionVM] Loading today's question")
+        
+        try? await gameManager.debugQuestionDates()
+        
+        isLoading = true
+        errorMessage = nil
+        isRandomQuestion = false  // Mark as daily question
+        
+        do {
+            if let result = try await gameManager.getTodaysQuestion() {
+                currentQuestion = result.question
+                questionState = result.state  // SET THE STATE
+                
+                if case .locked(let time) = result.state {
+                    timeRemaining = time
+                } else if result.state.isAnswered {
+                    timeRemaining = gameManager.getTimeUntilNextReset()
+                }
+                
+                print("✅ [QuestionVM] Question loaded: \(result.question.text)")
+            } else {
+                currentQuestion = nil
+                questionState = .locked(timeRemaining: gameManager.getTimeUntilNextReset())
+                timeRemaining = gameManager.getTimeUntilNextReset()
+                print("ℹ️  [QuestionVM] No question available")
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            print("❌ [QuestionVM] Failed to load question: \(error)")
+        }
+        
+        isLoading = false
+    }
     
     func submitAnswer() async {
         guard let question = currentQuestion else {
@@ -179,14 +177,14 @@ final class QuestionViewModel {
                 question: question,
                 userAnswer: userAnswer,
                 squadId: squadId,
-                isRandomQuestion: isRandomQuestion  // ADD THIS LINE
+                isRandomQuestion: isRandomQuestion
             )
             
             lastResult = result
             showResult = true
             
             // Only update timer for daily questions
-            if !isRandomQuestion {  // ADD THIS CHECK
+            if !isRandomQuestion {
                 questionState = .answered
                 timeRemaining = gameManager.getTimeUntilNextReset()
             }
@@ -203,6 +201,7 @@ final class QuestionViewModel {
         
         isLoading = false
     }
+    
     
     // MARK: - Timer Management
     

@@ -24,6 +24,19 @@ struct MatchesView: View {
         return grouped.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
     }
     
+    private func styleForDate(_ date: Date) -> DateCapsuleStyle {
+        let calendar = Calendar.current
+        let targetDay = calendar.startOfDay(for: date)
+        
+        guard let index = dates.firstIndex(where: {
+            calendar.startOfDay(for: $0) == targetDay
+        }) else {
+            return datePickerStyles[0]
+        }
+        
+        return datePickerStyles[index % datePickerStyles.count]
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             DateCapsuleSelector(
@@ -41,7 +54,7 @@ struct MatchesView: View {
                             MatchesPerDayCard(
                                 date: date,
                                 fixtures: dayFixtures,
-                                allFixtures: sortedFixtures
+                                style: styleForDate(date)
                             )
                             .id(date)
                             .padding(.horizontal, 28)
@@ -60,7 +73,6 @@ struct MatchesView: View {
         }
     }
 }
-
 
 // MARK: - Color Style System
 struct DateCapsuleStyle {
@@ -127,16 +139,10 @@ struct DateCapsule: View {
     }
 }
 
-//MARK: - Match card
+//MARK: - Match card**
 struct MatchCard: View {
     let fixture: Fixture
-    let colorIndex: Int
-    
-    let colorVariation: [Color] = [.wpBlueOcean]
-    
-    var gradientColor: Color {
-        colorVariation[colorIndex % colorVariation.count]
-    }
+    let style: DateCapsuleStyle
     
     var body: some View {
         HStack {
@@ -148,29 +154,24 @@ struct MatchCard: View {
                 } placeholder: {
                     Color.gray
                 }
-                .frame(width: 45, height: 45)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .frame(width: 30, height: 30)
+                .clipShape(Circle())
                 .overlay {
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.black, lineWidth: 1)
-                    }
+                    Circle()
+                        .stroke(Color.black, lineWidth: 1)
+                }
                 
-
                 Text(fixture.homeNation.rawValue)
-                    .font(
-                        Font.system(size: 16)
-                            .weight(.bold)
-                    )
-                    .foregroundColor(.black)
+                    .textStyle(.caption, weight: .bold)
+                    .foregroundColor(style.accent)
             }
             .frame(width: 100)
             
             Spacer()
             
             Text(fixture.displayScore)
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(gradientColor)
+                .textStyle(.h1, weight: .bold)
+                .foregroundColor(style.accent)
             
             Spacer()
             
@@ -182,35 +183,32 @@ struct MatchCard: View {
                 } placeholder: {
                     Color.gray
                 }
-                .frame(width: 45, height: 45)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .frame(width: 30, height: 30)
+                .clipShape(Circle())
                 .overlay {
-                        RoundedRectangle(cornerRadius: 5)
-                            .stroke(Color.black, lineWidth: 1)
-                    }
+                    Circle()
+                        .stroke(Color.black, lineWidth: 1)
+                }
                 
                 Text(fixture.awayNation.rawValue)
-                    .font(
-                        Font.system(size: 16)
-                            .weight(.bold)
-                    )
-                    .foregroundColor(.black)
+                    .textStyle(.caption, weight: .bold)
+                    .foregroundColor(style.accent)
             }
             .frame(width:100)
         }
+        .debugOutline()
         .padding(.horizontal, 12)
-        .padding(.vertical,28)
-        .frame(width: 330, height: 120)
-        .background(.white)
+        .frame(width: 330, height: 100)
+        .background(style.background)
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
 
-//MARK: -MatchesPerDayCard
+//**MARK: -MatchesPerDayCard**
 struct MatchesPerDayCard: View {
     let date: Date
     let fixtures: [Fixture]
-    let allFixtures: [Fixture]
+    let style: DateCapsuleStyle
     
     var formattedDate: String {
         date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())
@@ -254,38 +252,14 @@ struct MatchesPerDayCard: View {
                     
             VStack(spacing: 20) {
                 ForEach(fixtures, id: \.id) { fixture in
-                    if let globalIndex = allFixtures.firstIndex(where: { $0.id == fixture.id }) {
-                        MatchCard(fixture: fixture, colorIndex: globalIndex)
-                    }
+                    MatchCard(fixture: fixture, style: style)
                 }
             }
         }
     }
 }
 
-//MARK: - Preview Matches view
-#Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: Matchday.self, Fixture.self,
-        configurations: config
-    )
-    
-    let context = container.mainContext
-    WorldCupDataSeeder.seedMatchdays(context: context)
-    WorldCupDataSeeder.seedFixtures(context: context)
-    
-    let matchdays = try! context.fetch(FetchDescriptor<Matchday>())
-    let fixtures = try! context.fetch(FetchDescriptor<Fixture>())
-    let dates = matchdays.map { $0.deadline }
-    
-    return MatchesView(dates: dates, fixtures: fixtures)
-        .modelContainer(container)
-}
-
-
-
-//MARK: - Preview Matches view**
+//**MARK: - Preview Matches view**
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(

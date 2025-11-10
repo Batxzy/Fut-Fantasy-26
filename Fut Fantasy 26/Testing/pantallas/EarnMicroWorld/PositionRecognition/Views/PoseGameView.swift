@@ -5,8 +5,6 @@
 //  Created by Jose julian Lopez on 07/11/25.
 //
 
-
-
 import SwiftUI
 import Vision
 import AVFoundation
@@ -17,60 +15,78 @@ import SwiftData
 
 struct PoseGameView: View {
     @State private var gameViewModel = GameViewModel()
-        @State private var questionViewModel: QuestionViewModel?
-        let sharedQuestionViewModel: QuestionViewModel?
-       @Query private var squads: [Squad]
-       @Environment(\.modelContext) private var modelContext
-       @Namespace private var gameNamespace
-       
-        
-        private var currentSquad: Squad? {
-            squads.first
+    
+    let sharedDailyQuestionViewModel: QuestionViewModel?
+    @State private var dailyQuestionViewModel: QuestionViewModel?
+    
+    @State private var randomQuestionViewModel: QuestionViewModel?
+    
+    @Query private var squads: [Squad]
+    @Environment(\.modelContext) private var modelContext
+    @Namespace private var gameNamespace
+    
+    private var currentSquad: Squad? {
+        squads.first
+    }
+    
+    var body: some View {
+        ZStack {
+            Color.mainBg.ignoresSafeArea()
+            
+            if let dailyQVM = dailyQuestionViewModel,
+               let randomQVM = randomQuestionViewModel {
+                switch gameViewModel.gameState {
+                case .start:
+                    StartView(
+                        gameViewModel: gameViewModel,
+                        dailyQuestionViewModel: dailyQVM,
+                        randomQuestionViewModel: randomQVM,
+                        namespace: gameNamespace
+                    )
+                    
+                case .playing:
+                    PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
+                        .transition(.push(from: .bottom).combined(with: .scale))
+                        
+                case .end:
+                    EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
         }
-    
-    
-       var body: some View {
-           ZStack {
-               Color.mainBg.ignoresSafeArea()
-               
-               if let qvm = questionViewModel {
-                   switch gameViewModel.gameState {
-                   case .start:
-                       StartView(gameViewModel: gameViewModel, questionViewModel: qvm, namespace: gameNamespace)
-                       
-                   case .playing:
-                       PlayingView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                           .transition(.push(from: .bottom).combined(with: .scale))
-                           
-                   case .end:
-                       EndView(gameViewModel: gameViewModel, namespace: gameNamespace)
-                           .transition(.scale.combined(with: .opacity))
-                   }
-               }
-           }
-           .statusBar(hidden: true)
-           .toolbarVisibility(.hidden, for: .tabBar)
-           .onAppear {
-               if let squad = currentSquad {
-                   let rewardManager = RewardManager(modelContext: modelContext)
-                   gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
-                   
-                   // Use shared instance if provided, otherwise create new one
-                   if questionViewModel == nil {
-                       questionViewModel = sharedQuestionViewModel ?? QuestionViewModel.create(modelContext: modelContext, squadId: squad.id)
-                   }
-               }
-           }
-       }
-   }
-// MARK: - StartSubView
+        .statusBar(hidden: true)
+        .toolbarVisibility(.hidden, for: .tabBar)
+        .onAppear {
+            if let squad = currentSquad {
+                let rewardManager = RewardManager(modelContext: modelContext)
+                gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
+                
+                if dailyQuestionViewModel == nil {
+                    dailyQuestionViewModel = sharedDailyQuestionViewModel ?? QuestionViewModel.create(
+                        modelContext: modelContext,
+                        squadId: squad.id
+                    )
+                }
+                
+                if randomQuestionViewModel == nil {
+                    randomQuestionViewModel = QuestionViewModel.create(
+                        modelContext: modelContext,
+                        squadId: squad.id
+                    )
+                }
+            }
+        }
+    }
+}
 
-import SwiftUI
+// MARK: - StartSubView
 
 struct StartView: View {
     @Bindable var gameViewModel: GameViewModel
-    @Bindable var questionViewModel: QuestionViewModel
+    @Bindable var dailyQuestionViewModel: QuestionViewModel
+    @Bindable var randomQuestionViewModel: QuestionViewModel   
     var namespace: Namespace.ID
+    
     @State private var showQuestionView = false
     
     var body: some View {
@@ -103,27 +119,25 @@ struct StartView: View {
             
             Button(action: {
                 Task {
-                    await questionViewModel.loadRandomQuestion()
+                    await randomQuestionViewModel.loadRandomQuestion()
                     showQuestionView = true
                 }
             }) {
-                
-                    Text("Try Random Question")
-
-                
-                .font(.title2)
-                .fontWeight(.medium)
-                .foregroundStyle(.wpGreenYellow)
-                .padding(.vertical, 8)
-                .padding(.horizontal,40)
-                .background(
-                    RoundedRectangle(cornerRadius: 30)
-                        .stroke(.wpGreenYellow, lineWidth: 2)
-                )
+                Text("Try Random Question")
+                    .font(.title2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.wpGreenYellow)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 30)
+                            .stroke(.wpGreenYellow, lineWidth: 2)
+                    )
             }
         }
         .navigationDestination(isPresented: $showQuestionView) {
-            QuestionDetailview(viewModel: questionViewModel)
+            // Pass the RANDOM ViewModel to the question detail view
+            QuestionDetailview(viewModel: randomQuestionViewModel)
         }
     }
 }
@@ -305,7 +319,6 @@ struct WinContent: View {
     }
 }
 
-
 // MARK: - Content Layer End
 private struct ContentLayer: View {
     let isPerfect: Bool
@@ -367,7 +380,7 @@ struct EndView: View {
                 FrameUIImage: uiImageToDisplay,
                 referencePoseImageName: referenceImageToDisplay,
                 namespace: namespace,
-                onClaim: { 
+                onClaim: {
                     gameViewModel.resetToStart()
                     dismiss()
                 }
@@ -461,112 +474,26 @@ struct ExportProgressView: View {
     }
 }
 
-/*
-#Preview("PoseGameView") {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Squad.self, configurations: config)
-    
-    PoseGameView()
-        .modelContainer(container)
-}
-
-*/
 #Preview("StartView") {
     @Previewable @Namespace var namespace
     @Previewable @State var mockGameViewModel = GameViewModel()
     
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: Squad.self, Question.self, configurations: config)
-    let mockQuestionViewModel = QuestionViewModel.create(
+    let mockDailyQuestionViewModel = QuestionViewModel.create(
+        modelContext: container.mainContext,
+        squadId: UUID()
+    )
+    let mockRandomQuestionViewModel = QuestionViewModel.create(
         modelContext: container.mainContext,
         squadId: UUID()
     )
     
     StartView(
         gameViewModel: mockGameViewModel,
-        questionViewModel: mockQuestionViewModel,
+        dailyQuestionViewModel: mockDailyQuestionViewModel,
+        randomQuestionViewModel: mockRandomQuestionViewModel,
         namespace: namespace
     )
     .modelContainer(container)
-}
-
-#Preview("PredictionConfidenceView - High") {
-    PredictionConfidenceView(
-        messiConfidence: 0.92,
-        noPoseConfidence: 0.08
-    )
-    .padding()
-    .background(Color.black)
-}
-
-#Preview("PredictionConfidenceView - Medium") {
-    PredictionConfidenceView(
-        messiConfidence: 0.65,
-        noPoseConfidence: 0.35
-    )
-    .padding()
-    .background(Color.black)
-}
-
-#Preview("PredictionConfidenceView - Low") {
-    PredictionConfidenceView(
-        messiConfidence: 0.25,
-        noPoseConfidence: 0.75
-    )
-    .padding()
-    .background(Color.black)
-}
-
-#Preview("WinContent") {
-    @Previewable @Namespace var namespace
-    
-    WinContent(
-        score: 0.85,
-        FrameUIImage: nil,
-        referencePoseImageName: "defaultPose",
-        namespace: namespace,
-        onClaim: {}
-    )
-}
-
-#Preview("EndView - Perfect Score") {
-    @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
-    
-    EndView(gameViewModel: mockViewModel, namespace: namespace)
-        .onAppear {
-            mockViewModel.finalScore = 0.85
-            mockViewModel.finalUIImage = nil
-        }
-}
-
-#Preview("EndView - Almost") {
-    @Previewable @Namespace var namespace
-    @Previewable @State var mockViewModel = GameViewModel()
-    
-    EndView(gameViewModel: mockViewModel, namespace: namespace)
-        .onAppear {
-            mockViewModel.finalScore = 0.65
-            mockViewModel.finalUIImage = nil
-        }
-}
-
-#Preview("ExportProgressView - Loading") {
-    @Previewable @State var isShowing = true
-    
-    ExportProgressView(
-        isShowing: $isShowing,
-        progress: 0.6,
-        isComplete: false
-    )
-}
-
-#Preview("ExportProgressView - Complete") {
-    @Previewable @State var isShowing = true
-    
-    ExportProgressView(
-        isShowing: $isShowing,
-        progress: 1.0,
-        isComplete: true
-    )
 }
