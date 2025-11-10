@@ -213,23 +213,28 @@ struct ProfileView: View {
     }
 }
 
+
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(
-        for: Squad.self, Player.self,
+        for: Squad.self, Player.self, Collectible.self,
         configurations: config
     )
     
     let context = container.mainContext
-    
+    let manager = CollectibleManager(modelContext: context)
     let squad = Squad(teamName: "Preview Team", ownerName: "Preview")
     context.insert(squad)
+    
+    try? manager.seedInitialBadges(for: squad)
     
     try? context.save()
     
     return ProfileView()
         .modelContainer(container)
+        .environment(manager)
 }
+
 
 
 #Preview{

@@ -62,6 +62,22 @@ struct MatchesView: View {
 }
 
 
+// MARK: - Color Style System
+struct DateCapsuleStyle {
+    let background: Color
+    let accent: Color
+}
+
+// Predefined color styles
+let datePickerStyles: [DateCapsuleStyle] = [
+    DateCapsuleStyle(background: .wpBlueOcean, accent: .wpMint),
+    DateCapsuleStyle(background: .wpPurpleDeep, accent: .wpGreenYellow),
+    DateCapsuleStyle(background: .wpMagenta, accent: .wpGreenLime),
+    DateCapsuleStyle(background: .wpRedDark, accent: .wpRedOrange),
+    DateCapsuleStyle(background: .wpBlueSky, accent: .wpAqua),
+    DateCapsuleStyle(background: .wpPurpleOrchid, accent: .wpMint)
+]
+
 struct DateCapsuleSelector: View {
     let dates: [Date]
     @Binding var selectedDate: Date?
@@ -69,10 +85,11 @@ struct DateCapsuleSelector: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(dates, id: \.self) { date in
+                ForEach(Array(dates.enumerated()), id: \.element) { index, date in
                     DateCapsule(
                         date: date,
-                        isSelected: selectedDate != nil && Calendar.current.isDate(date, inSameDayAs: selectedDate!)
+                        isSelected: selectedDate != nil && Calendar.current.isDate(date, inSameDayAs: selectedDate!),
+                        style: datePickerStyles[index % datePickerStyles.count]
                     )
                     .onTapGesture {
                         selectedDate = date
@@ -87,6 +104,7 @@ struct DateCapsuleSelector: View {
 struct DateCapsule: View {
     let date: Date
     let isSelected: Bool
+    let style: DateCapsuleStyle
     
     var formattedDate: String {
         let weekday = date.formatted(.dateTime.weekday(.abbreviated))
@@ -102,20 +120,19 @@ struct DateCapsule: View {
             .padding(.horizontal, 6)
             .background(
                 Capsule()
-                    .fill(isSelected ? Color.grayMatch.opacity(0.2) : Color.grayMatch.opacity(0.62))
+                    .fill(isSelected ? style.background : style.background.opacity(0.80))
             )
-            .foregroundColor(.white)
+            .foregroundColor(isSelected ? style.accent : .white)
             .animation(.bouncy(duration: 0.4), value: isSelected)
     }
 }
-
 
 //MARK: - Match card
 struct MatchCard: View {
     let fixture: Fixture
     let colorIndex: Int
     
-    let colorVariation: [Color] = [.wpPurpleLilac, .wpMint, .wpGreenLime, .wpRedBright, .wpGreenMalachite, .wpPurpleOrchid]
+    let colorVariation: [Color] = [.wpBlueOcean]
     
     var gradientColor: Color {
         colorVariation[colorIndex % colorVariation.count]
@@ -131,15 +148,20 @@ struct MatchCard: View {
                 } placeholder: {
                     Color.gray
                 }
-                .frame(width: 30, height: 30)
-                .clipShape(Circle())
+                .frame(width: 45, height: 45)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay {
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.black, lineWidth: 1)
+                    }
                 
+
                 Text(fixture.homeNation.rawValue)
                     .font(
                         Font.system(size: 16)
                             .weight(.bold)
                     )
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
             }
             .frame(width: 100)
             
@@ -148,7 +170,7 @@ struct MatchCard: View {
             Text(fixture.displayScore)
                 .font(.title)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(gradientColor)
             
             Spacer()
             
@@ -160,37 +182,27 @@ struct MatchCard: View {
                 } placeholder: {
                     Color.gray
                 }
-                .frame(width: 30, height: 30)
-                .clipShape(Circle())
+                .frame(width: 45, height: 45)
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .overlay {
+                        RoundedRectangle(cornerRadius: 5)
+                            .stroke(Color.black, lineWidth: 1)
+                    }
                 
                 Text(fixture.awayNation.rawValue)
                     .font(
                         Font.system(size: 16)
                             .weight(.bold)
                     )
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
             }
             .frame(width:100)
         }
         .padding(.horizontal, 12)
         .padding(.vertical,28)
         .frame(width: 330, height: 120)
-        .background(gradientColor.opacity(0.08))
+        .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.33, green: 0.33, blue: 0.33),
-                            gradientColor
-                        ],
-                        startPoint: UnitPoint(x: 0.55, y: 0.84),
-                        endPoint: UnitPoint(x: 0.5, y: -0.05)
-                    ),
-                    lineWidth: 1
-                )
-        )
     }
 }
 
@@ -250,6 +262,7 @@ struct MatchesPerDayCard: View {
         }
     }
 }
+
 //MARK: - Preview Matches view
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
