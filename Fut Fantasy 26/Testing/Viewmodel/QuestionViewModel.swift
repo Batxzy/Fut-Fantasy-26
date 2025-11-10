@@ -31,6 +31,9 @@ final class QuestionViewModel {
     private let gameManager: GameManager
     private let squadId: UUID
     
+
+    var isRandomQuestion: Bool = false
+    
     init(gameManager: GameManager, squadId: UUID) {
         self.gameManager = gameManager
         self.squadId = squadId
@@ -61,8 +64,10 @@ final class QuestionViewModel {
         if currentQuestion == nil {
             await loadTodaysQuestion()
         }
-        // Always start the timer
-        startTimer()
+        // Only start timer if we have a valid timeRemaining value
+        if timeRemaining > 0 {  // ADD THIS CHECK
+            startTimer()
+        }
     }
     
     func onDisappear() {
@@ -80,6 +85,7 @@ final class QuestionViewModel {
                 await MainActor.run {
                     self.currentQuestion = question
                     self.questionState = .available
+                    self.isRandomQuestion = true
                     self.isLoading = false
                 }
                 print("✅ Random question loaded")
@@ -117,38 +123,39 @@ final class QuestionViewModel {
         }
     
     func loadTodaysQuestion() async {
-        print("📱 [QuestionVM] Loading today's question")
-        
-        try? await gameManager.debugQuestionDates()
-        
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            if let result = try await gameManager.getTodaysQuestion() {
-                currentQuestion = result.question
-                questionState = result.state
-                
-                if case .locked(let time) = result.state {
-                    timeRemaining = time
-                } else if result.state.isAnswered {
-                    timeRemaining = gameManager.getTimeUntilNextReset()
-                }
-                
-                print("✅ [QuestionVM] Question loaded: \(result.question.text)")
-            } else {
-                currentQuestion = nil
-                questionState = .locked(timeRemaining: gameManager.getTimeUntilNextReset())
-                timeRemaining = gameManager.getTimeUntilNextReset()
-                print("ℹ️  [QuestionVM] No question available")
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            print("❌ [QuestionVM] Failed to load question: \(error)")
-        }
-        
-        isLoading = false
-    }
+           do {
+               guard let result = try await gameManager.getTodaysQuestion() else {
+                   print("❌ No daily question available")
+                   return
+               }
+               
+               currentQuestion = result.question
+               isRandomQuestion = false  // Mark as daily
+               print("✅ Daily question loaded")
+           } catch {
+               print("❌ Failed to load daily question: \(error)")
+           }
+       }
+       
+       func submitAnswer(_ answer: String) async {
+           guard let question = currentQuestion else {
+               print("❌ No question to submit")
+               return
+           }
+           
+           do {
+               let result = try await gameManager.submitAnswer(
+                   question: question,
+                   userAnswer: answer,
+                   squadId: squadId,
+                   isRandomQuestion: isRandomQuestion
+               )
+               
+               print("✅ Answer submitted: correct=\(result.isCorrect), points=\(result.pointsEarned)")
+           } catch {
+               print("❌ Failed to submit answer: \(error)")
+           }
+       }
     
     // MARK: - Answer Submission
     
@@ -171,15 +178,18 @@ final class QuestionViewModel {
             let result = try await gameManager.submitAnswer(
                 question: question,
                 userAnswer: userAnswer,
-                squadId: squadId
+                squadId: squadId,
+                isRandomQuestion: isRandomQuestion  // ADD THIS LINE
             )
             
             lastResult = result
             showResult = true
             
-           
-            questionState = .answered
-            timeRemaining = gameManager.getTimeUntilNextReset()
+            // Only update timer for daily questions
+            if !isRandomQuestion {  // ADD THIS CHECK
+                questionState = .answered
+                timeRemaining = gameManager.getTimeUntilNextReset()
+            }
             
             if result.isCorrect {
                 print("✅ [QuestionVM] Correct answer! Earned \(result.pointsEarned) points")

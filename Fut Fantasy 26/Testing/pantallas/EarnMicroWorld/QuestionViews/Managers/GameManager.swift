@@ -47,6 +47,7 @@ final class GameManager {
     private let squadRepository: SquadRepository
     private let modelContext: ModelContext
     
+    
     // Configuration
     private let resetHour: Int // Hour of day to reset (0-23, UTC)
     
@@ -175,15 +176,19 @@ final class GameManager {
     func submitAnswer(
         question: Question,
         userAnswer: String,
-        squadId: UUID
+        squadId: UUID,
+        isRandomQuestion: Bool = false  // ADD THIS PARAMETER
     ) async throws -> (isCorrect: Bool, pointsEarned: Int) {
         print("🎮 [GameManager] Submitting answer for question: \(question.id)")
         
-        // Verify question state
-        let state = try await getQuestionState(for: question)
-        guard state.isAvailable else {
-            print("   ❌ Question not available for answering")
-            throw RepositoryError.invalidData
+        // Skip state verification for random questions
+        if !isRandomQuestion {  // ADD THIS CHECK
+            // Verify question state
+            let state = try await getQuestionState(for: question)
+            guard state.isAvailable else {
+                print("   ❌ Question not available for answering")
+                throw RepositoryError.invalidData
+            }
         }
         
         // Check answer

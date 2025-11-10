@@ -75,7 +75,7 @@ struct QuestionDetailview: View {
                     }
                     .padding(.horizontal,38)
                     
-                    if !viewModel.showResult && viewModel.isQuestionAvailable {
+                    if !viewModel.showResult {
                         Button(action: {
                             Task {
                                 await viewModel.submitAnswer()

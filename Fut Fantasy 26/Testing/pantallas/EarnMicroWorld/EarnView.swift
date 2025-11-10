@@ -71,7 +71,7 @@ struct EarnView: View {
                               }
                               .buttonStyle(.plain)
                             
-                            NavigationLink(destination: PoseGameView()) {
+                            NavigationLink(destination: PoseGameView(sharedQuestionViewModel: questionViewModel)) {
                                 EarnCard(
                                     title:"RECREATE THE POSE",
                                     question: "Recreate Mbappé's crossed-arms pose",

@@ -17,7 +17,8 @@ import SwiftData
 
 struct PoseGameView: View {
     @State private var gameViewModel = GameViewModel()
-       @State private var questionViewModel: QuestionViewModel?
+        @State private var questionViewModel: QuestionViewModel?
+        let sharedQuestionViewModel: QuestionViewModel?
        @Query private var squads: [Squad]
        @Environment(\.modelContext) private var modelContext
        @Namespace private var gameNamespace
@@ -54,8 +55,9 @@ struct PoseGameView: View {
                    let rewardManager = RewardManager(modelContext: modelContext)
                    gameViewModel.configureEconomy(squad: squad, rewardManager: rewardManager)
                    
+                   // Use shared instance if provided, otherwise create new one
                    if questionViewModel == nil {
-                       questionViewModel = QuestionViewModel.create(modelContext: modelContext, squadId: squad.id)
+                       questionViewModel = sharedQuestionViewModel ?? QuestionViewModel.create(modelContext: modelContext, squadId: squad.id)
                    }
                }
            }
@@ -459,6 +461,7 @@ struct ExportProgressView: View {
     }
 }
 
+/*
 #Preview("PoseGameView") {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: Squad.self, configurations: config)
@@ -467,6 +470,7 @@ struct ExportProgressView: View {
         .modelContainer(container)
 }
 
+*/
 #Preview("StartView") {
     @Previewable @Namespace var namespace
     @Previewable @State var mockGameViewModel = GameViewModel()
