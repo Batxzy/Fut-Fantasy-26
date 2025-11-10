@@ -371,20 +371,34 @@ struct HomeView: View {
             VStack(spacing: 20) {
                 // Spacer for image
                 Color.clear
-                    .frame(height: 300)
+                    .frame(height: 420)
                 
-                // Fixture Carousel
-                if !featuredFixtures.isEmpty {
-                    FixtureCarouselView(
-                        fixtures: featuredFixtures,
-                        currentIndex: $currentIndex
-                    )
-                } else {
-                    Text("No fixtures available")
-                        .foregroundColor(.white.opacity(0.7))
+                
+                VStack(spacing:20){
+                    if !featuredFixtures.isEmpty {
+                        FixtureCarouselView(
+                            fixtures: featuredFixtures,
+                            currentIndex: $currentIndex
+                        )
+                    } else {
+                        Text("No fixtures available")
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    
+                    Button(action: {
+                        print("")
+                    }) {
+                        Text("pick your team")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(.black)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.wpMint)
+                    .cornerRadius(16)
+                    .padding(.horizontal, 38)
+                    
                 }
-                
-                Spacer()
             }
         }
         .onAppear {
@@ -467,6 +481,8 @@ struct FixtureCarouselView: View {
             .zIndex(2)
             
             // Main fixture card
+            
+            
             if let fixture = fixtures[safe: currentIndex] {
                 FixtureCardView(fixture: fixture)
                     .transition(.asymmetric(
@@ -495,8 +511,6 @@ struct FixtureCarouselView: View {
             }
             
         }
-        .padding(.horizontal, 20)
-        .frame(maxHeight: 400)
     }
 }
 

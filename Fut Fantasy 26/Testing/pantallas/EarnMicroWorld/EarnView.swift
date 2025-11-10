@@ -74,7 +74,7 @@ struct EarnView: View {
                             NavigationLink(destination: PoseGameView(sharedDailyQuestionViewModel: questionViewModel)) {
                                 EarnCard(
                                     title:"RECREATE THE POSE",
-                                    question: "Recreate Mbappé's crossed-arms pose",
+                                    question: "Recreate Messi’s goal celebration pose",
                                     points: 1000,
                                     backgroundColor: .wpRedBright,
                                     accentColor: .wpGreenLime,

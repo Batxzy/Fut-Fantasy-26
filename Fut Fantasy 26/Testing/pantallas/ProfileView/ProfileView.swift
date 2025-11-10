@@ -112,11 +112,11 @@ struct ProfileView: View {
             // User info
             VStack(spacing: 4) {
                 Text("Deebie Thestta")
-                    .font(.system(size: 24, weight: .semibold))
+                    .textStyle(.h1)
                     .foregroundStyle(.white)
                 
                 Text("Rising Star")
-                    .font(.system(size: 16, weight: .regular))
+                    .textStyle(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
         }
@@ -136,7 +136,7 @@ struct ProfileView: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Badges")
-                    .font(.system(size: 20, weight: .semibold))
+                    .textStyle(.body)
                     .foregroundStyle(.white)
                 
                 Spacer()
@@ -144,7 +144,7 @@ struct ProfileView: View {
                 // Changed to NavigationLink
                 NavigationLink(destination: BadgeGalleryView()) {
                     Text("See all")
-                        .font(.system(size: 14))
+                        .textStyle(.caption)
                         .foregroundStyle(.wpMint)
                 }
             }
@@ -177,7 +177,7 @@ struct ProfileView: View {
     private var achievementsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Achievements")
-                .font(.system(size: 20, weight: .semibold))
+                .textStyle(.body)
                 .foregroundStyle(.white)
             
             VStack(spacing: 14) {
