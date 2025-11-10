@@ -114,10 +114,10 @@ struct DateCapsule: View {
     
     var body: some View {
         Text(formattedDate)
-            .font(.caption)
-            .frame(width: 78, height: 18)
+            .textStyle(.caption, weight: .bold)
+            .foregroundStyle(style.accent)
             .padding(.vertical, 4)
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 20)
             .background(
                 Capsule()
                     .fill(isSelected ? style.background : style.background.opacity(0.80))
@@ -244,11 +244,11 @@ struct MatchesPerDayCard: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(formattedDate)
-                    .font(.system(size: 12))
+                    .textStyle(.caption)
                     .foregroundColor(.white).opacity(0.8)
                 
                 Text(tournamentInfo)
-                    .font(.system(size: 10 , weight: .light))
+                    .textStyle(.caption)
                     .foregroundColor(.white).opacity(0.8)
             }
                     
