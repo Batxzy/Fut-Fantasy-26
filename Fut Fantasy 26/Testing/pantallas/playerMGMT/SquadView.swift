@@ -338,3 +338,288 @@ struct SquadView: View {
     )
     .modelContainer(container)
 }
+
+
+
+
+
+
+
+struct HomeView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var featuredFixtures: [Fixture] = []
+    @State private var currentIndex: Int = 0
+    
+    // Array of background images
+    private let backgroundImages = ["Home 7", "Home 8", "Home 6"]
+    
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Background color
+            Color.mainBg
+                .ignoresSafeArea()
+            
+            // Background image - changes based on current fixture
+            Image(backgroundImages[currentIndex])
+                .resizable()
+                .scaledToFit()
+                .frame(height: 560)
+                .ignoresSafeArea()
+                .transition(.opacity)
+                .id(currentIndex) // Force view update on index change
+            
+            VStack(spacing: 20) {
+                // Spacer for image
+                Color.clear
+                    .frame(height: 300)
+                
+                // Fixture Carousel
+                if !featuredFixtures.isEmpty {
+                    FixtureCarouselView(
+                        fixtures: featuredFixtures,
+                        currentIndex: $currentIndex
+                    )
+                } else {
+                    Text("No fixtures available")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                
+                Spacer()
+            }
+        }
+        .onAppear {
+            createFeaturedFixtures()
+        }
+    }
+    
+    private func createFeaturedFixtures() {
+        // Only create if not already created
+        guard featuredFixtures.isEmpty else { return }
+        
+        // Create 3 featured fixtures (not saved to database)
+        let fixture1 = Fixture(
+            id: 9001, // High ID to avoid conflicts
+            matchdayNumber: 2,
+            homeNation: .argentina,
+            awayNation: .germany,
+            kickoffTime: Calendar.current.date(byAdding: .hour, value: 6, to: Date()) ?? Date(),
+            group: .a
+        )
+        
+        let fixture2 = Fixture(
+            id: 9002,
+            matchdayNumber: 2,
+            homeNation: .brazil,
+            awayNation: .usa,
+            kickoffTime: Calendar.current.date(byAdding: .hour, value: 9, to: Date()) ?? Date(),
+            group: .g
+        )
+        
+        let fixture3 = Fixture(
+            id: 9003,
+            matchdayNumber: 2,
+            homeNation: .england,
+            awayNation: .mexico,
+            kickoffTime: Calendar.current.date(byAdding: .hour, value: 12, to: Date()) ?? Date(),
+            group: .b
+        )
+        
+        featuredFixtures = [fixture1, fixture2, fixture3]
+    }
+}
+
+#Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Fixture.self,
+        configurations: config
+    )
+    
+    return HomeView()
+        .modelContainer(container)
+}
+
+
+
+struct FixtureCarouselView: View {
+    let fixtures: [Fixture]
+    @Binding var currentIndex: Int
+
+    var body: some View {
+        HStack(spacing: -20) {
+            // Left arrow button
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    if currentIndex > 0 {
+                        currentIndex -= 1
+                    } else {
+                        currentIndex = fixtures.count - 1
+                    }
+                }
+            } label: {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(width: 32, height: 32)
+                    .background(Color.wpMint)
+                    .clipShape(Circle())
+            }
+            .zIndex(2)
+            
+            // Main fixture card
+            if let fixture = fixtures[safe: currentIndex] {
+                FixtureCardView(fixture: fixture)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    ))
+                    .id(currentIndex)
+            }
+            
+            // Right arrow button
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    if currentIndex < fixtures.count - 1 {
+                        currentIndex += 1
+                    } else {
+                        currentIndex = 0
+                    }
+                }
+            } label: {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(width: 32, height: 32)
+                    .background(Color.wpMint)
+                    .clipShape(Circle())
+            }
+            
+        }
+        .padding(.horizontal, 20)
+        .frame(maxHeight: 400)
+    }
+}
+
+struct FixtureCardView: View {
+    let fixture: Fixture
+    
+    var body: some View {
+        
+            
+            VStack(spacing: 0) {
+                // Time and round info
+                VStack(spacing: 8) {
+                    Text(fixture.formattedKickoffTime)
+                        .textStyle(.body)
+                        .foregroundColor(.white)
+                    
+                    Text(fixture.roundInfo)
+                        .textStyle(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                    
+                    Text(fixture.groupInfo)
+                        .textStyle(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                
+                
+                // Teams and VS
+                HStack {
+                    VStack(alignment: .center, spacing: 8) {
+                        AsyncImage(url: URL(string: fixture.homeFlagURL)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Color.gray
+                        }
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.black, lineWidth: 1)
+                        }
+                        
+                        Text(fixture.homeNation.rawValue)
+                            .textStyle(.body, weight: .bold)
+                            .foregroundColor(.white)
+                    }
+                    .frame(width: 80)
+                    
+                    Spacer()
+                    
+                    Text(fixture.displayScore)
+                        .textStyle(.h1, weight: .bold)
+                        .foregroundColor(.wpMint)
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .center, spacing: 8) {
+                        AsyncImage(url: URL(string: fixture.awayFlagURL)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Color.gray
+                        }
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.black, lineWidth: 1)
+                        }
+                        
+                        Text(fixture.awayNation.rawValue)
+                            .textStyle(.body, weight: .bold)
+                            .foregroundColor(.white)
+                    }
+                    .frame(width:100)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 16)
+                
+            }
+            .padding()
+        .frame(width: 350)
+        
+        .background(.wpBlueDeep)
+        .clipShape(RoundedRectangle(cornerRadius: 30))
+    }
+}
+
+// Extension for safe array access
+extension Array {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
+// Extension to Fixture for formatted display
+extension Fixture {
+    var formattedKickoffTime: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return "Today, \(formatter.string(from: kickoffTime)) h"
+    }
+    
+    var roundInfo: String {
+        if let stage = knockoutStage {
+            switch stage {
+            case .roundOf16: return "Round of 16"
+            case .quarterFinals: return "Quarter Finals"
+            case .semiFinals: return "Semi Finals"
+            case .thirdPlace: return "Third Place"
+            case .final: return "Final"
+            default: return "Group Stage"
+            }
+        }
+        return "Group Stage - Matchday \(matchdayNumber)"
+    }
+    
+    var groupInfo: String {
+        if let group = group {
+            return group.rawValue.uppercased()
+        }
+        return ""
+    }
+}

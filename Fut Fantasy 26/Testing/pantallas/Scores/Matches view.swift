@@ -132,73 +132,81 @@ struct DateCapsule: View {
             .padding(.horizontal, 20)
             .background(
                 Capsule()
-                    .fill(isSelected ? style.background : style.background.opacity(0.80))
+                    .fill(isSelected ? style.background : style.background.opacity(0.60))
             )
             .foregroundColor(isSelected ? style.accent : .white)
             .animation(.bouncy(duration: 0.4), value: isSelected)
     }
 }
 
-//MARK: - Match card**
 struct MatchCard: View {
     let fixture: Fixture
     let style: DateCapsuleStyle
     
     var body: some View {
-        HStack {
-            VStack(alignment: .center, spacing: 8) {
-                AsyncImage(url: URL(string: fixture.homeFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray
+        VStack(spacing: 0) {
+            // Top accent bar
+            Rectangle()
+            .fill(style.background.opacity(0.9))
+            .overlay(Color.white.opacity(0.3))
+            .frame(height: 22)
+            
+            // Match content
+            HStack {
+                VStack(alignment: .center, spacing: 8) {
+                    AsyncImage(url: URL(string: fixture.homeFlagURL)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray
+                    }
+                    .frame(width: 30, height: 30)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(Color.black, lineWidth: 1)
+                    }
+                    
+                    Text(fixture.homeNation.rawValue)
+                        .textStyle(.caption, weight: .bold)
+                        .foregroundColor(style.accent)
                 }
-                .frame(width: 30, height: 30)
-                .clipShape(Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.black, lineWidth: 1)
-                }
+                .frame(width: 100)
                 
-                Text(fixture.homeNation.rawValue)
-                    .textStyle(.caption, weight: .bold)
-                    .foregroundColor(style.accent)
-            }
-            .frame(width: 100)
-            
-            Spacer()
-            
-            Text(fixture.displayScore)
-                .textStyle(.h1, weight: .bold)
-                .foregroundColor(style.accent)
-            
-            Spacer()
-            
-            VStack(alignment: .center, spacing: 8) {
-                AsyncImage(url: URL(string: fixture.awayFlagURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray
-                }
-                .frame(width: 30, height: 30)
-                .clipShape(Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.black, lineWidth: 1)
-                }
+                Spacer()
                 
-                Text(fixture.awayNation.rawValue)
-                    .textStyle(.caption, weight: .bold)
+                Text(fixture.displayScore)
+                    .textStyle(.h1, weight: .bold)
                     .foregroundColor(style.accent)
+                
+                Spacer()
+                
+                VStack(alignment: .center, spacing: 8) {
+                    AsyncImage(url: URL(string: fixture.awayFlagURL)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray
+                    }
+                    .frame(width: 30, height: 30)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(Color.black, lineWidth: 1)
+                    }
+                    
+                    Text(fixture.awayNation.rawValue)
+                        .textStyle(.caption, weight: .bold)
+                        .foregroundColor(style.accent)
+                }
+                .frame(width:100)
             }
-            .frame(width:100)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 16)
         }
-        .debugOutline()
-        .padding(.horizontal, 12)
-        .frame(width: 330, height: 100)
+        .frame(width: 330, height: 108)
         .background(style.background)
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
